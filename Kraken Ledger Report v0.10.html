@@ -381,10 +381,21 @@
     <!-- Kraken API Config (hidden by default) -->
     <div id="apiConfigSection"
       style="display:none; margin-bottom:15px; padding:10px; background:#f1f2f6; border-radius:6px;">
+      <div style="font-size:0.7rem; font-weight:700; color:var(--primary); margin-bottom:6px;">Ledger/Trades API (Query
+        permissions)</div>
       <label>Kraken API Key</label>
-      <input type="text" id="krakenApiKey" placeholder="API Key" style="margin-bottom:6px;">
+      <input type="text" id="krakenApiKey" placeholder="API Key for Ledger/Trades" style="margin-bottom:6px;">
       <label>Kraken Private Key</label>
-      <input type="password" id="krakenPrivateKey" placeholder="Private Key (Base64)" style="margin-bottom:6px;">
+      <input type="password" id="krakenPrivateKey" placeholder="Private Key (Base64)" style="margin-bottom:10px;">
+
+      <div
+        style="font-size:0.7rem; font-weight:700; color:var(--kraken); margin-bottom:6px; border-top:1px solid #ddd; padding-top:10px;">
+        Withdrawal Addresses API (Withdraw permissions)</div>
+      <label>Withdrawal API Key</label>
+      <input type="text" id="withdrawApiKey" placeholder="API Key for Addresses" style="margin-bottom:6px;">
+      <label>Withdrawal Private Key</label>
+      <input type="password" id="withdrawPrivateKey" placeholder="Private Key (Base64)" style="margin-bottom:10px;">
+
       <label>CORS Proxy URL (optional)</label>
       <input type="text" id="corsProxy" placeholder="https://cors-anywhere.herokuapp.com/" value="">
       <div style="font-size:0.65rem; color:#7f8c8d; margin-top:4px;">Note: Browser security (CORS) blocks direct Kraken
@@ -1025,9 +1036,13 @@
       const savedKey = localStorage.getItem("kraken_api_key");
       const savedPrivate = localStorage.getItem("kraken_private_key");
       const savedProxy = localStorage.getItem("kraken_cors_proxy");
+      const savedWithdrawKey = localStorage.getItem("kraken_withdraw_api_key");
+      const savedWithdrawPrivate = localStorage.getItem("kraken_withdraw_private_key");
       if (savedKey) document.getElementById("krakenApiKey").value = savedKey;
       if (savedPrivate) document.getElementById("krakenPrivateKey").value = savedPrivate;
       if (savedProxy) document.getElementById("corsProxy").value = savedProxy;
+      if (savedWithdrawKey) document.getElementById("withdrawApiKey").value = savedWithdrawKey;
+      if (savedWithdrawPrivate) document.getElementById("withdrawPrivateKey").value = savedWithdrawPrivate;
     }
 
     function getApiCredentials() {
@@ -1040,6 +1055,19 @@
       localStorage.setItem("kraken_private_key", privateKey);
       const proxy = document.getElementById("corsProxy").value.trim();
       localStorage.setItem("kraken_cors_proxy", proxy);
+      return { apiKey, privateKey, proxy };
+    }
+
+    function getWithdrawCredentials() {
+      let apiKey = document.getElementById("withdrawApiKey").value.trim();
+      let privateKey = document.getElementById("withdrawPrivateKey").value.trim();
+      if (!apiKey || !privateKey) {
+        throw new Error("Please enter Withdrawal API credentials in API Config");
+      }
+      // Save for next time
+      localStorage.setItem("kraken_withdraw_api_key", apiKey);
+      localStorage.setItem("kraken_withdraw_private_key", privateKey);
+      const proxy = document.getElementById("corsProxy").value.trim();
       return { apiKey, privateKey, proxy };
     }
 
@@ -1096,8 +1124,8 @@
       return arrayBufferToBase64(signature);
     }
 
-    async function callKrakenPrivateAPI(endpoint, params = {}) {
-      const { apiKey, privateKey, proxy } = getApiCredentials();
+    async function callKrakenPrivateAPI(endpoint, params = {}, credentials = null) {
+      const { apiKey, privateKey, proxy } = credentials || getApiCredentials();
       const urlPath = "/0/private/" + endpoint;
       const nonce = Date.now().toString();
 
@@ -1147,8 +1175,11 @@
       updateStatus("Fetching Kraken...", "sync");
 
       try {
-        // Fetch all withdrawal addresses
-        const addresses = await callKrakenPrivateAPI("WithdrawAddresses");
+        // Get withdrawal-specific credentials
+        const withdrawCreds = getWithdrawCredentials();
+
+        // Fetch all withdrawal addresses using withdrawal API key
+        const addresses = await callKrakenPrivateAPI("WithdrawAddresses", {}, withdrawCreds);
 
         logTrace("Kraken WithdrawAddresses response: " + JSON.stringify(addresses).substring(0, 500));
 
