@@ -1,0 +1,10 @@
+
+I need an HTML app for extracting the ledger via API from the Kraken crypto exhange, according to date range specified dynamically, and a set of pre-defined wallet addresses (for USDT) or destination tags (XRP) matched to recipient names (e.g. Aleksey Trofimov, Evgenij Ulyukin), and a set of pre-defined assets (e.g. XRP, USDT) and then writing a report that gives in date/time order the list of transfers from Kraken to external recipients with the recipient, asset and also the equivalent GBP value (this is usually according to a trade of GBP or EUR (and converted to GBP if EUR so there must be two columns for the fiat amount in GBP and EUR) to the specified asset immediately prior to the transfer, for the same or nearly same value as the asset quantity that was transferred ( that was converted into that asset for crypto transfer to a recipient.
+
+GBP (or EUR, this is either/or, there are no EUR/GBP trades). Each transfer was done as follows: the recipient is due to be paid e.g. GBP 500 so first convert from the GBP balance in Kraken GBP 500 to equivalent USDT (or XRP), then next transfer the USDT (or XRP) to the recipient. This information is in the ledger it is only needed to scan the list of transfers and for each to check if the crypto amount was converted immediately prior and to use that to know the fiat to crypto conversion and the associated fiat amount for the report
+
+
+
+This will be realized with html so it will run first time to see the screen layout, it must be useable code that runs without error.
+
+Update the API ID in the code, the API key and a Private Key for Kraken Exchange are provided in a separate .txt file.

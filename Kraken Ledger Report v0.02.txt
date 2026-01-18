@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kraken Ledger Extraction</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+        header h1 {
+            text-align: center;
+            color: #333;
+        }
+        form {
+            display: flex;
+            flex-direction: column;
+            max-width: 600px;
+            margin: 20px auto;
+        }
+        label, button {
+            margin-bottom: 10px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+    </style>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+</head>
+<body>
+    <header>
+        <h1>Kraken Ledger Extraction</h1>
+    </header>
+    <main>
+        <form id="kraken-ledger-form">
+            <label for="start-date">Start Date:</label>
+            <input type="date" id="start-date" name="start-date" required>
+
+            <label for="end-date">End Date:</label>
+            <input type="date" id="end-date" name="end-date" required>
+
+            <label for="wallet-addresses">Wallet Addresses (comma-separated):</label>
+            <textarea id="wallet-addresses" name="wallet-addresses" rows="4" required></textarea>
+
+            <button type="submit">Extract Ledger</button>
+        </form>
+
+        <section id="results">
+            <h2>Results</h2>
+            <table id="ledger-table">
+                <thead>
+                    <tr>
+                        <th>Recipient's Name</th>
+                        <th>Asset Type</th>
+                        <th>GBP Value</th>
+                        <th>USDT Equivalent (if available)</th>
+                        <th>Transfer Date/Time</th>
+                    </tr>
+                </thead>
+                <tbody id="ledger-data">
+                    <!-- Dynamically populate this section with data from the Kraken API -->
+                </tbody>
+            </table>
+        </section>
+    </main>
+
+    <script>
+    document.getElementById('kraken-ledger-form').addEventListener('submit', async (event) => {
+        event.preventDefault();
+
+        // Get user input from the form
+        const startDate = document.getElementById('start-date').value;
+        const endDate = document.getElementById('end-date').value;
+        const walletAddresses = document.getElementById('wallet-addresses').value.split(',');
+
+        // Your Kraken API key and private key
+        const apiKey = 'your_api_key';
+        const privateKey = 'your_private_key';
+
+        // Send API request to Kraken with axios
+        try {
+            const response = await axios({
+                method: 'POST',
+                url: 'https://api.kraken.com/0/private/GetLedgers',
+                headers: {
+                    'API-Key': apiKey
+                },
+                data: {
+                    start: startDate,
+                    end: endDate,
+                    // Add other parameters as needed
+                }
+            });
+
+            // Handle the response and update the table with results
+            const ledgerData = response.data.result;
+            const ledgerTableBody = document.getElementById('ledger-data');
+            ledgerTableBody.innerHTML = '';
+
+            for (const entry of ledgerData) {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${entry.recipient}</td>
+                    <td>${entry.asset}</td>
+                    <td>${entry.gbpValue}</td>
+                    <td>${entry.usdtEquivalent}</td>
+                    <td>${entry.time}</td>
+                `;
+                ledgerTableBody.appendChild(row);
+            }
+        } catch (error) {
+            console.error(error);
+            // Handle any errors here
+        }
+    });
+    </script>
+</body>
+</html>

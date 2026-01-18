@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kraken Ledger Extraction</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+        header h1 {
+            text-align: center;
+            color: #333;
+        }
+        form {
+            display: flex;
+            flex-direction: column;
+            max-width: 600px;
+            margin: 20px auto;
+        }
+        label, button {
+            margin-bottom: 10px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 8px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Kraken Ledger Extraction</h1>
+    </header>
+    <main>
+        <form id="kraken-ledger-form">
+            <label for="start-date">Start Date:</label>
+            <input type="date" id="start-date" name="start-date" required>
+
+            <label for="end-date">End Date:</label>
+            <input type="date" id="end-date" name="end-date" required>
+
+            <label for="wallet-addresses">Wallet Addresses (comma-separated):</label>
+            <textarea id="wallet-addresses" name="wallet-addresses" rows="4" required></textarea>
+
+            <button type="submit">Extract Ledger</button>
+        </form>
+
+        <section id="results">
+            <h2>Results</h2>
+            <table id="ledger-table">
+                <thead>
+                    <tr>
+                        <th>Recipient's Name</th>
+                        <th>Asset Type</th>
+                        <th>GBP Value</th>
+                        <th>USDT Equivalent (if available)</th>
+                        <th>Transfer Date/Time</th>
+                    </tr>
+                </thead>
+                <tbody id="ledger-data">
+                    <!-- Dynamically populate this section with data from the Kraken API -->
+                </tbody>
+            </table>
+        </section>
+    </main>
+</body>
+</html>

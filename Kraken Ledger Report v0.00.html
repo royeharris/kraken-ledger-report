@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Kraken GBP Transfer Report</title>
+  <script src="https://cdn.jsdelivr.net/npm/axios@1.6.8/index.js"></script>
+</head>
+<body>
+  <h1>Kraken GBP Transfer Report (For Your Wallets)</h1>
+  <form id="report-form">
+    <label>Start Date (YYYY-MM-DD): <input type="date" id="start-date" min="2024-01-01"></label>
+    <label>End Date (YYYY-MM-DD): <input type="date" id="end-date" min="2024-01-01"></label>
+    
+    <h2>Pre-defined Wallets (to filter)</h2>
+    <div>
+      <label>Wallet 1: <input type="text" id="wallet1" value="sd455m4m4m5555nnnn"></label>
+      <label>Wallet 2: <input type="text" id="wallet2" value="xa455mdf54m5555nnnn"></label>
+    </div>
+
+    <button type="submit">Fetch GBP Transfers</button>
+  </form>
+
+  <div id="report-results"></div>
+
+  <script>
+    // PRE-DEFINED WALLET MAP (add more as needed)
+    const WALLET_MAP = {
+      "sd455m4m4m5555nnnn": "Aleksey Trofimov",
+      "xa455mdf54m5555nnnn": "Another Recipient"
+    };
+
+    async function fetchKrakenTransfers() {
+      const formData = {
+        start_date: document.getElementById('start-date').value,
+        end_date: document.getElementById('end-date').value,
+        wallets: [document.getElementById('wallet1').value, document.getElementById('wallet2').value]
+      };
+
+      try {
+        const krakenApiKey = "YOUR_KRAKEN_API_KEY"; // 🔑 MUST SET THIS
+        const url = `https://www.kraken.com/api/v2/transactions?account=your_account&from=${formData.start_date}&to=${formData.end_date}&txid=...`;
+
+        const response = await axios.get(url, { headers: { 'X-API-KEY': krakenApiKey } });
+        const transactions = response.data.transactions.filter(tx => {
+          // Filter for your wallets AND fiat transfers (type="fiat")
+          return (
+            (tx.recipient in WALLET_MAP) &&
+            tx.type === "fiat" // Critical: Only fiat transfers (not crypto)
+          );
+        });
+
+        // Build report (no conversions needed!)
+        const report = transactions.map(tx => ({
+          time: tx.time,
+          recipient: WALLET_MAP[tx.recipient] || tx.recipient, // Use your map
+          asset: tx.asset,
+          amount: tx.amount, // THIS IS THE GBP VALUE (e.g., 500.00)
+          crypto_amount: tx.crypto_amount // Kraken's crypto amount (e.g., 500 USDT)
+        }));
+
+        // Display in table
+        document.getElementById('report-results').innerHTML = `
+          <table>
+            <tr><th>Time</th><th>Recipient</th><th>Asset</th><th>GBP Amount</th><th>Crypto Amount</th></tr>
+            ${report.map(r => `
+              <tr>
+                <td>${r.time}</td>
+                <td>${r.recipient}</td>
+                <td>${r.asset}</td>
+                <td>${r.amount.toFixed(2)}</td>
+                <td>${r.crypto_amount.toFixed(2)} ${r.asset}</td>
+              </tr>
+            `).join('')}
+          </table>
+        `;
+
+      } catch (error) {
+        document.getElementById('report-results').innerHTML = `<p>Error: ${error.message}</p>`;
+      }
+    }
+
+    document.getElementById('report-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      fetchKrakenTransfers();
+    });
+  </script>
+</body>
+</html>
