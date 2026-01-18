@@ -358,7 +358,7 @@
       <div
         style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; position:relative;">
         <div class="branding-row" style="margin-bottom:0;"><b>Kraken Ledger Report</b> <span
-            style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v0.18</span></div>
+            style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v0.19</span></div>
         <div id="auth_status"
           style="position:absolute; left:50%; transform:translateX(-50%); font-size:0.7rem; font-weight:700;">Sync
           Status: Idle</div>
@@ -412,10 +412,10 @@
       <table id="addressTable" style="width:100%; font-size:0.65rem; border-collapse:collapse;">
         <thead>
           <tr style="background:#c8e6c9; text-align:left;">
-            <th style="padding:4px; border:1px solid #a5d6a7; width:60px;">Asset</th>
-            <th style="padding:4px; border:1px solid #a5d6a7;">Recipient</th>
-            <th style="padding:4px; border:1px solid #a5d6a7;">Key Name</th>
-            <th style="padding:4px; border:1px solid #a5d6a7;">Address</th>
+            <th style="padding:4px; border:1px solid #a5d6a7; width:50px;">Asset</th>
+            <th style="padding:4px; border:1px solid #a5d6a7; max-width:200px;">Recipient</th>
+            <th style="padding:4px; border:1px solid #a5d6a7; max-width:250px;">Key Name</th>
+            <th style="padding:4px; border:1px solid #a5d6a7; max-width:280px;">Address</th>
             <th style="padding:4px; border:1px solid #a5d6a7; width:70px;">Dest Tag</th>
           </tr>
         </thead>
@@ -477,12 +477,12 @@
     <div class="preview-wrap" id="previewArea"></div>
 
     <button id="log_btn" onclick="toggleLog(true)">Display Trace Log</button>
-    <div id="trace_log" onclick="toggleLog(false)">Trace: v0.18 Kraken Ledger Report initialized.</div>
+    <div id="trace_log" onclick="toggleLog(false)">Trace: v0.19 Kraken Ledger Report initialized.</div>
   </div>
 
   <script>
     const SHEET_ID = "1Vf0iqthwHv0kFqTRJkYShH_RBpbokLmiEDWGJN3Q0_E";
-    const VER = "Kraken Ledger Report (v0.18)";
+    const VER = "Kraken Ledger Report (v0.19)";
     const KRAKEN_API_URL = "https://api.kraken.com";
 
     // Default API credentials (enter your own in API Config)
@@ -510,7 +510,7 @@
       const now = new Date().toLocaleTimeString();
       const base = log.textContent && log.textContent.trim().length
         ? log.textContent
-        : "Trace: v0.18 Kraken Ledger Report initialized.";
+        : "Trace: v0.19 Kraken Ledger Report initialized.";
       log.textContent = base + "\n[" + now + "] " + msg;
       log.scrollTop = log.scrollHeight;
       console.log(msg);
@@ -881,12 +881,28 @@
 
     // Parse Kraken date strings like "2024-11-02 08:42:24" to Unix timestamp
     function parseDateString(dateStr) {
-      if (!dateStr) return 0;
-      // Handle both "2024-11-02 08:42:24" and Unix timestamp formats
-      if (!isNaN(parseFloat(dateStr)) && dateStr.indexOf("-") === -1) {
-        return parseFloat(dateStr);
+      if (!dateStr && dateStr !== 0) return 0;
+
+      // If it's already a number, return it directly (Unix timestamp in seconds)
+      if (typeof dateStr === "number") {
+        return dateStr;
       }
-      const dt = new Date(dateStr.replace(" ", "T"));
+
+      // Convert to string for parsing
+      const str = String(dateStr).trim();
+
+      // If it's a numeric string without dashes, treat as Unix timestamp
+      if (!isNaN(parseFloat(str)) && str.indexOf("-") === -1) {
+        const num = parseFloat(str);
+        // If number is very large (> year 2100 in seconds), it's likely milliseconds
+        if (num > 4102444800) {
+          return num / 1000;
+        }
+        return num;
+      }
+
+      // Parse date string like "2024-11-02 08:42:24"
+      const dt = new Date(str.replace(" ", "T"));
       return dt.getTime() / 1000;
     }
 
@@ -1174,10 +1190,10 @@
         const destTag = escHtml(addr.tag || addr.memo || "");
 
         html += '<tr style="border-bottom:1px solid #e0e0e0;">';
-        html += '<td style="padding:4px; border:1px solid #e0e0e0; width:60px;">' + asset + '</td>';
-        html += '<td style="padding:4px; border:1px solid #e0e0e0;">' + recipient + '</td>';
-        html += '<td style="padding:4px; border:1px solid #e0e0e0;">' + keyName + '</td>';
-        html += '<td style="padding:4px; border:1px solid #e0e0e0; font-family:monospace; font-size:0.55rem; max-width:150px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="' + address + '">' + (address.length > 20 ? address.substring(0, 20) + '...' : address) + '</td>';
+        html += '<td style="padding:4px; border:1px solid #e0e0e0; width:50px;">' + asset + '</td>';
+        html += '<td style="padding:4px; border:1px solid #e0e0e0; max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="' + recipient + '">' + recipient + '</td>';
+        html += '<td style="padding:4px; border:1px solid #e0e0e0; max-width:250px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="' + keyName + '">' + keyName + '</td>';
+        html += '<td style="padding:4px; border:1px solid #e0e0e0; font-family:monospace; font-size:0.55rem; max-width:280px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="' + address + '">' + (address.length > 40 ? address.substring(0, 40) + '...' : address) + '</td>';
         html += '<td style="padding:4px; border:1px solid #e0e0e0; width:70px;">' + destTag + '</td>';
         html += '</tr>';
       }
