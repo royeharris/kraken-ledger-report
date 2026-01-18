@@ -358,7 +358,7 @@
       <div
         style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; position:relative;">
         <div class="branding-row" style="margin-bottom:0;"><b>Kraken Ledger Report</b> <span
-            style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v0.16</span></div>
+            style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v0.17</span></div>
         <div id="auth_status"
           style="position:absolute; left:50%; transform:translateX(-50%); font-size:0.7rem; font-weight:700;">Sync
           Status: Idle</div>
@@ -412,11 +412,11 @@
       <table id="addressTable" style="width:100%; font-size:0.65rem; border-collapse:collapse;">
         <thead>
           <tr style="background:#c8e6c9; text-align:left;">
-            <th style="padding:4px; border:1px solid #a5d6a7;">Asset</th>
+            <th style="padding:4px; border:1px solid #a5d6a7; width:60px;">Asset</th>
             <th style="padding:4px; border:1px solid #a5d6a7;">Recipient</th>
             <th style="padding:4px; border:1px solid #a5d6a7;">Key Name</th>
             <th style="padding:4px; border:1px solid #a5d6a7;">Address</th>
-            <th style="padding:4px; border:1px solid #a5d6a7;">Dest Tag</th>
+            <th style="padding:4px; border:1px solid #a5d6a7; width:70px;">Dest Tag</th>
           </tr>
         </thead>
         <tbody id="addressTableBody">
@@ -477,12 +477,12 @@
     <div class="preview-wrap" id="previewArea"></div>
 
     <button id="log_btn" onclick="toggleLog(true)">Display Trace Log</button>
-    <div id="trace_log" onclick="toggleLog(false)">Trace: v0.16 Kraken Ledger Report initialized.</div>
+    <div id="trace_log" onclick="toggleLog(false)">Trace: v0.17 Kraken Ledger Report initialized.</div>
   </div>
 
   <script>
     const SHEET_ID = "1Vf0iqthwHv0kFqTRJkYShH_RBpbokLmiEDWGJN3Q0_E";
-    const VER = "Kraken Ledger Report (v0.16)";
+    const VER = "Kraken Ledger Report (v0.17)";
     const KRAKEN_API_URL = "https://api.kraken.com";
 
     // Default API credentials (enter your own in API Config)
@@ -510,7 +510,7 @@
       const now = new Date().toLocaleTimeString();
       const base = log.textContent && log.textContent.trim().length
         ? log.textContent
-        : "Trace: v0.16 Kraken Ledger Report initialized.";
+        : "Trace: v0.17 Kraken Ledger Report initialized.";
       log.textContent = base + "\n[" + now + "] " + msg;
       log.scrollTop = log.scrollHeight;
       console.log(msg);
@@ -727,6 +727,20 @@
       });
 
       logTrace("Found " + withdrawals.length + " withdrawals in date range.");
+
+      // Debug: show ledger date range
+      if (cacheData.ledger.length > 0) {
+        const allDates = cacheData.ledger.map(e => e.time || "").filter(t => t).sort();
+        logTrace("DEBUG: Ledger date range: " + allDates[0] + " to " + allDates[allDates.length - 1]);
+        logTrace("DEBUG: Selected range: " + new Date(startTime * 1000).toISOString() + " to " + new Date(endTime * 1000).toISOString());
+      }
+
+      // Debug: show withdrawal history info
+      logTrace("DEBUG: Withdrawal history entries: " + (cacheData.withdrawalHistory || []).length);
+      if ((cacheData.withdrawalHistory || []).length > 0) {
+        const sample = cacheData.withdrawalHistory[0];
+        logTrace("DEBUG: Sample history entry keys: " + Object.keys(sample).join(", "));
+      }
 
       stagingRecords = [];
 
@@ -1145,11 +1159,11 @@
         const destTag = escHtml(addr.tag || addr.memo || "");
 
         html += '<tr style="border-bottom:1px solid #e0e0e0;">';
-        html += '<td style="padding:4px; border:1px solid #e0e0e0;">' + asset + '</td>';
+        html += '<td style="padding:4px; border:1px solid #e0e0e0; width:60px;">' + asset + '</td>';
         html += '<td style="padding:4px; border:1px solid #e0e0e0;">' + recipient + '</td>';
         html += '<td style="padding:4px; border:1px solid #e0e0e0;">' + keyName + '</td>';
-        html += '<td style="padding:4px; border:1px solid #e0e0e0; font-family:monospace; font-size:0.6rem;">' + address + '</td>';
-        html += '<td style="padding:4px; border:1px solid #e0e0e0;">' + destTag + '</td>';
+        html += '<td style="padding:4px; border:1px solid #e0e0e0; font-family:monospace; font-size:0.55rem; max-width:150px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="' + address + '">' + (address.length > 20 ? address.substring(0, 20) + '...' : address) + '</td>';
+        html += '<td style="padding:4px; border:1px solid #e0e0e0; width:70px;">' + destTag + '</td>';
         html += '</tr>';
       }
 
