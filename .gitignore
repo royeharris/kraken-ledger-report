@@ -1,0 +1,15 @@
+# Data files - contains private transaction data
+*.csv
+*.xlsx
+*.zip
+
+# API credentials
+*API*.txt
+
+# Old versions and backups
+*.bak
+*~
+
+# System files
+.DS_Store
+Thumbs.db
