@@ -357,9 +357,11 @@
     <div class="header-wrap">
       <div
         style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; position:relative;">
-        <div class="branding-row" style="margin-bottom:0;"><b>Kraken Ledger Report</b></div>
-        <span
-          style="position:absolute; left:50%; transform:translateX(-50%); font-size:0.7rem; color:#7f8c8d; font-weight:600;">v0.11</span>
+        <div class="branding-row" style="margin-bottom:0;"><b>Kraken Ledger Report</b> <span
+            style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v0.12</span></div>
+        <div id="auth_status"
+          style="position:absolute; left:50%; transform:translateX(-50%); font-size:0.7rem; font-weight:700;">Sync
+          Status: Idle</div>
         <div style="display:flex; gap:4px;">
           <button class="btn-lookup" style="background:var(--kraken); padding:4px 8px; height:auto; font-size:0.65rem;"
             onclick="fetchKrakenAddresses()">Fetch<br />Addresses</button>
@@ -423,6 +425,8 @@
       <div class="status-item"><span>Trades:</span> <b id="tradesCount">0</b> <span>records</span></div>
       <div class="status-item"><span>Recipients:</span> <b id="recipientCount">0</b></div>
       <div class="status-item"><span>Tolerance:</span> <b id="toleranceDisp">2</b>%</div>
+      <div class="status-item" id="stagingHint" style="flex:1; text-align:right; font-size:0.65rem; color:#7f8c8d;">
+      </div>
     </div>
 
     <div class="actions">
@@ -435,14 +439,13 @@
 
     <div class="preview-wrap" id="previewArea"></div>
 
-    <div id="auth_status">Sync Status: Idle</div>
     <button id="log_btn" onclick="toggleLog(true)">Display Trace Log</button>
-    <div id="trace_log" onclick="toggleLog(false)">Trace: v0.10 Kraken Ledger Report initialized.</div>
+    <div id="trace_log" onclick="toggleLog(false)">Trace: v0.12 Kraken Ledger Report initialized.</div>
   </div>
 
   <script>
     const SHEET_ID = "1Vf0iqthwHv0kFqTRJkYShH_RBpbokLmiEDWGJN3Q0_E";
-    const VER = "Kraken Ledger Report (v0.11)";
+    const VER = "Kraken Ledger Report (v0.12)";
     const KRAKEN_API_URL = "https://api.kraken.com";
 
     // Default API credentials (enter your own in API Config)
@@ -470,7 +473,7 @@
       const now = new Date().toLocaleTimeString();
       const base = log.textContent && log.textContent.trim().length
         ? log.textContent
-        : "Trace: v0.10 Kraken Ledger Report initialized.";
+        : "Trace: v0.12 Kraken Ledger Report initialized.";
       log.textContent = base + "\n[" + now + "] " + msg;
       log.scrollTop = log.scrollHeight;
       console.log(msg);
@@ -590,10 +593,13 @@
     // ---------- Staging Table Render ----------
     function renderPreview() {
       const area = document.getElementById("previewArea");
+      const hint = document.getElementById("stagingHint");
       if (!stagingRecords.length) {
-        area.innerHTML = "<div style='padding:15px; text-align:center; color:#7f8c8d; font-size:0.75rem;'>No staging records. Click 'Generate Report' after loading data.</div>";
+        area.innerHTML = "";
+        if (hint) hint.textContent = "No staging records. Click 'Generate Report' after loading data.";
         return;
       }
+      if (hint) hint.textContent = stagingRecords.length + " staging record(s)";
 
       let html = '<table><thead><tr>';
       html += '<th class="w-date">Date</th>';
