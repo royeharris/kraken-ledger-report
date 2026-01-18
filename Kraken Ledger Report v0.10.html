@@ -358,11 +358,13 @@
       <div
         style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; position:relative;">
         <div class="branding-row" style="margin-bottom:0;"><b>Kraken Ledger Report</b> <span
-            style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v0.15</span></div>
+            style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v0.16</span></div>
         <div id="auth_status"
           style="position:absolute; left:50%; transform:translateX(-50%); font-size:0.7rem; font-weight:700;">Sync
           Status: Idle</div>
         <div style="display:flex; gap:4px;">
+          <button class="btn-lookup" style="background:#27ae60; padding:4px 8px; height:auto; font-size:0.65rem;"
+            onclick="toggleAddressViewer()">View<br />Addresses</button>
           <button class="btn-lookup" style="background:var(--kraken); padding:4px 8px; height:auto; font-size:0.65rem;"
             onclick="fetchKrakenAddresses()">Fetch<br />Addresses</button>
           <button class="btn-lookup" style="background:#34495e; padding:4px 8px; height:auto; font-size:0.65rem;"
@@ -400,6 +402,30 @@
       <input type="text" id="corsProxy" placeholder="https://cors-anywhere.herokuapp.com/" value="">
       <div style="font-size:0.65rem; color:#7f8c8d; margin-top:4px;">Note: Browser security (CORS) blocks direct Kraken
         API calls. Use a CORS proxy or leave blank to try direct call.</div>
+    </div>
+
+    <!-- Address Viewer Panel (hidden by default) -->
+    <div id="addressViewerSection"
+      style="display:none; margin-bottom:15px; padding:10px; background:#e8f5e9; border-radius:6px; max-height:300px; overflow-y:auto;">
+      <div style="font-size:0.75rem; font-weight:700; color:#27ae60; margin-bottom:8px;">Fetched Withdrawal Addresses
+      </div>
+      <table id="addressTable" style="width:100%; font-size:0.65rem; border-collapse:collapse;">
+        <thead>
+          <tr style="background:#c8e6c9; text-align:left;">
+            <th style="padding:4px; border:1px solid #a5d6a7;">Asset</th>
+            <th style="padding:4px; border:1px solid #a5d6a7;">Recipient</th>
+            <th style="padding:4px; border:1px solid #a5d6a7;">Key Name</th>
+            <th style="padding:4px; border:1px solid #a5d6a7;">Address</th>
+            <th style="padding:4px; border:1px solid #a5d6a7;">Dest Tag</th>
+          </tr>
+        </thead>
+        <tbody id="addressTableBody">
+          <tr>
+            <td colspan="5" style="padding:8px; text-align:center; color:#7f8c8d;">No addresses loaded. Click "Fetch
+              Addresses" first.</td>
+          </tr>
+        </tbody>
+      </table>
     </div>
 
     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
@@ -451,12 +477,12 @@
     <div class="preview-wrap" id="previewArea"></div>
 
     <button id="log_btn" onclick="toggleLog(true)">Display Trace Log</button>
-    <div id="trace_log" onclick="toggleLog(false)">Trace: v0.15 Kraken Ledger Report initialized.</div>
+    <div id="trace_log" onclick="toggleLog(false)">Trace: v0.16 Kraken Ledger Report initialized.</div>
   </div>
 
   <script>
     const SHEET_ID = "1Vf0iqthwHv0kFqTRJkYShH_RBpbokLmiEDWGJN3Q0_E";
-    const VER = "Kraken Ledger Report (v0.15)";
+    const VER = "Kraken Ledger Report (v0.16)";
     const KRAKEN_API_URL = "https://api.kraken.com";
 
     // Default API credentials (enter your own in API Config)
@@ -484,7 +510,7 @@
       const now = new Date().toLocaleTimeString();
       const base = log.textContent && log.textContent.trim().length
         ? log.textContent
-        : "Trace: v0.15 Kraken Ledger Report initialized.";
+        : "Trace: v0.16 Kraken Ledger Report initialized.";
       log.textContent = base + "\n[" + now + "] " + msg;
       log.scrollTop = log.scrollHeight;
       console.log(msg);
@@ -653,7 +679,7 @@
     }
 
     // ---------- Report Generation ----------
-    function generateReport() {
+    async function generateReport() {
       const startVal = document.getElementById("startDate").value;
       const endVal = document.getElementById("endDate").value;
 
@@ -672,6 +698,24 @@
       const tolerance = cacheData.settings.tolerancePercent / 100;
 
       logTrace("Generating report. Start=" + startVal + " End=" + endVal + " Tolerance=" + (tolerance * 100) + "%");
+
+      // Prompt for 2FA once to fetch withdrawal history
+      let otp = null;
+      const hasWithdrawCreds = document.getElementById("withdrawApiKey").value.trim() &&
+        document.getElementById("withdrawPrivateKey").value.trim();
+
+      if (hasWithdrawCreds) {
+        otp = prompt("Enter your 2FA code for Kraken Withdrawal API (or Cancel to skip API lookup):");
+        if (otp && otp.trim()) {
+          updateStatus("Fetching withdrawal history...", "sync");
+          try {
+            await fetchWithdrawalHistory(otp.trim());
+            logTrace("Withdrawal history fetched for matching.");
+          } catch (e) {
+            logTrace("Failed to fetch withdrawal history: " + e.message);
+          }
+        }
+      }
 
       // Filter withdrawals from ledger
       // Ledger time format: "2024-11-02 08:42:24" - need to parse as date string
@@ -697,20 +741,53 @@
         const wFee = parseFloat(w.fee || 0);
         const wBalance = parseFloat(w.balance || 0);
 
-        // Find recipient
+        // Find recipient - first try withdrawal history from API, then address lookups
         let recipient = "";
         let destTag = "";
         let walletAddr = "";
 
-        if (wAsset.includes("XRP") || wAsset === "XXRP") {
-          // Extract destination tag from refid or description
-          destTag = extractDestTag(refid);
-          const match = cacheData.destTags.find(d => String(d.destTag) === destTag || String(d[1]) === destTag);
-          recipient = match ? (match.recipient || match[0] || "") : "";
-        } else if (wAsset.includes("USDT")) {
-          walletAddr = extractWallet(refid);
-          const match = cacheData.wallets.find(d => (d.address || d[2] || "") === walletAddr);
-          recipient = match ? (match.recipient || match[0] || "") : "";
+        // Try to find in withdrawal history from API (matched by refid)
+        const historyMatch = (cacheData.withdrawalHistory || []).find(h => h.refid === refid);
+        if (historyMatch) {
+          walletAddr = historyMatch.info || historyMatch.address || "";
+          destTag = historyMatch.dest || historyMatch.tag || "";
+
+          // Find recipient from address lookups
+          if (wAsset.includes("XRP") || wAsset === "XXRP") {
+            const addrMatch = cacheData.destTags.find(d =>
+              String(d.destTag) === destTag || String(d[1]) === destTag ||
+              (d.address && d.address === walletAddr)
+            );
+            recipient = addrMatch ? (addrMatch.recipient || addrMatch[0] || "") : "";
+          } else {
+            const addrMatch = cacheData.wallets.find(d =>
+              (d.address || d[2] || "") === walletAddr
+            );
+            recipient = addrMatch ? (addrMatch.recipient || addrMatch[0] || "") : "";
+          }
+
+          if (!recipient) {
+            // Try to find by savedAddress key name in krakenAddresses
+            const keyMatch = cacheData.krakenAddresses.find(a =>
+              a.address === walletAddr || (a.tag && a.tag === destTag)
+            );
+            if (keyMatch) {
+              recipient = (keyMatch.key || "").replace(/\s*(XRP|USDT|TRC20|ERC20|BTC|ETH)\s*/gi, "").trim();
+            }
+          }
+
+          logTrace("Matched refid " + refid.substring(0, 10) + "... to address " + walletAddr.substring(0, 15) + "... recipient: " + recipient);
+        } else {
+          // Fallback: try extracting from refid (old method - likely won't work)
+          if (wAsset.includes("XRP") || wAsset === "XXRP") {
+            destTag = extractDestTag(refid);
+            const match = cacheData.destTags.find(d => String(d.destTag) === destTag || String(d[1]) === destTag);
+            recipient = match ? (match.recipient || match[0] || "") : "";
+          } else if (wAsset.includes("USDT")) {
+            walletAddr = extractWallet(refid);
+            const match = cacheData.wallets.find(d => (d.address || d[2] || "") === walletAddr);
+            recipient = match ? (match.recipient || match[0] || "") : "";
+          }
         }
 
         // Find matching trade (fuzzy)
@@ -1028,6 +1105,57 @@
       });
     }
 
+    // ---------- Address Viewer ----------
+    function toggleAddressViewer() {
+      const section = document.getElementById("addressViewerSection");
+      section.style.display = section.style.display === "none" ? "block" : "none";
+      if (section.style.display === "block") {
+        renderAddressTable();
+      }
+    }
+
+    function renderAddressTable() {
+      const tbody = document.getElementById("addressTableBody");
+      const addresses = cacheData.krakenAddresses || [];
+
+      if (addresses.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="padding:8px; text-align:center; color:#7f8c8d;">No addresses loaded. Click "Fetch Addresses" first.</td></tr>';
+        return;
+      }
+
+      // Sort by Asset, then Recipient, then Key Name
+      const sorted = [...addresses].sort((a, b) => {
+        const assetA = (a.asset || "").toUpperCase();
+        const assetB = (b.asset || "").toUpperCase();
+        if (assetA !== assetB) return assetA.localeCompare(assetB);
+
+        const recipA = (a.key || "").replace(/\s*(XRP|USDT|TRC20|ERC20|BTC|ETH)/gi, "").trim();
+        const recipB = (b.key || "").replace(/\s*(XRP|USDT|TRC20|ERC20|BTC|ETH)/gi, "").trim();
+        if (recipA !== recipB) return recipA.localeCompare(recipB);
+
+        return (a.key || "").localeCompare(b.key || "");
+      });
+
+      let html = "";
+      for (const addr of sorted) {
+        const asset = escHtml(addr.asset || "");
+        const keyName = escHtml(addr.key || "");
+        const recipient = escHtml((addr.key || "").replace(/\s*(XRP|USDT|TRC20|ERC20|BTC|ETH)/gi, "").trim());
+        const address = escHtml(addr.address || "");
+        const destTag = escHtml(addr.tag || addr.memo || "");
+
+        html += '<tr style="border-bottom:1px solid #e0e0e0;">';
+        html += '<td style="padding:4px; border:1px solid #e0e0e0;">' + asset + '</td>';
+        html += '<td style="padding:4px; border:1px solid #e0e0e0;">' + recipient + '</td>';
+        html += '<td style="padding:4px; border:1px solid #e0e0e0;">' + keyName + '</td>';
+        html += '<td style="padding:4px; border:1px solid #e0e0e0; font-family:monospace; font-size:0.6rem;">' + address + '</td>';
+        html += '<td style="padding:4px; border:1px solid #e0e0e0;">' + destTag + '</td>';
+        html += '</tr>';
+      }
+
+      tbody.innerHTML = html;
+    }
+
     // ---------- Kraken API ----------
     function toggleApiConfig() {
       const section = document.getElementById("apiConfigSection");
@@ -1253,6 +1381,39 @@
         logTrace("Kraken API error: " + (e.message || e));
         alert("Kraken API Error:\n" + (e.message || e) + "\n\nCheck trace log for details.");
       }
+    }
+
+    // Fetch withdrawal history with destination details
+    async function fetchWithdrawalHistory(otp) {
+      const withdrawCreds = getWithdrawCredentials();
+
+      // Try both USDT and XRP (common assets for withdrawals)
+      const assets = ["USDT", "XXRP", "ZUSD", "ZGBP"];
+      const allWithdrawals = [];
+
+      for (const asset of assets) {
+        try {
+          logTrace("Fetching withdrawal history for " + asset + "...");
+          const params = otp ? { asset, otp } : { asset };
+          const result = await callKrakenPrivateAPI("WithdrawStatus", params, withdrawCreds);
+
+          if (Array.isArray(result)) {
+            for (const w of result) {
+              allWithdrawals.push({
+                ...w,
+                queriedAsset: asset
+              });
+            }
+            logTrace("Found " + result.length + " withdrawals for " + asset);
+          }
+        } catch (e) {
+          logTrace("WithdrawStatus for " + asset + ": " + (e.message || "error"));
+        }
+      }
+
+      cacheData.withdrawalHistory = allWithdrawals;
+      logTrace("Total withdrawal history entries: " + allWithdrawals.length);
+      return allWithdrawals;
     }
 
     // ---------- Boot ----------
