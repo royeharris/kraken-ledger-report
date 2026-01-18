@@ -358,7 +358,7 @@
       <div
         style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; position:relative;">
         <div class="branding-row" style="margin-bottom:0;"><b>Kraken Ledger Report</b> <span
-            style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v0.19</span></div>
+            style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v0.20</span></div>
         <div id="auth_status"
           style="position:absolute; left:50%; transform:translateX(-50%); font-size:0.7rem; font-weight:700;">Sync
           Status: Idle</div>
@@ -477,12 +477,12 @@
     <div class="preview-wrap" id="previewArea"></div>
 
     <button id="log_btn" onclick="toggleLog(true)">Display Trace Log</button>
-    <div id="trace_log" onclick="toggleLog(false)">Trace: v0.19 Kraken Ledger Report initialized.</div>
+    <div id="trace_log" onclick="toggleLog(false)">Trace: v0.20 Kraken Ledger Report initialized.</div>
   </div>
 
   <script>
     const SHEET_ID = "1Vf0iqthwHv0kFqTRJkYShH_RBpbokLmiEDWGJN3Q0_E";
-    const VER = "Kraken Ledger Report (v0.19)";
+    const VER = "Kraken Ledger Report (v0.20)";
     const KRAKEN_API_URL = "https://api.kraken.com";
 
     // Default API credentials (enter your own in API Config)
@@ -510,7 +510,7 @@
       const now = new Date().toLocaleTimeString();
       const base = log.textContent && log.textContent.trim().length
         ? log.textContent
-        : "Trace: v0.19 Kraken Ledger Report initialized.";
+        : "Trace: v0.20 Kraken Ledger Report initialized.";
       log.textContent = base + "\n[" + now + "] " + msg;
       log.scrollTop = log.scrollHeight;
       console.log(msg);
@@ -732,7 +732,11 @@
       if (cacheData.ledger.length > 0) {
         const sample = cacheData.ledger[0];
         logTrace("DEBUG: Ledger sample entry keys: " + Object.keys(sample).join(", "));
-        logTrace("DEBUG: Ledger sample type field: '" + sample.type + "' time field: '" + sample.time + "'");
+        logTrace("DEBUG: Ledger sample type field: '" + sample.type + "' time field: '" + sample.time + "' (typeof: " + typeof sample.time + ")");
+
+        // Parse and show the sample time
+        const sampleParsed = parseDateString(sample.time);
+        logTrace("DEBUG: Sample parsed time: " + sampleParsed + " => " + new Date(sampleParsed * 1000).toISOString());
 
         // Count entries by type
         const typeCounts = {};
@@ -741,13 +745,22 @@
           typeCounts[t] = (typeCounts[t] || 0) + 1;
         }
         logTrace("DEBUG: Ledger types: " + JSON.stringify(typeCounts));
+
+        // Find one withdrawal and show its details
+        const sampleWithdrawal = cacheData.ledger.find(e => (e.type || "").toLowerCase() === "withdrawal");
+        if (sampleWithdrawal) {
+          const wTime = parseDateString(sampleWithdrawal.time);
+          logTrace("DEBUG: Sample withdrawal - time raw: '" + sampleWithdrawal.time + "' parsed: " + wTime + " => " + new Date(wTime * 1000).toISOString());
+          logTrace("DEBUG: Comparison: " + startTime + " <= " + wTime + " <= " + endTime + " = " + (wTime >= startTime && wTime <= endTime));
+        }
       }
 
       // Debug: show date range info
       if (cacheData.ledger.length > 0) {
         const allDates = cacheData.ledger.map(e => e.time || "").filter(t => t).sort();
-        logTrace("DEBUG: Ledger date range: " + allDates[0] + " to " + allDates[allDates.length - 1]);
-        logTrace("DEBUG: Selected range: " + new Date(startTime * 1000).toISOString() + " to " + new Date(endTime * 1000).toISOString());
+        logTrace("DEBUG: Ledger date range (raw): " + allDates[0] + " to " + allDates[allDates.length - 1]);
+        logTrace("DEBUG: Selected range: startTime=" + startTime + " endTime=" + endTime);
+        logTrace("DEBUG: Selected range (ISO): " + new Date(startTime * 1000).toISOString() + " to " + new Date(endTime * 1000).toISOString());
       }
 
       // Debug: show withdrawal history info
@@ -1484,6 +1497,18 @@
       }
       renderPreview();
       updateStatusCounts();
+
+      // Auto-load API credentials from localStorage
+      const savedKey = localStorage.getItem("kraken_api_key");
+      const savedPrivate = localStorage.getItem("kraken_private_key");
+      const savedProxy = localStorage.getItem("kraken_cors_proxy");
+      const savedWithdrawKey = localStorage.getItem("kraken_withdraw_api_key");
+      const savedWithdrawPrivate = localStorage.getItem("kraken_withdraw_private_key");
+      if (savedKey) document.getElementById("krakenApiKey").value = savedKey;
+      if (savedPrivate) document.getElementById("krakenPrivateKey").value = savedPrivate;
+      if (savedProxy) document.getElementById("corsProxy").value = savedProxy;
+      if (savedWithdrawKey) document.getElementById("withdrawApiKey").value = savedWithdrawKey;
+      if (savedWithdrawPrivate) document.getElementById("withdrawPrivateKey").value = savedWithdrawPrivate;
 
       try {
         await waitFor(() => typeof gapi !== "undefined", 8000);
