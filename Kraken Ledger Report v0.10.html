@@ -358,7 +358,7 @@
       <div
         style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; position:relative;">
         <div class="branding-row" style="margin-bottom:0;"><b>Kraken Ledger Report</b> <span
-            style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v1.00</span></div>
+            style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v1.01</span></div>
         <div id="auth_status"
           style="position:absolute; left:50%; transform:translateX(-50%); font-size:0.7rem; font-weight:700;">Sync
           Status: Idle</div>
@@ -477,12 +477,12 @@
     <div class="preview-wrap" id="previewArea"></div>
 
     <button id="log_btn" onclick="toggleLog(true)">Display Trace Log</button>
-    <div id="trace_log" onclick="toggleLog(false)">Trace: v1.00 Kraken Ledger Report initialized.</div>
+    <div id="trace_log" onclick="toggleLog(false)">Trace: v1.01 Kraken Ledger Report initialized.</div>
   </div>
 
   <script>
     const SHEET_ID = "1Vf0iqthwHv0kFqTRJkYShH_RBpbokLmiEDWGJN3Q0_E";
-    const VER = "Kraken Ledger Report (v1.00)";
+    const VER = "Kraken Ledger Report (v1.01)";
     const KRAKEN_API_URL = "https://api.kraken.com";
 
     // Default API credentials (enter your own in API Config)
@@ -510,7 +510,7 @@
       const now = new Date().toLocaleTimeString();
       const base = log.textContent && log.textContent.trim().length
         ? log.textContent
-        : "Trace: v1.00 Kraken Ledger Report initialized.";
+        : "Trace: v1.01 Kraken Ledger Report initialized.";
       log.textContent = base + "\n[" + now + "] " + msg;
       log.scrollTop = log.scrollHeight;
       console.log(msg);
@@ -953,9 +953,22 @@
         const str = String(dateStr).trim();
         if (!str) return 0;
 
-        // If it's a numeric string without dashes, treat as Unix timestamp
+        // If it's a numeric string without dashes, could be Unix timestamp OR Excel serial date
         const numVal = parseFloat(str);
         if (!isNaN(numVal) && str.indexOf("-") === -1) {
+          // Excel serial dates are small numbers (days since 1900-01-01)
+          // A date in 2024 is around 45000 in Excel format
+          // Unix timestamps in seconds for 2024 are around 1700000000
+          if (numVal < 100000) {
+            // This is likely an Excel serial date, convert to Unix timestamp
+            // Excel epoch is 1900-01-01, but Excel incorrectly considers 1900 a leap year
+            // So we adjust by subtracting 25569 (days between 1900-01-01 and 1970-01-01)
+            // Then multiply by 86400 (seconds per day)
+            const excelEpoch = (numVal - 25569) * 86400;
+            logTrace("DEBUG: Converted Excel date " + numVal + " to Unix " + excelEpoch);
+            return excelEpoch;
+          }
+
           // If number is very large (> year 2100 in seconds), it's likely milliseconds
           if (numVal > 4102444800) {
             return numVal / 1000;
