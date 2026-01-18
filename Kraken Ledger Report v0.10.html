@@ -358,7 +358,7 @@
       <div
         style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; position:relative;">
         <div class="branding-row" style="margin-bottom:0;"><b>Kraken Ledger Report</b> <span
-            style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v0.12</span></div>
+            style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v0.13</span></div>
         <div id="auth_status"
           style="position:absolute; left:50%; transform:translateX(-50%); font-size:0.7rem; font-weight:700;">Sync
           Status: Idle</div>
@@ -451,12 +451,12 @@
     <div class="preview-wrap" id="previewArea"></div>
 
     <button id="log_btn" onclick="toggleLog(true)">Display Trace Log</button>
-    <div id="trace_log" onclick="toggleLog(false)">Trace: v0.12 Kraken Ledger Report initialized.</div>
+    <div id="trace_log" onclick="toggleLog(false)">Trace: v0.13 Kraken Ledger Report initialized.</div>
   </div>
 
   <script>
     const SHEET_ID = "1Vf0iqthwHv0kFqTRJkYShH_RBpbokLmiEDWGJN3Q0_E";
-    const VER = "Kraken Ledger Report (v0.12)";
+    const VER = "Kraken Ledger Report (v0.13)";
     const KRAKEN_API_URL = "https://api.kraken.com";
 
     // Default API credentials (enter your own in API Config)
@@ -484,7 +484,7 @@
       const now = new Date().toLocaleTimeString();
       const base = log.textContent && log.textContent.trim().length
         ? log.textContent
-        : "Trace: v0.12 Kraken Ledger Report initialized.";
+        : "Trace: v0.13 Kraken Ledger Report initialized.";
       log.textContent = base + "\n[" + now + "] " + msg;
       log.scrollTop = log.scrollHeight;
       console.log(msg);
@@ -1064,6 +1064,8 @@
       if (!apiKey || !privateKey) {
         throw new Error("Please enter Withdrawal API credentials in API Config");
       }
+      // Log credential lengths for debugging (not the actual values)
+      logTrace("Withdraw API Key length: " + apiKey.length + ", Private Key length: " + privateKey.length);
       // Save for next time
       localStorage.setItem("kraken_withdraw_api_key", apiKey);
       localStorage.setItem("kraken_withdraw_private_key", privateKey);
