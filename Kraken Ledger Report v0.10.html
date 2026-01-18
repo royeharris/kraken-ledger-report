@@ -358,7 +358,7 @@
       <div
         style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; position:relative;">
         <div class="branding-row" style="margin-bottom:0;"><b>Kraken Ledger Report</b> <span
-            style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v0.20</span></div>
+            style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v0.21</span></div>
         <div id="auth_status"
           style="position:absolute; left:50%; transform:translateX(-50%); font-size:0.7rem; font-weight:700;">Sync
           Status: Idle</div>
@@ -477,12 +477,12 @@
     <div class="preview-wrap" id="previewArea"></div>
 
     <button id="log_btn" onclick="toggleLog(true)">Display Trace Log</button>
-    <div id="trace_log" onclick="toggleLog(false)">Trace: v0.20 Kraken Ledger Report initialized.</div>
+    <div id="trace_log" onclick="toggleLog(false)">Trace: v0.21 Kraken Ledger Report initialized.</div>
   </div>
 
   <script>
     const SHEET_ID = "1Vf0iqthwHv0kFqTRJkYShH_RBpbokLmiEDWGJN3Q0_E";
-    const VER = "Kraken Ledger Report (v0.20)";
+    const VER = "Kraken Ledger Report (v0.21)";
     const KRAKEN_API_URL = "https://api.kraken.com";
 
     // Default API credentials (enter your own in API Config)
@@ -510,7 +510,7 @@
       const now = new Date().toLocaleTimeString();
       const base = log.textContent && log.textContent.trim().length
         ? log.textContent
-        : "Trace: v0.20 Kraken Ledger Report initialized.";
+        : "Trace: v0.21 Kraken Ledger Report initialized.";
       log.textContent = base + "\n[" + now + "] " + msg;
       log.scrollTop = log.scrollHeight;
       console.log(msg);
@@ -717,16 +717,34 @@
         }
       }
 
-      // Filter withdrawals from ledger
-      // Ledger time format: "2024-11-02 08:42:24" - need to parse as date string
-      const withdrawals = cacheData.ledger.filter(entry => {
-        const entryTimeStr = entry.time || "";
-        const entryTime = parseDateString(entryTimeStr);
+      // STEP 1: Get ALL withdrawals from ledger (filter by type only)
+      const allWithdrawals = cacheData.ledger.filter(entry => {
         const entryType = (entry.type || "").toLowerCase();
-        return entryType === "withdrawal" && entryTime >= startTime && entryTime <= endTime;
+        return entryType === "withdrawal";
       });
+      logTrace("STEP 1: Found " + allWithdrawals.length + " total withdrawals in ledger.");
 
-      logTrace("Found " + withdrawals.length + " withdrawals in date range.");
+      // STEP 2: Parse times and filter by date range
+      const withdrawals = [];
+      for (const w of allWithdrawals) {
+        const timeRaw = w.time;
+        const timeParsed = parseDateString(timeRaw);
+
+        // Show first withdrawal for debugging
+        if (withdrawals.length === 0 && allWithdrawals.length > 0) {
+          logTrace("STEP 2: First withdrawal - time raw='" + timeRaw + "' (typeof " + typeof timeRaw + ") parsed=" + timeParsed);
+          if (timeParsed > 0) {
+            logTrace("STEP 2: Parsed to " + new Date(timeParsed * 1000).toISOString());
+          }
+          logTrace("STEP 2: Date range check: " + startTime + " <= " + timeParsed + " <= " + endTime);
+        }
+
+        // Include if date is valid and within range (or if date is 0, include anyway to show in report)
+        if (timeParsed === 0 || (timeParsed >= startTime && timeParsed <= endTime)) {
+          withdrawals.push({ ...w, _parsedTime: timeParsed });
+        }
+      }
+      logTrace("STEP 2: " + withdrawals.length + " withdrawals in date range (or with unparseable dates).");
 
       // Debug: show ledger sample BEFORE filtering
       if (cacheData.ledger.length > 0) {
@@ -894,29 +912,44 @@
 
     // Parse Kraken date strings like "2024-11-02 08:42:24" to Unix timestamp
     function parseDateString(dateStr) {
-      if (!dateStr && dateStr !== 0) return 0;
+      try {
+        if (!dateStr && dateStr !== 0) return 0;
 
-      // If it's already a number, return it directly (Unix timestamp in seconds)
-      if (typeof dateStr === "number") {
-        return dateStr;
-      }
-
-      // Convert to string for parsing
-      const str = String(dateStr).trim();
-
-      // If it's a numeric string without dashes, treat as Unix timestamp
-      if (!isNaN(parseFloat(str)) && str.indexOf("-") === -1) {
-        const num = parseFloat(str);
-        // If number is very large (> year 2100 in seconds), it's likely milliseconds
-        if (num > 4102444800) {
-          return num / 1000;
+        // If it's already a number, return it directly (Unix timestamp in seconds)
+        if (typeof dateStr === "number") {
+          if (isNaN(dateStr)) return 0;
+          return dateStr;
         }
-        return num;
-      }
 
-      // Parse date string like "2024-11-02 08:42:24"
-      const dt = new Date(str.replace(" ", "T"));
-      return dt.getTime() / 1000;
+        // Convert to string for parsing
+        const str = String(dateStr).trim();
+        if (!str) return 0;
+
+        // If it's a numeric string without dashes, treat as Unix timestamp
+        const numVal = parseFloat(str);
+        if (!isNaN(numVal) && str.indexOf("-") === -1) {
+          // If number is very large (> year 2100 in seconds), it's likely milliseconds
+          if (numVal > 4102444800) {
+            return numVal / 1000;
+          }
+          return numVal;
+        }
+
+        // Parse date string like "2024-11-02 08:42:24"
+        const dt = new Date(str.replace(" ", "T"));
+        const result = dt.getTime() / 1000;
+
+        // Check for invalid date
+        if (isNaN(result)) {
+          logTrace("WARNING: Could not parse date: '" + str + "'");
+          return 0;
+        }
+
+        return result;
+      } catch (e) {
+        logTrace("ERROR parsing date: " + e.message);
+        return 0;
+      }
     }
 
     function extractDestTag(refid) {
@@ -1472,6 +1505,60 @@
       cacheData.withdrawalHistory = allWithdrawals;
       logTrace("Total withdrawal history entries: " + allWithdrawals.length);
       return allWithdrawals;
+    }
+
+    // Get historical exchange rate from Kraken public API
+    // Returns { gbpRate, eurRate } for the given asset at the given timestamp
+    async function getKrakenRate(asset, timestamp) {
+      // Map Kraken asset names to pair names
+      const assetMap = {
+        "XXRP": "XRP", "XRP": "XRP",
+        "USDT": "USDT", "USDTTRC20": "USDT",
+        "XXBT": "XBT", "XBT": "XBT",
+        "XETH": "ETH", "ETH": "ETH",
+        "ZUSD": "USD", "USD": "USD"
+      };
+
+      const baseAsset = assetMap[asset] || asset.replace(/^X|^Z/, "");
+      const rates = { gbpRate: null, eurRate: null, usdRate: null };
+
+      // Try GBP pair first
+      const pairs = [
+        { pair: baseAsset + "GBP", target: "gbpRate" },
+        { pair: baseAsset + "EUR", target: "eurRate" },
+        { pair: baseAsset + "USD", target: "usdRate" }
+      ];
+
+      const proxy = document.getElementById("corsProxy").value.trim() || "";
+      const ohlcUrl = proxy + "https://api.kraken.com/0/public/OHLC";
+
+      for (const { pair, target } of pairs) {
+        try {
+          // Get OHLC data for the day (1440 = daily interval)
+          const url = ohlcUrl + "?pair=" + pair + "&interval=60&since=" + Math.floor(timestamp - 3600);
+          const response = await fetch(url);
+          const data = await response.json();
+
+          if (data.result && Object.keys(data.result).length > 0) {
+            const pairData = Object.values(data.result).find(v => Array.isArray(v));
+            if (pairData && pairData.length > 0) {
+              // Find the candle closest to our timestamp
+              let closest = pairData[0];
+              for (const candle of pairData) {
+                if (Math.abs(candle[0] - timestamp) < Math.abs(closest[0] - timestamp)) {
+                  closest = candle;
+                }
+              }
+              // Candle format: [time, open, high, low, close, vwap, volume, count]
+              rates[target] = parseFloat(closest[4]); // close price
+            }
+          }
+        } catch (e) {
+          // Pair might not exist, continue
+        }
+      }
+
+      return rates;
     }
 
     // ---------- Boot ----------
