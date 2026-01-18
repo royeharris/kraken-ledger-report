@@ -358,7 +358,7 @@
       <div
         style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; position:relative;">
         <div class="branding-row" style="margin-bottom:0;"><b>Kraken Ledger Report</b> <span
-            style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v1.01</span></div>
+            style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v1.02</span></div>
         <div id="auth_status"
           style="position:absolute; left:50%; transform:translateX(-50%); font-size:0.7rem; font-weight:700;">Sync
           Status: Idle</div>
@@ -477,12 +477,12 @@
     <div class="preview-wrap" id="previewArea"></div>
 
     <button id="log_btn" onclick="toggleLog(true)">Display Trace Log</button>
-    <div id="trace_log" onclick="toggleLog(false)">Trace: v1.01 Kraken Ledger Report initialized.</div>
+    <div id="trace_log" onclick="toggleLog(false)">Trace: v1.02 Kraken Ledger Report initialized.</div>
   </div>
 
   <script>
     const SHEET_ID = "1Vf0iqthwHv0kFqTRJkYShH_RBpbokLmiEDWGJN3Q0_E";
-    const VER = "Kraken Ledger Report (v1.01)";
+    const VER = "Kraken Ledger Report (v1.02)";
     const KRAKEN_API_URL = "https://api.kraken.com";
 
     // Default API credentials (enter your own in API Config)
@@ -510,7 +510,7 @@
       const now = new Date().toLocaleTimeString();
       const base = log.textContent && log.textContent.trim().length
         ? log.textContent
-        : "Trace: v1.01 Kraken Ledger Report initialized.";
+        : "Trace: v1.02 Kraken Ledger Report initialized.";
       log.textContent = base + "\n[" + now + "] " + msg;
       log.scrollTop = log.scrollHeight;
       console.log(msg);
@@ -717,12 +717,15 @@
         }
       }
 
-      // STEP 1: Get ALL withdrawals from ledger (filter by type only)
+      // STEP 1: Get USDT and XRP withdrawals only (exclude fiat GBP/EUR)
       const allWithdrawals = cacheData.ledger.filter(entry => {
         const entryType = (entry.type || "").toLowerCase();
-        return entryType === "withdrawal";
+        const asset = (entry.asset || "").toUpperCase();
+        // Only include USDT (including TRC20) and XRP
+        const isTarget = asset.includes("USDT") || asset.includes("XRP") || asset === "XXRP";
+        return entryType === "withdrawal" && isTarget;
       });
-      logTrace("STEP 1: Found " + allWithdrawals.length + " total withdrawals in ledger.");
+      logTrace("STEP 1: Found " + allWithdrawals.length + " USDT/XRP withdrawals in ledger.");
 
       // STEP 2: Parse times and filter by date range
       const withdrawals = [];
