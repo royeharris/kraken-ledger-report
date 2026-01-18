@@ -358,7 +358,7 @@
       <div
         style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; position:relative;">
         <div class="branding-row" style="margin-bottom:0;"><b>Kraken Ledger Report</b> <span
-            style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v1.02</span></div>
+            style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v1.03</span></div>
         <div id="auth_status"
           style="position:absolute; left:50%; transform:translateX(-50%); font-size:0.7rem; font-weight:700;">Sync
           Status: Idle</div>
@@ -477,12 +477,12 @@
     <div class="preview-wrap" id="previewArea"></div>
 
     <button id="log_btn" onclick="toggleLog(true)">Display Trace Log</button>
-    <div id="trace_log" onclick="toggleLog(false)">Trace: v1.02 Kraken Ledger Report initialized.</div>
+    <div id="trace_log" onclick="toggleLog(false)">Trace: v1.03 Kraken Ledger Report initialized.</div>
   </div>
 
   <script>
     const SHEET_ID = "1Vf0iqthwHv0kFqTRJkYShH_RBpbokLmiEDWGJN3Q0_E";
-    const VER = "Kraken Ledger Report (v1.02)";
+    const VER = "Kraken Ledger Report (v1.03)";
     const KRAKEN_API_URL = "https://api.kraken.com";
 
     // Default API credentials (enter your own in API Config)
@@ -510,7 +510,7 @@
       const now = new Date().toLocaleTimeString();
       const base = log.textContent && log.textContent.trim().length
         ? log.textContent
-        : "Trace: v1.02 Kraken Ledger Report initialized.";
+        : "Trace: v1.03 Kraken Ledger Report initialized.";
       log.textContent = base + "\n[" + now + "] " + msg;
       log.scrollTop = log.scrollHeight;
       console.log(msg);
@@ -876,12 +876,36 @@
         } else if (wAsset === "ZEUR" || wAsset === "EUR") {
           originalCurrency = "EUR";
           originalAmount = Math.abs(wAmount).toFixed(2);
-          // EUR to GBP rough estimate (could be refined)
           gbpEquivalent = (Math.abs(wAmount) * 0.86).toFixed(2);
         } else if (wAsset === "ZUSD" || wAsset === "USD") {
           originalCurrency = "USD";
           originalAmount = Math.abs(wAmount).toFixed(2);
           gbpEquivalent = (Math.abs(wAmount) * 0.79).toFixed(2);
+        } else {
+          // For crypto (USDT, XRP), look up exchange rate from Kraken API
+          try {
+            const rates = await getKrakenRate(wAsset, wTime);
+            const absAmount = Math.abs(wAmount);
+
+            if (rates.gbpRate) {
+              gbpEquivalent = (absAmount * rates.gbpRate).toFixed(2);
+              originalCurrency = "GBP";
+              originalAmount = gbpEquivalent;
+            } else if (rates.eurRate) {
+              originalCurrency = "EUR";
+              originalAmount = (absAmount * rates.eurRate).toFixed(2);
+              // Convert EUR to GBP
+              gbpEquivalent = (parseFloat(originalAmount) * 0.86).toFixed(2);
+            } else if (rates.usdRate) {
+              originalCurrency = "USD";
+              originalAmount = (absAmount * rates.usdRate).toFixed(2);
+              gbpEquivalent = (parseFloat(originalAmount) * 0.79).toFixed(2);
+            }
+
+            logTrace("Rate for " + wAsset + ": GBP=" + rates.gbpRate + " EUR=" + rates.eurRate + " USD=" + rates.usdRate);
+          } catch (e) {
+            logTrace("Rate lookup failed for " + wAsset + ": " + e.message);
+          }
         }
 
         const record = {
