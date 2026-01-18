@@ -358,7 +358,7 @@
       <div
         style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; position:relative;">
         <div class="branding-row" style="margin-bottom:0;"><b>Kraken Ledger Report</b> <span
-            style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v0.22</span></div>
+            style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v1.00</span></div>
         <div id="auth_status"
           style="position:absolute; left:50%; transform:translateX(-50%); font-size:0.7rem; font-weight:700;">Sync
           Status: Idle</div>
@@ -409,13 +409,13 @@
       style="display:none; margin-bottom:15px; padding:10px; background:#e8f5e9; border-radius:6px; max-height:300px; overflow-y:auto;">
       <div style="font-size:0.75rem; font-weight:700; color:#27ae60; margin-bottom:8px;">Fetched Withdrawal Addresses
       </div>
-      <table id="addressTable" style="width:100%; font-size:0.65rem; border-collapse:collapse;">
+      <table id="addressTable" style="width:100%; font-size:0.65rem; border-collapse:collapse; table-layout:fixed;">
         <thead>
           <tr style="background:#c8e6c9; text-align:left;">
-            <th style="padding:4px; border:1px solid #a5d6a7; width:50px;">Asset</th>
-            <th style="padding:4px; border:1px solid #a5d6a7; max-width:200px;">Recipient</th>
-            <th style="padding:4px; border:1px solid #a5d6a7; max-width:250px;">Key Name</th>
-            <th style="padding:4px; border:1px solid #a5d6a7; max-width:280px;">Address</th>
+            <th style="padding:4px; border:1px solid #a5d6a7; width:45px;">Asset</th>
+            <th style="padding:4px; border:1px solid #a5d6a7; width:130px;">Recipient</th>
+            <th style="padding:4px; border:1px solid #a5d6a7; width:180px;">Key Name</th>
+            <th style="padding:4px; border:1px solid #a5d6a7;">Address</th>
             <th style="padding:4px; border:1px solid #a5d6a7; width:70px;">Dest Tag</th>
           </tr>
         </thead>
@@ -477,12 +477,12 @@
     <div class="preview-wrap" id="previewArea"></div>
 
     <button id="log_btn" onclick="toggleLog(true)">Display Trace Log</button>
-    <div id="trace_log" onclick="toggleLog(false)">Trace: v0.22 Kraken Ledger Report initialized.</div>
+    <div id="trace_log" onclick="toggleLog(false)">Trace: v1.00 Kraken Ledger Report initialized.</div>
   </div>
 
   <script>
     const SHEET_ID = "1Vf0iqthwHv0kFqTRJkYShH_RBpbokLmiEDWGJN3Q0_E";
-    const VER = "Kraken Ledger Report (v0.22)";
+    const VER = "Kraken Ledger Report (v1.00)";
     const KRAKEN_API_URL = "https://api.kraken.com";
 
     // Default API credentials (enter your own in API Config)
@@ -510,7 +510,7 @@
       const now = new Date().toLocaleTimeString();
       const base = log.textContent && log.textContent.trim().length
         ? log.textContent
-        : "Trace: v0.22 Kraken Ledger Report initialized.";
+        : "Trace: v1.00 Kraken Ledger Report initialized.";
       log.textContent = base + "\n[" + now + "] " + msg;
       log.scrollTop = log.scrollHeight;
       console.log(msg);
@@ -853,6 +853,34 @@
         // Find matching trade (fuzzy)
         const trade = findMatchingTrade(wAmount, wTime, wAsset, tolerance);
 
+        // Get exchange rates for GBP/EUR equivalent
+        let originalCurrency = "";
+        let originalAmount = "";
+        let gbpEquivalent = "";
+
+        // If trade matched, use trade data
+        if (trade) {
+          originalCurrency = extractFiatCurrency(trade);
+          originalAmount = (parseFloat(trade.cost || trade[7] || 0)).toFixed(2);
+          gbpEquivalent = calculateGBPEquivalent(trade);
+        }
+
+        // For fiat withdrawals (GBP, EUR, USD), show directly
+        if (wAsset === "ZGBP" || wAsset === "GBP") {
+          originalCurrency = "GBP";
+          originalAmount = Math.abs(wAmount).toFixed(2);
+          gbpEquivalent = Math.abs(wAmount).toFixed(2);
+        } else if (wAsset === "ZEUR" || wAsset === "EUR") {
+          originalCurrency = "EUR";
+          originalAmount = Math.abs(wAmount).toFixed(2);
+          // EUR to GBP rough estimate (could be refined)
+          gbpEquivalent = (Math.abs(wAmount) * 0.86).toFixed(2);
+        } else if (wAsset === "ZUSD" || wAsset === "USD") {
+          originalCurrency = "USD";
+          originalAmount = Math.abs(wAmount).toFixed(2);
+          gbpEquivalent = (Math.abs(wAmount) * 0.79).toFixed(2);
+        }
+
         const record = {
           dateSent: formatTimestamp(wTime),
           entryDate: trade ? formatTimestamp(parseDateString(trade.time || "")) : "",
@@ -861,9 +889,9 @@
           amount: wAmount.toFixed(6),
           fee: wFee.toFixed(6),
           balance: wBalance.toFixed(6),
-          originalCurrency: trade ? extractFiatCurrency(trade) : "",
-          originalAmount: trade ? (parseFloat(trade.cost || trade[7] || 0)).toFixed(2) : "",
-          gbpEquivalent: trade ? calculateGBPEquivalent(trade) : "",
+          originalCurrency: originalCurrency,
+          originalAmount: originalAmount,
+          gbpEquivalent: gbpEquivalent,
           destTag: destTag,
           wallet: walletAddr,
           txId: refid,
@@ -1159,6 +1187,11 @@
           const startRow = 2 + used;
 
           // Prepare values
+          const headers = [
+            "Date Sent", "Entry Date", "Recipient", "Asset", "Amount", "Fee", "Balance",
+            "Orig Cur", "Orig Amt", "GBP Equiv", "Dest Tag", "Wallet", "TX ID", "Matched", "Version"
+          ];
+
           const vals = stagingRecords.map(r => [
             r.dateSent,
             r.entryDate,
@@ -1176,6 +1209,16 @@
             r.matched,
             VER
           ]);
+
+          // If sheet is empty, add headers first
+          if (startRow === 2) {
+            await gapi.client.sheets.spreadsheets.values.update({
+              spreadsheetId: SHEET_ID,
+              range: "'ReportStaging'!A1:O1",
+              valueInputOption: "USER_ENTERED",
+              resource: { values: [headers] }
+            });
+          }
 
           await gapi.client.sheets.spreadsheets.values.update({
             spreadsheetId: SHEET_ID,
