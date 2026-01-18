@@ -358,7 +358,7 @@
       <div
         style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; position:relative;">
         <div class="branding-row" style="margin-bottom:0;"><b>Kraken Ledger Report</b> <span
-            style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v0.21</span></div>
+            style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v0.22</span></div>
         <div id="auth_status"
           style="position:absolute; left:50%; transform:translateX(-50%); font-size:0.7rem; font-weight:700;">Sync
           Status: Idle</div>
@@ -477,12 +477,12 @@
     <div class="preview-wrap" id="previewArea"></div>
 
     <button id="log_btn" onclick="toggleLog(true)">Display Trace Log</button>
-    <div id="trace_log" onclick="toggleLog(false)">Trace: v0.21 Kraken Ledger Report initialized.</div>
+    <div id="trace_log" onclick="toggleLog(false)">Trace: v0.22 Kraken Ledger Report initialized.</div>
   </div>
 
   <script>
     const SHEET_ID = "1Vf0iqthwHv0kFqTRJkYShH_RBpbokLmiEDWGJN3Q0_E";
-    const VER = "Kraken Ledger Report (v0.21)";
+    const VER = "Kraken Ledger Report (v0.22)";
     const KRAKEN_API_URL = "https://api.kraken.com";
 
     // Default API credentials (enter your own in API Config)
@@ -510,7 +510,7 @@
       const now = new Date().toLocaleTimeString();
       const base = log.textContent && log.textContent.trim().length
         ? log.textContent
-        : "Trace: v0.21 Kraken Ledger Report initialized.";
+        : "Trace: v0.22 Kraken Ledger Report initialized.";
       log.textContent = base + "\n[" + now + "] " + msg;
       log.scrollTop = log.scrollHeight;
       console.log(msg);
@@ -1236,11 +1236,11 @@
         const destTag = escHtml(addr.tag || addr.memo || "");
 
         html += '<tr style="border-bottom:1px solid #e0e0e0;">';
-        html += '<td style="padding:4px; border:1px solid #e0e0e0; width:50px;">' + asset + '</td>';
-        html += '<td style="padding:4px; border:1px solid #e0e0e0; max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="' + recipient + '">' + recipient + '</td>';
-        html += '<td style="padding:4px; border:1px solid #e0e0e0; max-width:250px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="' + keyName + '">' + keyName + '</td>';
-        html += '<td style="padding:4px; border:1px solid #e0e0e0; font-family:monospace; font-size:0.55rem; max-width:280px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="' + address + '">' + (address.length > 40 ? address.substring(0, 40) + '...' : address) + '</td>';
-        html += '<td style="padding:4px; border:1px solid #e0e0e0; width:70px;">' + destTag + '</td>';
+        html += '<td style="padding:4px; border:1px solid #e0e0e0; width:45px; font-size:0.6rem;">' + asset + '</td>';
+        html += '<td style="padding:4px; border:1px solid #e0e0e0; width:150px; max-width:150px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:0.6rem;" title="' + recipient + '">' + recipient + '</td>';
+        html += '<td style="padding:4px; border:1px solid #e0e0e0; width:200px; max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:0.6rem;" title="' + keyName + '">' + keyName + '</td>';
+        html += '<td style="padding:4px; border:1px solid #e0e0e0; font-family:monospace; font-size:0.5rem; word-break:break-all;" title="' + address + '">' + address + '</td>';
+        html += '<td style="padding:4px; border:1px solid #e0e0e0; width:70px; font-size:0.6rem;">' + destTag + '</td>';
         html += '</tr>';
       }
 
