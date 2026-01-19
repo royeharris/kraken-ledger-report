@@ -364,7 +364,7 @@
         style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; position:relative;">
         <div class="branding-row" style="margin-bottom:0; line-height:1.2;">
           <div><b>Kraken Withdrawals Report</b> <span
-              style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.23</span></div>
+              style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.25</span></div>
           <div style="font-size:0.65rem; color:#b0b0b0; font-weight:400;">(GBP equivalent for all XRP and USDT transfers
             in Date range)</div>
         </div>
@@ -412,8 +412,9 @@
         <button onclick="pullAddresses()"
           style="flex:1; padding:10px 4px; background:var(--kraken); color:#fff; border:none; border-radius:4px; font-size:0.7rem; font-weight:600; cursor:pointer;">Pull
           Addresses<br />✱ 2FA</button>
-        <button onclick="generateReport()"
-          style="flex:1; padding:10px 4px; background:#27ae60; color:#fff; border:none; border-radius:4px; font-size:0.7rem; font-weight:600; cursor:pointer;">Generate<br />Report</button>
+        <button id="generate_btn" onclick="generateReport()"
+          style="flex:1; padding:8px 4px; background:var(--joy); color:#fff; border:none; border-radius:4px; font-size:0.65rem; font-weight:600; cursor:pointer;">Generate
+          Report</button>
       </div>
     </div>
 
@@ -571,12 +572,12 @@
     <button id="copy_trace_btn" onclick="copyTraceToClipboard()"
       style="width:100%; padding:8px; margin-top:6px; background:#16a085; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Copy
       Trace to Clipboard</button>
-    <div id="trace_log" onclick="toggleLog(false)">Trace: v2.23 Kraken Withdrawals Report initialized.</div>
+    <div id="trace_log" onclick="toggleLog(false)">Trace: v2.25 Kraken Withdrawals Report initialized.</div>
   </div>
 
   <script>
     const SHEET_ID = "1Vf0iqthwHv0kFqTRJkYShH_RBpbokLmiEDWGJN3Q0_E";
-    const VER = "Kraken Withdrawals Report (v2.23)";
+    const VER = "Kraken Withdrawals Report (v2.25)";
     const KRAKEN_API_URL = "https://api.kraken.com";
 
     // Default API credentials (enter your own in API Config)
@@ -604,7 +605,7 @@
       const now = new Date().toLocaleTimeString();
       const base = log.textContent && log.textContent.trim().length
         ? log.textContent
-        : "Trace: v2.23 Kraken Withdrawals Report initialized.";
+        : "Trace: v2.25 Kraken Withdrawals Report initialized.";
       log.textContent = base + "\n[" + now + "] " + msg;
       log.scrollTop = log.scrollHeight;
       console.log(msg);
@@ -993,7 +994,7 @@
         return;
       }
 
-      const btn = document.querySelector('button[onclick="generateReport()"]');
+      const btn = document.getElementById("generate_btn");
       isGenerating = true;
       if (btn) {
         btn.disabled = true;
@@ -1319,23 +1320,22 @@
 
           // Prepare values
           const headers = [
-            "Date Sent", "Entry Date", "Recipient", "Asset", "Amount", "Fee", "Balance",
-            "Orig Cur", "Orig Amt", "GBP Equiv", "Dest Tag", "Wallet", "TX ID", "Matched", "Version"
+            "Date", "Time (UTC)", "Recipient", "GBP", "Asset", "Amount", "Fee",
+            "Orig Cur", "Orig Amt", "Destination", "Dest Tag", "TX ID", "Match", "Version"
           ];
 
           const vals = stagingRecords.map(r => [
             r.dateSent,
-            r.entryDate,
+            r.timeSent,
             r.recipient,
+            r.gbpEquivalent,
             r.asset,
             r.amount,
             r.fee,
-            r.balance,
             r.originalCurrency,
             r.originalAmount,
-            r.gbpEquivalent,
-            r.destTag,
             r.wallet,
+            r.destTag,
             r.txId,
             r.matched,
             VER
@@ -1799,9 +1799,16 @@
 
       // If still no GBP rate but we have EUR rate, convert via EUR/GBP
       if (rates.gbpRate === null && rates.eurRate !== null) {
-        const eurgbpRate = await fetchOHLC("EURGBP", thirtyDaysBefore);
-        if (eurgbpRate !== null) {
-          rates.gbpRate = rates.eurRate * eurgbpRate;
+        // Try GBPEUR pair (gives EUR per GBP, so we divide)
+        let gbpeurRate = await fetchOHLC("GBPEUR", thirtyDaysBefore);
+        if (gbpeurRate !== null) {
+          rates.gbpRate = rates.eurRate / gbpeurRate;
+        } else {
+          // Fallback: try EURGBP (gives GBP per EUR, so we multiply)
+          const eurgbpRate = await fetchOHLC("EURGBP", thirtyDaysBefore);
+          if (eurgbpRate !== null) {
+            rates.gbpRate = rates.eurRate * eurgbpRate;
+          }
         }
       }
 
