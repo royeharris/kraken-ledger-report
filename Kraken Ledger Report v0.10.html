@@ -358,11 +358,13 @@
       <div
         style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; position:relative;">
         <div class="branding-row" style="margin-bottom:0;"><b>Kraken Ledger Report</b> <span
-            style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.15</span></div>
+            style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.16</span></div>
         <div id="auth_status"
           style="position:absolute; left:50%; transform:translateX(-50%); font-size:0.7rem; font-weight:700;">Status:
           Ready</div>
         <div style="display:flex; gap:4px;">
+          <button id="resetBtn" onclick="handleReportReset()"
+            style="background:var(--danger); padding:4px 8px; height:auto; font-size:0.65rem; border-radius:6px; border:none; color:#fff; cursor:pointer; font-weight:800; box-shadow: 0 0 6px rgba(192,57,43,0.5);">Reset</button>
           <button class="btn-lookup" style="background:#34495e; padding:4px 8px; height:auto; font-size:0.65rem;"
             onclick="toggleApiConfig()">API<br />Config</button>
         </div>
@@ -530,6 +532,12 @@
         style="flex:1; padding:8px 4px; background:#8e44ad; color:#fff; border:none; border-radius:4px; font-size:0.65rem; font-weight:600; cursor:pointer;">Load<br />Local</button>
     </div>
 
+    <div style="display:flex; gap:6px; margin-top:10px;">
+      <button onclick="copyReportToClipboard()"
+        style="flex:1; padding:8px 4px; background:#16a085; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">📋
+        Copy Report to Clipboard</button>
+    </div>
+
     <div class="preview-wrap" id="previewArea"></div>
 
     <button id="log_btn" onclick="toggleLog(true)"
@@ -538,12 +546,12 @@
     <button id="copy_trace_btn" onclick="copyTraceToClipboard()"
       style="width:100%; padding:8px; margin-top:6px; background:#16a085; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Copy
       Trace to Clipboard</button>
-    <div id="trace_log" onclick="toggleLog(false)">Trace: v2.15 Kraken Ledger Report initialized.</div>
+    <div id="trace_log" onclick="toggleLog(false)">Trace: v2.16 Kraken Ledger Report initialized.</div>
   </div>
 
   <script>
     const SHEET_ID = "1Vf0iqthwHv0kFqTRJkYShH_RBpbokLmiEDWGJN3Q0_E";
-    const VER = "Kraken Ledger Report (v2.15)";
+    const VER = "Kraken Ledger Report (v2.16)";
     const KRAKEN_API_URL = "https://api.kraken.com";
 
     // Default API credentials (enter your own in API Config)
@@ -562,6 +570,8 @@
     let tokenClient;
     let resetConfirmed = false;
     let wipeConfirmed = false;
+    let isGenerating = false;
+    let reportResetConfirmed = false;
 
     // ---------- Logging ----------
     function logTrace(msg) {
@@ -569,7 +579,7 @@
       const now = new Date().toLocaleTimeString();
       const base = log.textContent && log.textContent.trim().length
         ? log.textContent
-        : "Trace: v2.15 Kraken Ledger Report initialized.";
+        : "Trace: v2.16 Kraken Ledger Report initialized.";
       log.textContent = base + "\n[" + now + "] " + msg;
       log.scrollTop = log.scrollHeight;
       console.log(msg);
@@ -647,6 +657,75 @@
       localStorage.removeItem("kraken_staging");
       renderPreview();
       logTrace("Staging cleared manually.");
+    }
+
+    // Reset button with two-click confirmation - resets UI state without clearing data
+    function handleReportReset() {
+      const btn = document.getElementById("resetBtn");
+      if (!reportResetConfirmed) {
+        reportResetConfirmed = true;
+        btn.innerText = "CONFIRM?";
+        btn.style.animation = "pulse 0.5s ease-in-out";
+        setTimeout(() => {
+          reportResetConfirmed = false;
+          btn.innerText = "Reset";
+          btn.style.animation = "";
+        }, 3000);
+        return;
+      }
+      reportResetConfirmed = false;
+      btn.innerText = "Reset";
+      btn.style.animation = "";
+
+      // Reset UI state (dates, status) but preserve cached data
+      document.getElementById("startDate").value = "";
+      document.getElementById("endDate").value = "";
+      stagingRecords = [];
+      localStorage.removeItem("kraken_staging");
+      renderPreview();
+      updateStatus("Ready", "idle");
+      updateStatusCounts();
+      logTrace("=== APPLICATION RESET ===");
+      logTrace("UI reset. Cached data preserved (withdrawals, addresses, rates). Staging cleared.");
+    }
+
+    // Copy report to clipboard (tab-separated for spreadsheet paste)
+    function copyReportToClipboard() {
+      if (!stagingRecords.length) {
+        alert("No report records to copy. Generate a report first.");
+        return;
+      }
+
+      // Build header row
+      const headers = ["Date", "Recipient", "Asset", "Amount", "Fee", "Orig Cur", "Orig Amt", "GBP Equiv", "Dest Tag", "Wallet", "TX ID", "Matched"];
+
+      // Build data rows
+      let text = headers.join("\t") + "\n";
+      for (const r of stagingRecords) {
+        const row = [
+          r.dateSent,
+          r.recipient,
+          r.asset,
+          r.amount,
+          r.fee,
+          r.originalCurrency,
+          r.originalAmount,
+          r.gbpEquivalent,
+          r.destTag,
+          r.wallet,
+          r.txId,
+          r.matched
+        ];
+        text += row.join("\t") + "\n";
+      }
+
+      navigator.clipboard.writeText(text).then(() => {
+        alert("Report copied to clipboard! (" + stagingRecords.length + " records)");
+        logTrace("Copied " + stagingRecords.length + " report records to clipboard");
+      }).catch(err => {
+        logTrace("ERROR copying to clipboard: " + err);
+        alert("Failed to copy. Check browser permissions.");
+      });
     }
 
     function localReset() {
@@ -851,23 +930,52 @@
 
     // ========== STEP 3: Generate Report (local processing only) ==========
     async function generateReport() {
+      // Prevent double-click / concurrent generation
+      if (isGenerating) {
+        logTrace("Report generation already in progress - ignoring click");
+        return;
+      }
+
+      const btn = document.querySelector('button[onclick="generateReport()"]');
+      isGenerating = true;
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = "Generating...<br/>Please wait";
+        btn.style.opacity = "0.6";
+      }
+
       logTrace("=== GENERATE REPORT ===");
 
       // Check prerequisites
       if (cacheData.withdrawals.length === 0) {
         alert("No ledger data loaded. Please click 'Read Ledger' first.");
         logTrace("ERROR: No withdrawals loaded");
+        resetGenerateButton(btn);
         return;
       }
 
       if (cacheData.krakenAddresses.length === 0) {
         alert("No addresses loaded. Please click 'Pull Addresses' first (requires 2FA).");
         logTrace("ERROR: No addresses loaded");
+        resetGenerateButton(btn);
         return;
       }
 
-      // Generate report from cached data
-      await generateReportFromCache();
+      try {
+        // Generate report from cached data
+        await generateReportFromCache();
+      } finally {
+        resetGenerateButton(btn);
+      }
+    }
+
+    function resetGenerateButton(btn) {
+      isGenerating = false;
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = "Generate<br/>Report";
+        btn.style.opacity = "1";
+      }
     }
 
     // ========== Toggle Ledger Viewer ==========
