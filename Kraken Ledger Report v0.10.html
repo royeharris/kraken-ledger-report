@@ -358,19 +358,21 @@
       <div
         style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; position:relative;">
         <div class="branding-row" style="margin-bottom:0;"><b>Kraken Ledger Report</b> <span
-            style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.0</span></div>
+            style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.1</span></div>
         <div id="auth_status"
           style="position:absolute; left:50%; transform:translateX(-50%); font-size:0.7rem; font-weight:700;">Status:
           Ready</div>
         <div style="display:flex; gap:4px;">
           <button class="btn-lookup" style="background:#27ae60; padding:4px 8px; height:auto; font-size:0.65rem;"
             onclick="toggleAddressViewer()">View<br />Addresses</button>
+          <button class="btn-lookup" style="background:#16a085; padding:4px 8px; height:auto; font-size:0.65rem;"
+            onclick="toggleLedgerViewer()">View<br />Ledger</button>
           <button class="btn-lookup" style="background:#34495e; padding:4px 8px; height:auto; font-size:0.65rem;"
             onclick="toggleApiConfig()">API<br />Config</button>
         </div>
       </div>
 
-      <!-- Date Range (SET FIRST) -->
+      <!-- Date Range -->
       <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:10px;">
         <div>
           <label>Start Date</label>
@@ -398,11 +400,15 @@
         </div>
       </div>
 
-      <!-- Main Action Button -->
-      <div style="margin-bottom:10px;">
-        <button class="btn-lookup" style="background:var(--kraken); width:100%; height:52px; font-size:0.85rem;"
-          onclick="fetchAndGenerateReport()">Fetch & Generate Report ✱</button>
-        <div style="font-size:0.6rem; color:#7f8c8d; text-align:center; margin-top:2px;">✱ Requires 2FA</div>
+      <!-- Three Action Buttons -->
+      <div style="display:flex; gap:6px; margin-bottom:10px;">
+        <button onclick="readLedger()"
+          style="flex:1; padding:10px 4px; background:var(--primary); color:#fff; border:none; border-radius:4px; font-size:0.7rem; font-weight:600; cursor:pointer;">Read<br />Ledger</button>
+        <button onclick="pullAddresses()"
+          style="flex:1; padding:10px 4px; background:var(--kraken); color:#fff; border:none; border-radius:4px; font-size:0.7rem; font-weight:600; cursor:pointer;">Pull
+          Addresses<br />✱ 2FA</button>
+        <button onclick="generateReport()"
+          style="flex:1; padding:10px 4px; background:#27ae60; color:#fff; border:none; border-radius:4px; font-size:0.7rem; font-weight:600; cursor:pointer;">Generate<br />Report</button>
       </div>
     </div>
 
@@ -442,8 +448,12 @@
     <div id="addressViewerSection"
       style="display:none; margin-bottom:15px; padding:10px; background:#e8f5e9; border-radius:6px; max-height:300px; overflow-y:auto; border:2px solid #27ae60;">
       <div
-        style="font-size:0.85rem; font-weight:700; color:#27ae60; margin-bottom:8px; padding-bottom:6px; border-bottom:1px solid #a5d6a7;">
-        📋 Saved Withdrawal Addresses</div>
+        style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; padding-bottom:6px; border-bottom:1px solid #a5d6a7;">
+        <span style="font-size:0.85rem; font-weight:700; color:#27ae60;">📋 Saved Withdrawal Addresses</span>
+        <button onclick="copyAddressesToClipboard()"
+          style="padding:4px 8px; background:#27ae60; color:#fff; border:none; border-radius:4px; font-size:0.6rem; cursor:pointer;">Copy
+          to Clipboard</button>
+      </div>
       <table id="addressTable" style="width:100%; font-size:0.6rem; border-collapse:collapse; table-layout:fixed;">
         <thead>
           <tr style="background:#c8e6c9; text-align:left;">
@@ -456,7 +466,37 @@
         </thead>
         <tbody id="addressTableBody">
           <tr>
-            <td colspan="5" style="padding:8px; text-align:center; color:#7f8c8d;">No addresses loaded yet.</td>
+            <td colspan="5" style="padding:8px; text-align:center; color:#7f8c8d;">No addresses loaded. Click "Pull
+              Addresses" first.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Ledger Viewer Panel (hidden by default) -->
+    <div id="ledgerViewerSection"
+      style="display:none; margin-bottom:15px; padding:10px; background:#e3f2fd; border-radius:6px; max-height:300px; overflow-y:auto; border:2px solid #16a085;">
+      <div
+        style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; padding-bottom:6px; border-bottom:1px solid #90caf9;">
+        <span style="font-size:0.85rem; font-weight:700; color:#16a085;">📊 Raw Ledger Data</span>
+        <button onclick="copyLedgerToClipboard()"
+          style="padding:4px 8px; background:#16a085; color:#fff; border:none; border-radius:4px; font-size:0.6rem; cursor:pointer;">Copy
+          to Clipboard</button>
+      </div>
+      <table id="ledgerTable" style="width:100%; font-size:0.6rem; border-collapse:collapse; table-layout:fixed;">
+        <thead>
+          <tr style="background:#bbdefb; text-align:left;">
+            <th style="padding:4px; border:1px solid #90caf9; width:80px;">Date</th>
+            <th style="padding:4px; border:1px solid #90caf9; width:50px;">Asset</th>
+            <th style="padding:4px; border:1px solid #90caf9; width:80px;">Amount</th>
+            <th style="padding:4px; border:1px solid #90caf9; width:60px;">Fee</th>
+            <th style="padding:4px; border:1px solid #90caf9;">RefID</th>
+          </tr>
+        </thead>
+        <tbody id="ledgerTableBody">
+          <tr>
+            <td colspan="5" style="padding:8px; text-align:center; color:#7f8c8d;">No ledger data loaded. Click "Read
+              Ledger" first.</td>
           </tr>
         </tbody>
       </table>
@@ -487,7 +527,7 @@
     <div class="preview-wrap" id="previewArea"></div>
 
     <button id="log_btn" onclick="toggleLog(true)">Display Trace Log</button>
-    <div id="trace_log" onclick="toggleLog(false)">Trace: v2.0 Kraken Ledger Report initialized.</div>
+    <div id="trace_log" onclick="toggleLog(false)">Trace: v2.1 Kraken Ledger Report initialized.</div>
   </div>
 
   <script>
@@ -518,7 +558,7 @@
       const now = new Date().toLocaleTimeString();
       const base = log.textContent && log.textContent.trim().length
         ? log.textContent
-        : "Trace: v2.0 Kraken Ledger Report initialized.";
+        : "Trace: v2.1 Kraken Ledger Report initialized.";
       log.textContent = base + "\n[" + now + "] " + msg;
       log.scrollTop = log.scrollHeight;
       console.log(msg);
@@ -644,6 +684,198 @@
 
       logTrace("API credentials saved (Query + Withdraw).");
       alert("API keys saved.");
+    }
+
+    // ========== STEP 1: Read Ledger (Query API - no 2FA needed) ==========
+    async function readLedger() {
+      // Validate date range
+      const startDate = document.getElementById("startDate").value;
+      const endDate = document.getElementById("endDate").value;
+
+      if (!startDate || !endDate) {
+        alert("Please select Start Date and End Date first.");
+        logTrace("ERROR: Date range not set");
+        return;
+      }
+
+      const startTime = new Date(startDate).getTime() / 1000;
+      const endTime = new Date(endDate + "T23:59:59").getTime() / 1000;
+
+      logTrace("=== READ LEDGER ===");
+      logTrace("Date range: " + startDate + " to " + endDate);
+      logTrace("Unix range: " + startTime + " to " + endTime);
+
+      try {
+        const creds = getApiCredentials();
+        logTrace("Using Query API Key: " + creds.apiKey.substring(0, 8) + "...");
+        logTrace("Proxy: " + (creds.proxy || "(none)"));
+
+        updateStatus("Reading Ledger...", "sync");
+
+        // Call Kraken Ledgers API - Query API should NOT need 2FA
+        logTrace("Calling Kraken Ledgers API (type=withdrawal)...");
+        const ledgerResult = await callKrakenPrivateAPI("Ledgers", {
+          type: "withdrawal",
+          start: Math.floor(startTime),
+          end: Math.floor(endTime)
+        }, creds);
+
+        logTrace("Ledgers API response received");
+        logTrace("Response keys: " + Object.keys(ledgerResult || {}).join(", "));
+
+        // Parse ledger result
+        const allWithdrawals = [];
+        const ledgerData = ledgerResult.ledger || ledgerResult || {};
+
+        for (const [ledgerId, entry] of Object.entries(ledgerData)) {
+          const asset = (entry.asset || "").toUpperCase();
+          // Filter to USDT and XRP only
+          if (asset.includes("USDT") || asset.includes("XRP") || asset === "XXRP") {
+            allWithdrawals.push({
+              ledgerId,
+              refid: entry.refid,
+              time: entry.time,
+              asset: asset,
+              amount: parseFloat(entry.amount || 0),
+              fee: parseFloat(entry.fee || 0),
+              balance: parseFloat(entry.balance || 0)
+            });
+          }
+        }
+
+        cacheData.withdrawals = allWithdrawals;
+        updateStatusCounts();
+        renderLedgerTable();
+
+        logTrace("SUCCESS: Fetched " + allWithdrawals.length + " USDT/XRP withdrawals");
+        updateStatus("Ledger: " + allWithdrawals.length, "active");
+
+      } catch (e) {
+        updateStatus("Ledger Error", "error");
+        logTrace("ERROR in readLedger: " + (e.message || e));
+        alert("Error reading ledger: " + (e.message || e));
+      }
+    }
+
+    // ========== STEP 2: Pull Addresses (Withdraw API - requires 2FA) ==========
+    async function pullAddresses() {
+      logTrace("=== PULL ADDRESSES ===");
+
+      // Prompt for 2FA
+      const otp = prompt("Enter your Kraken 2FA code:");
+      if (!otp || otp.trim() === "") {
+        logTrace("2FA cancelled by user");
+        return;
+      }
+
+      try {
+        const creds = getWithdrawCredentials();
+        logTrace("Using Withdraw API Key: " + creds.apiKey.substring(0, 8) + "...");
+
+        updateStatus("Pulling Addresses...", "sync");
+
+        // Call WithdrawAddresses API
+        logTrace("Calling Kraken WithdrawAddresses API...");
+        const addresses = await callKrakenPrivateAPI("WithdrawAddresses", { otp: otp.trim() }, creds);
+
+        cacheData.krakenAddresses = addresses || [];
+        logTrace("SUCCESS: Fetched " + cacheData.krakenAddresses.length + " addresses");
+
+        // Also fetch withdrawal history for destination details
+        logTrace("Calling WithdrawStatus API...");
+        await fetchWithdrawalHistory(otp.trim());
+
+        updateStatusCounts();
+        renderAddressTable();
+
+        updateStatus("Addresses: " + cacheData.krakenAddresses.length, "active");
+
+      } catch (e) {
+        updateStatus("Address Error", "error");
+        logTrace("ERROR in pullAddresses: " + (e.message || e));
+        alert("Error pulling addresses: " + (e.message || e));
+      }
+    }
+
+    // ========== STEP 3: Generate Report (local processing only) ==========
+    async function generateReport() {
+      logTrace("=== GENERATE REPORT ===");
+
+      // Check prerequisites
+      if (cacheData.withdrawals.length === 0) {
+        alert("No ledger data loaded. Please click 'Read Ledger' first.");
+        logTrace("ERROR: No withdrawals loaded");
+        return;
+      }
+
+      if (cacheData.krakenAddresses.length === 0) {
+        alert("No addresses loaded. Please click 'Pull Addresses' first (requires 2FA).");
+        logTrace("ERROR: No addresses loaded");
+        return;
+      }
+
+      // Generate report from cached data
+      await generateReportFromCache();
+    }
+
+    // ========== Toggle Ledger Viewer ==========
+    function toggleLedgerViewer() {
+      const section = document.getElementById("ledgerViewerSection");
+      section.style.display = section.style.display === "none" ? "block" : "none";
+    }
+
+    // ========== Render Ledger Table ==========
+    function renderLedgerTable() {
+      const tbody = document.getElementById("ledgerTableBody");
+      if (cacheData.withdrawals.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="padding:8px; text-align:center; color:#7f8c8d;">No ledger data loaded.</td></tr>';
+        return;
+      }
+
+      let html = "";
+      for (const w of cacheData.withdrawals) {
+        const dateStr = formatTimestamp(w.time);
+        html += "<tr>";
+        html += '<td style="padding:4px; border:1px solid #90caf9;">' + escHtml(dateStr) + "</td>";
+        html += '<td style="padding:4px; border:1px solid #90caf9;">' + escHtml(w.asset) + "</td>";
+        html += '<td style="padding:4px; border:1px solid #90caf9;">' + w.amount.toFixed(4) + "</td>";
+        html += '<td style="padding:4px; border:1px solid #90caf9;">' + w.fee.toFixed(4) + "</td>";
+        html += '<td style="padding:4px; border:1px solid #90caf9; word-break:break-all;">' + escHtml(w.refid || "") + "</td>";
+        html += "</tr>";
+      }
+      tbody.innerHTML = html;
+    }
+
+    // ========== Copy to Clipboard Functions ==========
+    function copyAddressesToClipboard() {
+      if (cacheData.krakenAddresses.length === 0) {
+        alert("No addresses to copy.");
+        return;
+      }
+      let text = "Asset\tRecipient\tKey Name\tAddress\tDest Tag\n";
+      for (const a of cacheData.krakenAddresses) {
+        const recipient = (a.key || "").replace(/\s*(XRP|USDT|TRC20|ERC20)\s*/gi, "").trim();
+        text += (a.asset || "") + "\t" + recipient + "\t" + (a.key || "") + "\t" + (a.address || "") + "\t" + (a.tag || a.memo || "") + "\n";
+      }
+      navigator.clipboard.writeText(text).then(() => {
+        alert("Addresses copied to clipboard!");
+        logTrace("Copied " + cacheData.krakenAddresses.length + " addresses to clipboard");
+      });
+    }
+
+    function copyLedgerToClipboard() {
+      if (cacheData.withdrawals.length === 0) {
+        alert("No ledger data to copy.");
+        return;
+      }
+      let text = "Date\tAsset\tAmount\tFee\tRefID\n";
+      for (const w of cacheData.withdrawals) {
+        text += formatTimestamp(w.time) + "\t" + w.asset + "\t" + w.amount + "\t" + w.fee + "\t" + (w.refid || "") + "\n";
+      }
+      navigator.clipboard.writeText(text).then(() => {
+        alert("Ledger data copied to clipboard!");
+        logTrace("Copied " + cacheData.withdrawals.length + " ledger entries to clipboard");
+      });
     }
 
     // ---------- Staging Table Render ----------
