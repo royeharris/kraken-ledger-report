@@ -358,7 +358,7 @@
       <div
         style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; position:relative;">
         <div class="branding-row" style="margin-bottom:0;"><b>Kraken Ledger Report</b> <span
-            style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.13</span></div>
+            style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.14</span></div>
         <div id="auth_status"
           style="position:absolute; left:50%; transform:translateX(-50%); font-size:0.7rem; font-weight:700;">Status:
           Ready</div>
@@ -538,12 +538,12 @@
     <button id="copy_trace_btn" onclick="copyTraceToClipboard()"
       style="width:100%; padding:8px; margin-top:6px; background:#16a085; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Copy
       Trace to Clipboard</button>
-    <div id="trace_log" onclick="toggleLog(false)">Trace: v2.13 Kraken Ledger Report initialized.</div>
+    <div id="trace_log" onclick="toggleLog(false)">Trace: v2.14 Kraken Ledger Report initialized.</div>
   </div>
 
   <script>
     const SHEET_ID = "1Vf0iqthwHv0kFqTRJkYShH_RBpbokLmiEDWGJN3Q0_E";
-    const VER = "Kraken Ledger Report (v2.13)";
+    const VER = "Kraken Ledger Report (v2.14)";
     const KRAKEN_API_URL = "https://api.kraken.com";
 
     // Default API credentials (enter your own in API Config)
@@ -569,7 +569,7 @@
       const now = new Date().toLocaleTimeString();
       const base = log.textContent && log.textContent.trim().length
         ? log.textContent
-        : "Trace: v2.13 Kraken Ledger Report initialized.";
+        : "Trace: v2.14 Kraken Ledger Report initialized.";
       log.textContent = base + "\n[" + now + "] " + msg;
       log.scrollTop = log.scrollHeight;
       console.log(msg);
@@ -590,7 +590,7 @@
     function copyTraceToClipboard() {
       const log = document.getElementById("trace_log");
       const text = log.textContent || "";
-      if (!text.trim() || text.trim() === "Trace: v2.13 Kraken Ledger Report initialized.") {
+      if (!text.trim() || text.trim() === "Trace: v2.14 Kraken Ledger Report initialized.") {
         alert("There are no trace log records to copy.");
         return;
       }
@@ -736,34 +736,62 @@
 
         updateStatus("Reading Ledger...", "sync");
 
-        // Call Kraken Ledgers API - Query API should NOT need 2FA
-        logTrace("Calling Kraken Ledgers API (type=withdrawal)...");
-        const ledgerResult = await callKrakenPrivateAPI("Ledgers", {
-          type: "withdrawal",
-          start: Math.floor(startTime),
-          end: Math.floor(endTime)
-        }, creds);
-
-        logTrace("Ledgers API response received");
-        logTrace("Response keys: " + Object.keys(ledgerResult || {}).join(", "));
-
-        // Parse ledger result
+        // Paginate through ALL ledger records
         const allWithdrawals = [];
-        const ledgerData = ledgerResult.ledger || ledgerResult || {};
+        let offset = 0;
+        let hasMore = true;
+        let totalCount = 0;
 
-        for (const [ledgerId, entry] of Object.entries(ledgerData)) {
-          const asset = (entry.asset || "").toUpperCase();
-          // Filter to USDT and XRP only
-          if (asset.includes("USDT") || asset.includes("XRP") || asset === "XXRP") {
-            allWithdrawals.push({
-              ledgerId,
-              refid: entry.refid,
-              time: entry.time,
-              asset: asset,
-              amount: parseFloat(entry.amount || 0),
-              fee: parseFloat(entry.fee || 0),
-              balance: parseFloat(entry.balance || 0)
-            });
+        while (hasMore) {
+          logTrace("Calling Kraken Ledgers API (offset=" + offset + ")...");
+          const ledgerResult = await callKrakenPrivateAPI("Ledgers", {
+            type: "withdrawal",
+            start: Math.floor(startTime),
+            end: Math.floor(endTime),
+            ofs: offset
+          }, creds);
+
+          // Get total count from first response
+          if (offset === 0 && ledgerResult.count) {
+            totalCount = ledgerResult.count;
+            logTrace("Total ledger entries (all types): " + totalCount);
+          }
+
+          const ledgerData = ledgerResult.ledger || {};
+          const batchSize = Object.keys(ledgerData).length;
+          logTrace("Batch " + (Math.floor(offset / 50) + 1) + ": " + batchSize + " records");
+
+          if (batchSize === 0) {
+            hasMore = false;
+            break;
+          }
+
+          // Parse and filter for USDT/XRP
+          for (const [ledgerId, entry] of Object.entries(ledgerData)) {
+            const asset = (entry.asset || "").toUpperCase();
+            if (asset.includes("USDT") || asset.includes("XRP") || asset === "XXRP") {
+              allWithdrawals.push({
+                ledgerId,
+                refid: entry.refid,
+                time: entry.time,
+                asset: asset,
+                amount: parseFloat(entry.amount || 0),
+                fee: parseFloat(entry.fee || 0),
+                balance: parseFloat(entry.balance || 0)
+              });
+            }
+          }
+
+          offset += batchSize;
+
+          // Stop if we've fetched fewer than 50 records (no more pages)
+          if (batchSize < 50) {
+            hasMore = false;
+          }
+
+          // Add small delay between requests to avoid rate limiting
+          if (hasMore) {
+            await new Promise(r => setTimeout(r, 200));
           }
         }
 
@@ -771,7 +799,7 @@
         updateStatusCounts();
         renderLedgerTable();
 
-        logTrace("SUCCESS: Fetched " + allWithdrawals.length + " USDT/XRP withdrawals");
+        logTrace("SUCCESS: Fetched " + allWithdrawals.length + " USDT/XRP withdrawals (from " + offset + " total entries)");
         updateStatus("Ledger: " + allWithdrawals.length, "active");
 
       } catch (e) {
