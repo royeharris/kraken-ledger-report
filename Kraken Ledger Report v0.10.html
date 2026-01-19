@@ -358,15 +358,13 @@
       <div
         style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; position:relative;">
         <div class="branding-row" style="margin-bottom:0;"><b>Kraken Ledger Report</b> <span
-            style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.17</span></div>
+            style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.18</span></div>
         <div id="auth_status"
           style="position:absolute; left:50%; transform:translateX(-50%); font-size:0.7rem; font-weight:700;">Status:
           Ready</div>
         <div style="display:flex; gap:4px;">
           <button id="resetBtn" onclick="handleReportReset()"
             style="background:var(--danger); padding:4px 8px; height:auto; font-size:0.65rem; border-radius:6px; border:none; color:#fff; cursor:pointer; font-weight:800; box-shadow: 0 0 6px rgba(192,57,43,0.5);">Reset</button>
-          <button class="btn-lookup" style="background:#34495e; padding:4px 8px; height:auto; font-size:0.65rem;"
-            onclick="toggleApiConfig()">API<br />Config</button>
         </div>
       </div>
 
@@ -410,36 +408,50 @@
       </div>
     </div>
 
-    <!-- Kraken API Config (hidden by default) -->
-    <div id="apiConfigSection"
-      style="display:none; margin-bottom:15px; padding:10px; background:#f1f2f6; border-radius:6px; border:2px solid #34495e;">
+    <!-- API Config Button + Panel (click to close) -->
+    <button id="api_btn" onclick="toggleApiConfig()"
+      style="width:100%; padding:8px; margin-top:10px; background:#34495e; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">⚙️
+      API Config</button>
+
+    <div id="apiConfigSection" onclick="toggleApiConfig()"
+      style="display:none; margin-bottom:15px; padding:10px; background:#f1f2f6; border-radius:6px; border:2px solid #34495e; cursor:pointer;">
       <div
         style="font-size:0.85rem; font-weight:700; color:var(--primary); margin-bottom:10px; padding-bottom:6px; border-bottom:1px solid #ddd;">
-        ⚙️ Kraken API Configuration</div>
+        ⚙️ Kraken API Configuration (click to close)</div>
 
-      <div style="font-size:0.7rem; font-weight:700; color:var(--primary); margin-bottom:4px;">Query API (for Ledger
-        data)</div>
-      <label>API Key</label>
-      <input type="text" id="krakenApiKey" placeholder="API Key with Query permissions" style="margin-bottom:4px;">
-      <label>Private Key</label>
-      <input type="password" id="krakenPrivateKey" placeholder="Private Key (Base64)" style="margin-bottom:10px;">
+      <div onclick="event.stopPropagation()">
+        <div style="font-size:0.7rem; font-weight:700; color:var(--primary); margin-bottom:4px;">Query API (for Ledger
+          data)</div>
+        <label>API Key</label>
+        <input type="text" id="krakenApiKey" placeholder="API Key with Query permissions" style="margin-bottom:4px;">
+        <label>Private Key</label>
+        <input type="password" id="krakenPrivateKey" placeholder="Private Key (Base64)" style="margin-bottom:10px;">
 
-      <div
-        style="font-size:0.7rem; font-weight:700; color:var(--kraken); margin-bottom:4px; padding-top:8px; border-top:1px solid #ddd;">
-        Withdraw API (for Addresses - requires 2FA)</div>
-      <label>API Key</label>
-      <input type="text" id="withdrawApiKey" placeholder="API Key with Withdraw permissions" style="margin-bottom:4px;">
-      <label>Private Key</label>
-      <input type="password" id="withdrawPrivateKey" placeholder="Private Key (Base64)" style="margin-bottom:10px;">
+        <div
+          style="font-size:0.7rem; font-weight:700; color:var(--kraken); margin-bottom:4px; padding-top:8px; border-top:1px solid #ddd;">
+          Withdraw API (for Addresses - requires 2FA)</div>
+        <label>API Key</label>
+        <input type="text" id="withdrawApiKey" placeholder="API Key with Withdraw permissions"
+          style="margin-bottom:4px;">
+        <label>Private Key</label>
+        <input type="password" id="withdrawPrivateKey" placeholder="Private Key (Base64)" style="margin-bottom:10px;">
 
-      <label>CORS Proxy URL (optional)</label>
-      <input type="text" id="corsProxy" placeholder="https://cors-anywhere.herokuapp.com/" value="">
-      <div style="font-size:0.6rem; color:#7f8c8d; margin-top:2px;">Browser CORS blocks direct Kraken calls. Use a proxy
-        or leave blank.</div>
+        <label>CORS Proxy</label>
+        <select id="corsProxySelect" onchange="handleProxyChange()" style="margin-bottom:4px;">
+          <option value="">None (direct - may fail in browser)</option>
+          <option value="https://cors-anywhere.herokuapp.com/">cors-anywhere (50 req/hr)</option>
+          <option value="https://corsproxy.io/?">corsproxy.io</option>
+          <option value="https://api.allorigins.win/raw?url=">allorigins.win</option>
+          <option value="custom">Custom...</option>
+        </select>
+        <input type="text" id="corsProxy" placeholder="Custom proxy URL" style="display:none; margin-bottom:4px;">
+        <div style="font-size:0.6rem; color:#7f8c8d; margin-top:2px;">Browser CORS blocks direct Kraken calls. Select a
+          proxy or use custom.</div>
 
-      <button onclick="saveApiConfig()"
-        style="margin-top:10px; padding:8px 16px; background:var(--accent); color:#fff; border:none; border-radius:4px; cursor:pointer; font-weight:600;">Save
-        API Keys</button>
+        <button onclick="saveApiConfig(); event.stopPropagation();"
+          style="margin-top:10px; padding:8px 16px; background:var(--accent); color:#fff; border:none; border-radius:4px; cursor:pointer; font-weight:600;">Save
+          API Keys</button>
+      </div>
     </div>
 
     <!-- Display Buttons for Address and Ledger Viewers -->
@@ -550,12 +562,12 @@
     <button id="copy_trace_btn" onclick="copyTraceToClipboard()"
       style="width:100%; padding:8px; margin-top:6px; background:#16a085; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Copy
       Trace to Clipboard</button>
-    <div id="trace_log" onclick="toggleLog(false)">Trace: v2.17 Kraken Ledger Report initialized.</div>
+    <div id="trace_log" onclick="toggleLog(false)">Trace: v2.18 Kraken Ledger Report initialized.</div>
   </div>
 
   <script>
     const SHEET_ID = "1Vf0iqthwHv0kFqTRJkYShH_RBpbokLmiEDWGJN3Q0_E";
-    const VER = "Kraken Ledger Report (v2.17)";
+    const VER = "Kraken Ledger Report (v2.18)";
     const KRAKEN_API_URL = "https://api.kraken.com";
 
     // Default API credentials (enter your own in API Config)
@@ -583,7 +595,7 @@
       const now = new Date().toLocaleTimeString();
       const base = log.textContent && log.textContent.trim().length
         ? log.textContent
-        : "Trace: v2.17 Kraken Ledger Report initialized.";
+        : "Trace: v2.18 Kraken Ledger Report initialized.";
       log.textContent = base + "\n[" + now + "] " + msg;
       log.scrollTop = log.scrollHeight;
       console.log(msg);
@@ -710,7 +722,7 @@
       }
 
       // Build header row - match the report table order
-      const headers = ["Date", "Recipient", "GBP", "Asset", "Amount", "Fee", "Orig Cur", "Destination", "Dest Tag", "TX ID", "Match"];
+      const headers = ["Date", "Recipient", "GBP", "Asset", "Amount", "Fee", "Orig Cur", "Destination", "Dest Tag", "TX ID", "No match"];
 
       // Build data rows
       let text = headers.join("\t") + "\n";
@@ -726,7 +738,7 @@
           r.wallet,
           r.destTag,
           r.txId,
-          r.matched
+          r.matched === 'Yes' ? '' : 'X'
         ];
         text += row.join("\t") + "\n";
       }
@@ -751,6 +763,28 @@
     function updateStatusCounts() {
       document.getElementById("withdrawalCount").innerText = cacheData.withdrawals.length;
       document.getElementById("addressCount").innerText = cacheData.krakenAddresses.length;
+    }
+
+    // ---------- CORS Proxy Handling ----------
+    function handleProxyChange() {
+      const select = document.getElementById("corsProxySelect");
+      const customInput = document.getElementById("corsProxy");
+      if (select.value === "custom") {
+        customInput.style.display = "block";
+        customInput.focus();
+      } else {
+        customInput.style.display = "none";
+        customInput.value = "";
+      }
+    }
+
+    function getSelectedProxy() {
+      const select = document.getElementById("corsProxySelect");
+      const customInput = document.getElementById("corsProxy");
+      if (select.value === "custom") {
+        return customInput.value.trim();
+      }
+      return select.value;
     }
 
     // ---------- Local Save/Load (v2.0) ----------
@@ -789,13 +823,14 @@
       const privateKey = document.getElementById("krakenPrivateKey").value;
       const withdrawKey = document.getElementById("withdrawApiKey").value;
       const withdrawPrivate = document.getElementById("withdrawPrivateKey").value;
-      const proxy = document.getElementById("corsProxy").value;
+      const proxy = getSelectedProxy();
 
       localStorage.setItem("kraken_api_key", apiKey);
       localStorage.setItem("kraken_private_key", privateKey);
       localStorage.setItem("kraken_withdraw_api_key", withdrawKey);
       localStorage.setItem("kraken_withdraw_private_key", withdrawPrivate);
       localStorage.setItem("kraken_cors_proxy", proxy);
+      localStorage.setItem("kraken_cors_proxy_type", document.getElementById("corsProxySelect").value);
 
       logTrace("API credentials saved (Query + Withdraw).");
       alert("API keys saved.");
@@ -1078,7 +1113,7 @@
       html += '<th class="w-wallet">Destination</th>';
       html += '<th class="w-desttag">Dest Tag</th>';
       html += '<th class="w-txid">TX ID</th>';
-      html += '<th class="w-matched">Match</th>';
+      html += '<th class="w-matched">No match</th>';
       html += '</tr></thead><tbody>';
 
       for (const r of stagingRecords) {
@@ -1093,7 +1128,9 @@
         html += '<td class="w-wallet">' + escHtml(r.wallet) + '</td>';
         html += '<td class="w-desttag">' + escHtml(r.destTag) + '</td>';
         html += '<td class="w-txid">' + escHtml(r.txId) + '</td>';
-        html += '<td class="w-matched" style="font-weight:800; color:' + (r.matched === 'Yes' ? 'var(--accent)' : 'var(--danger)') + '">' + escHtml(r.matched) + '</td>';
+        // Show X only if no match (missing destination or no address matched)
+        const noMatch = r.matched !== 'Yes';
+        html += '<td class="w-matched" style="font-weight:800; color:var(--danger); text-align:center;">' + (noMatch ? 'X' : '') + '</td>';
         html += '</tr>';
       }
       html += '</tbody></table>';
@@ -1377,19 +1414,32 @@
 
     // ---------- Kraken API ----------
     function toggleApiConfig() {
+      const btn = document.getElementById("api_btn");
       const section = document.getElementById("apiConfigSection");
-      section.style.display = section.style.display === "none" ? "block" : "none";
-      // Load saved credentials
-      const savedKey = localStorage.getItem("kraken_api_key");
-      const savedPrivate = localStorage.getItem("kraken_private_key");
-      const savedProxy = localStorage.getItem("kraken_cors_proxy");
-      const savedWithdrawKey = localStorage.getItem("kraken_withdraw_api_key");
-      const savedWithdrawPrivate = localStorage.getItem("kraken_withdraw_private_key");
-      if (savedKey) document.getElementById("krakenApiKey").value = savedKey;
-      if (savedPrivate) document.getElementById("krakenPrivateKey").value = savedPrivate;
-      if (savedProxy) document.getElementById("corsProxy").value = savedProxy;
-      if (savedWithdrawKey) document.getElementById("withdrawApiKey").value = savedWithdrawKey;
-      if (savedWithdrawPrivate) document.getElementById("withdrawPrivateKey").value = savedWithdrawPrivate;
+      const isHidden = section.style.display === "none";
+      btn.style.display = isHidden ? "none" : "block";
+      section.style.display = isHidden ? "block" : "none";
+
+      // Load saved credentials when opening
+      if (isHidden) {
+        const savedKey = localStorage.getItem("kraken_api_key");
+        const savedPrivate = localStorage.getItem("kraken_private_key");
+        const savedProxyType = localStorage.getItem("kraken_cors_proxy_type");
+        const savedProxy = localStorage.getItem("kraken_cors_proxy");
+        const savedWithdrawKey = localStorage.getItem("kraken_withdraw_api_key");
+        const savedWithdrawPrivate = localStorage.getItem("kraken_withdraw_private_key");
+        if (savedKey) document.getElementById("krakenApiKey").value = savedKey;
+        if (savedPrivate) document.getElementById("krakenPrivateKey").value = savedPrivate;
+        if (savedProxyType) {
+          document.getElementById("corsProxySelect").value = savedProxyType;
+          if (savedProxyType === "custom" && savedProxy) {
+            document.getElementById("corsProxy").value = savedProxy;
+            document.getElementById("corsProxy").style.display = "block";
+          }
+        }
+        if (savedWithdrawKey) document.getElementById("withdrawApiKey").value = savedWithdrawKey;
+        if (savedWithdrawPrivate) document.getElementById("withdrawPrivateKey").value = savedWithdrawPrivate;
+      }
     }
 
     function getApiCredentials() {
@@ -1400,8 +1450,7 @@
       // Save for next time
       localStorage.setItem("kraken_api_key", apiKey);
       localStorage.setItem("kraken_private_key", privateKey);
-      const proxy = document.getElementById("corsProxy").value.trim();
-      localStorage.setItem("kraken_cors_proxy", proxy);
+      const proxy = getSelectedProxy();
       return { apiKey, privateKey, proxy };
     }
 
@@ -1412,7 +1461,7 @@
       if (!apiKey || !privateKey) {
         throw new Error("Please enter Withdraw API credentials in API Config (requires 2FA permission)");
       }
-      const proxy = document.getElementById("corsProxy").value.trim();
+      const proxy = getSelectedProxy();
       return { apiKey, privateKey, proxy };
     }
 
@@ -1666,7 +1715,7 @@
         { pair: baseAsset + "USD", target: "usdRate" }
       ];
 
-      const proxy = document.getElementById("corsProxy").value.trim() || "";
+      const proxy = getSelectedProxy();
       const ohlcUrl = proxy + "https://api.kraken.com/0/public/OHLC";
 
       // Use daily interval (1440 min) and request from 2 days before target
@@ -1945,12 +1994,19 @@
       // Auto-load API credentials from localStorage
       const savedKey = localStorage.getItem("kraken_api_key");
       const savedPrivate = localStorage.getItem("kraken_private_key");
+      const savedProxyType = localStorage.getItem("kraken_cors_proxy_type");
       const savedProxy = localStorage.getItem("kraken_cors_proxy");
       const savedWithdrawKey = localStorage.getItem("kraken_withdraw_api_key");
       const savedWithdrawPrivate = localStorage.getItem("kraken_withdraw_private_key");
       if (savedKey) document.getElementById("krakenApiKey").value = savedKey;
       if (savedPrivate) document.getElementById("krakenPrivateKey").value = savedPrivate;
-      if (savedProxy) document.getElementById("corsProxy").value = savedProxy;
+      if (savedProxyType) {
+        document.getElementById("corsProxySelect").value = savedProxyType;
+        if (savedProxyType === "custom" && savedProxy) {
+          document.getElementById("corsProxy").value = savedProxy;
+          document.getElementById("corsProxy").style.display = "block";
+        }
+      }
       if (savedWithdrawKey) document.getElementById("withdrawApiKey").value = savedWithdrawKey;
       if (savedWithdrawPrivate) document.getElementById("withdrawPrivateKey").value = savedWithdrawPrivate;
 
