@@ -358,15 +358,11 @@
       <div
         style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; position:relative;">
         <div class="branding-row" style="margin-bottom:0;"><b>Kraken Ledger Report</b> <span
-            style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.11</span></div>
+            style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.12</span></div>
         <div id="auth_status"
           style="position:absolute; left:50%; transform:translateX(-50%); font-size:0.7rem; font-weight:700;">Status:
           Ready</div>
         <div style="display:flex; gap:4px;">
-          <button class="btn-lookup" style="background:#27ae60; padding:4px 8px; height:auto; font-size:0.65rem;"
-            onclick="toggleAddressViewer()">View<br />Addresses</button>
-          <button class="btn-lookup" style="background:#16a085; padding:4px 8px; height:auto; font-size:0.65rem;"
-            onclick="toggleLedgerViewer()">View<br />Ledger</button>
           <button class="btn-lookup" style="background:#34495e; padding:4px 8px; height:auto; font-size:0.65rem;"
             onclick="toggleApiConfig()">API<br />Config</button>
         </div>
@@ -444,6 +440,11 @@
         API Keys</button>
     </div>
 
+    <!-- Display Buttons for Address and Ledger Viewers -->
+    <button id="address_btn" onclick="toggleAddressViewer()"
+      style="width:100%; padding:8px; margin-top:10px; background:#27ae60; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Display
+      Saved Addresses</button>
+
     <!-- Address Viewer Panel (hidden by default) -->
     <div id="addressViewerSection"
       style="display:none; margin-bottom:15px; padding:10px; background:#e8f5e9; border-radius:6px; max-height:300px; overflow-y:auto; border:2px solid #27ae60;">
@@ -472,6 +473,10 @@
         </tbody>
       </table>
     </div>
+
+    <button id="ledger_btn" onclick="toggleLedgerViewer()"
+      style="width:100%; padding:8px; margin-top:6px; background:#16a085; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Display
+      Raw Ledger Data</button>
 
     <!-- Ledger Viewer Panel (hidden by default) -->
     <div id="ledgerViewerSection"
@@ -526,18 +531,18 @@
 
     <div class="preview-wrap" id="previewArea"></div>
 
-    <div style="display:flex; gap:6px; margin-top:10px;">
-      <button id="log_btn" onclick="toggleLog(true)" style="flex:0 0 auto;">Display Trace Log</button>
-      <button onclick="copyTraceToClipboard()"
-        style="flex:0 0 auto; padding:8px 12px; background:#16a085; color:#fff; border:none; border-radius:4px; font-size:0.7rem; cursor:pointer;">Copy
-        Trace to Clipboard</button>
-    </div>
-    <div id="trace_log" onclick="toggleLog(false)">Trace: v2.11 Kraken Ledger Report initialized.</div>
+    <button id="log_btn" onclick="toggleLog(true)"
+      style="width:100%; padding:8px; margin-top:10px; background:#8e44ad; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Display
+      Trace Log</button>
+    <button id="copy_trace_btn" onclick="copyTraceToClipboard()"
+      style="width:100%; padding:8px; margin-top:6px; background:#16a085; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Copy
+      Trace to Clipboard</button>
+    <div id="trace_log" onclick="toggleLog(false)">Trace: v2.12 Kraken Ledger Report initialized.</div>
   </div>
 
   <script>
     const SHEET_ID = "1Vf0iqthwHv0kFqTRJkYShH_RBpbokLmiEDWGJN3Q0_E";
-    const VER = "Kraken Ledger Report (v2.11)";
+    const VER = "Kraken Ledger Report (v2.12)";
     const KRAKEN_API_URL = "https://api.kraken.com";
 
     // Default API credentials (enter your own in API Config)
@@ -563,7 +568,7 @@
       const now = new Date().toLocaleTimeString();
       const base = log.textContent && log.textContent.trim().length
         ? log.textContent
-        : "Trace: v2.11 Kraken Ledger Report initialized.";
+        : "Trace: v2.12 Kraken Ledger Report initialized.";
       log.textContent = base + "\n[" + now + "] " + msg;
       log.scrollTop = log.scrollHeight;
       console.log(msg);
@@ -584,7 +589,7 @@
     function copyTraceToClipboard() {
       const log = document.getElementById("trace_log");
       const text = log.textContent || "";
-      if (!text.trim() || text.trim() === "Trace: v2.11 Kraken Ledger Report initialized.") {
+      if (!text.trim() || text.trim() === "Trace: v2.12 Kraken Ledger Report initialized.") {
         alert("There are no trace log records to copy.");
         return;
       }
@@ -838,8 +843,14 @@
 
     // ========== Toggle Ledger Viewer ==========
     function toggleLedgerViewer() {
+      const btn = document.getElementById("ledger_btn");
       const section = document.getElementById("ledgerViewerSection");
-      section.style.display = section.style.display === "none" ? "block" : "none";
+      const isHidden = section.style.display === "none";
+      btn.style.display = isHidden ? "none" : "block";
+      section.style.display = isHidden ? "block" : "none";
+      if (isHidden) {
+        renderLedgerTable();
+      }
     }
 
     // ========== Render Ledger Table ==========
@@ -1550,9 +1561,12 @@
 
     // ---------- Address Viewer ----------
     function toggleAddressViewer() {
+      const btn = document.getElementById("address_btn");
       const section = document.getElementById("addressViewerSection");
-      section.style.display = section.style.display === "none" ? "block" : "none";
-      if (section.style.display === "block") {
+      const isHidden = section.style.display === "none";
+      btn.style.display = isHidden ? "none" : "block";
+      section.style.display = isHidden ? "block" : "none";
+      if (isHidden) {
         renderAddressTable();
       }
     }
