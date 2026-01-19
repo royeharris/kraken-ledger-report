@@ -358,56 +358,78 @@
       <div
         style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; position:relative;">
         <div class="branding-row" style="margin-bottom:0;"><b>Kraken Ledger Report</b> <span
-            style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v1.03</span></div>
+            style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.0</span></div>
         <div id="auth_status"
-          style="position:absolute; left:50%; transform:translateX(-50%); font-size:0.7rem; font-weight:700;">Sync
-          Status: Idle</div>
+          style="position:absolute; left:50%; transform:translateX(-50%); font-size:0.7rem; font-weight:700;">Status:
+          Ready</div>
         <div style="display:flex; gap:4px;">
           <button class="btn-lookup" style="background:#27ae60; padding:4px 8px; height:auto; font-size:0.65rem;"
             onclick="toggleAddressViewer()">View<br />Addresses</button>
-          <button class="btn-lookup" style="background:var(--kraken); padding:4px 8px; height:auto; font-size:0.65rem;"
-            onclick="fetchKrakenAddresses()">Fetch<br />Addresses</button>
           <button class="btn-lookup" style="background:#34495e; padding:4px 8px; height:auto; font-size:0.65rem;"
             onclick="toggleApiConfig()">API<br />Config</button>
         </div>
       </div>
-      <div class="header-btns">
-        <button class="btn-lookup btn-pull" onclick="cachePull()">Pull local<br />Lookups</button>
-        <button class="btn-lookup btn-refresh" id="refresh_btn" onclick="initRefresh()">Refresh<br />Lookups<br />from
-          Sheets</button>
-        <button class="btn-lookup btn-save" onclick="cacheSave()">Save to<br />local Lookups</button>
-        <button class="btn-lookup btn-reset" id="resetBtn" onclick="handleResetConfirm()">Reset</button>
+
+      <!-- Date Range (SET FIRST) -->
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:10px;">
+        <div>
+          <label>Start Date</label>
+          <div class="date-input-container" onclick="document.getElementById('startDate').showPicker()">
+            <span class="ico" aria-hidden="true">
+              <svg class="cal-svg" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path
+                  d="M7 2a1 1 0 0 1 1 1v1h8V3a1 1 0 1 1 2 0v1h1.5A2.5 2.5 0 0 1 22 6.5v13A2.5 2.5 0 0 1 19.5 22h-15A2.5 2.5 0 0 1 2 19.5v-13A2.5 2.5 0 0 1 4.5 4H6V3a1 1 0 0 1 1-1Zm12.5 8H4.5v9.5c0 .276.224.5.5.5h14.5c.276 0 .5-.224.5-.5V10ZM6 6H4.5a.5.5 0 0 0-.5.5V8h16V6.5a.5.5 0 0 0-.5-.5H18v1a1 1 0 1 1-2 0V6H8v1a1 1 0 1 1-2 0V6Z">
+                </path>
+              </svg>
+            </span><input id="startDate" onchange="handleDateChange('startDate')" type="date" />
+          </div>
+        </div>
+        <div>
+          <label>End Date</label>
+          <div class="date-input-container" onclick="document.getElementById('endDate').showPicker()">
+            <span class="ico" aria-hidden="true">
+              <svg class="cal-svg" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                <path
+                  d="M7 2a1 1 0 0 1 1 1v1h8V3a1 1 0 1 1 2 0v1h1.5A2.5 2.5 0 0 1 22 6.5v13A2.5 2.5 0 0 1 19.5 22h-15A2.5 2.5 0 0 1 2 19.5v-13A2.5 2.5 0 0 1 4.5 4H6V3a1 1 0 0 1 1-1Zm12.5 8H4.5v9.5c0 .276.224.5.5.5h14.5c.276 0 .5-.224.5-.5V10ZM6 6H4.5a.5.5 0 0 0-.5.5V8h16V6.5a.5.5 0 0 0-.5-.5H18v1a1 1 0 1 1-2 0V6H8v1a1 1 0 1 1-2 0V6Z">
+                </path>
+              </svg>
+            </span><input id="endDate" onchange="handleDateChange('endDate')" type="date" />
+          </div>
+        </div>
+      </div>
+
+      <!-- Main Action Button -->
+      <div style="margin-bottom:10px;">
+        <button class="btn-lookup" style="background:var(--kraken); width:100%; height:52px; font-size:0.85rem;"
+          onclick="fetchAndGenerateReport()">Fetch & Generate Report ✱</button>
+        <div style="font-size:0.6rem; color:#7f8c8d; text-align:center; margin-top:2px;">✱ Requires 2FA</div>
       </div>
     </div>
 
     <!-- Kraken API Config (hidden by default) -->
     <div id="apiConfigSection"
       style="display:none; margin-bottom:15px; padding:10px; background:#f1f2f6; border-radius:6px;">
-      <div style="font-size:0.7rem; font-weight:700; color:var(--primary); margin-bottom:6px;">Ledger/Trades API (Query
-        permissions)</div>
-      <label>Kraken API Key</label>
-      <input type="text" id="krakenApiKey" placeholder="API Key for Ledger/Trades" style="margin-bottom:6px;">
-      <label>Kraken Private Key</label>
+      <div style="font-size:0.7rem; font-weight:700; color:var(--primary); margin-bottom:6px;">Kraken API Credentials
+      </div>
+      <label>API Key</label>
+      <input type="text" id="krakenApiKey" placeholder="API Key" style="margin-bottom:6px;">
+      <label>Private Key</label>
       <input type="password" id="krakenPrivateKey" placeholder="Private Key (Base64)" style="margin-bottom:10px;">
-
-      <div
-        style="font-size:0.7rem; font-weight:700; color:var(--kraken); margin-bottom:6px; border-top:1px solid #ddd; padding-top:10px;">
-        Withdrawal Addresses API (Withdraw permissions)</div>
-      <label>Withdrawal API Key</label>
-      <input type="text" id="withdrawApiKey" placeholder="API Key for Addresses" style="margin-bottom:6px;">
-      <label>Withdrawal Private Key</label>
-      <input type="password" id="withdrawPrivateKey" placeholder="Private Key (Base64)" style="margin-bottom:10px;">
 
       <label>CORS Proxy URL (optional)</label>
       <input type="text" id="corsProxy" placeholder="https://cors-anywhere.herokuapp.com/" value="">
       <div style="font-size:0.65rem; color:#7f8c8d; margin-top:4px;">Note: Browser security (CORS) blocks direct Kraken
         API calls. Use a CORS proxy or leave blank to try direct call.</div>
+
+      <button onclick="saveApiConfig()"
+        style="margin-top:10px; padding:8px 16px; background:var(--accent); color:#fff; border:none; border-radius:4px; cursor:pointer;">Save
+        Credentials</button>
     </div>
 
     <!-- Address Viewer Panel (hidden by default) -->
     <div id="addressViewerSection"
       style="display:none; margin-bottom:15px; padding:10px; background:#e8f5e9; border-radius:6px; max-height:300px; overflow-y:auto;">
-      <div style="font-size:0.75rem; font-weight:700; color:#27ae60; margin-bottom:8px;">Fetched Withdrawal Addresses
+      <div style="font-size:0.75rem; font-weight:700; color:#27ae60; margin-bottom:8px;">Saved Withdrawal Addresses
       </div>
       <table id="addressTable" style="width:100%; font-size:0.65rem; border-collapse:collapse; table-layout:fixed;">
         <thead>
@@ -421,63 +443,34 @@
         </thead>
         <tbody id="addressTableBody">
           <tr>
-            <td colspan="5" style="padding:8px; text-align:center; color:#7f8c8d;">No addresses loaded. Click "Fetch
-              Addresses" first.</td>
+            <td colspan="5" style="padding:8px; text-align:center; color:#7f8c8d;">No addresses loaded yet.</td>
           </tr>
         </tbody>
       </table>
     </div>
 
-    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
-      <div>
-        <label>Start Date</label>
-        <div class="date-input-container" onclick="document.getElementById('startDate').showPicker()">
-          <span class="ico" aria-hidden="true">
-            <svg class="cal-svg" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-              <path
-                d="M7 2a1 1 0 0 1 1 1v1h8V3a1 1 0 1 1 2 0v1h1.5A2.5 2.5 0 0 1 22 6.5v13A2.5 2.5 0 0 1 19.5 22h-15A2.5 2.5 0 0 1 2 19.5v-13A2.5 2.5 0 0 1 4.5 4H6V3a1 1 0 0 1 1-1Zm12.5 8H4.5v9.5c0 .276.224.5.5.5h14.5c.276 0 .5-.224.5-.5V10ZM6 6H4.5a.5.5 0 0 0-.5.5V8h16V6.5a.5.5 0 0 0-.5-.5H18v1a1 1 0 1 1-2 0V6H8v1a1 1 0 1 1-2 0V6Z">
-              </path>
-            </svg>
-          </span><input id="startDate" onchange="handleDateChange('startDate')" type="date" />
-        </div>
-        <div id="startDateDisp" class="date-disp"></div>
-      </div>
-      <div>
-        <label>End Date</label>
-        <div class="date-input-container" onclick="document.getElementById('endDate').showPicker()">
-          <span class="ico" aria-hidden="true">
-            <svg class="cal-svg" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
-              <path
-                d="M7 2a1 1 0 0 1 1 1v1h8V3a1 1 0 1 1 2 0v1h1.5A2.5 2.5 0 0 1 22 6.5v13A2.5 2.5 0 0 1 19.5 22h-15A2.5 2.5 0 0 1 2 19.5v-13A2.5 2.5 0 0 1 4.5 4H6V3a1 1 0 0 1 1-1Zm12.5 8H4.5v9.5c0 .276.224.5.5.5h14.5c.276 0 .5-.224.5-.5V10ZM6 6H4.5a.5.5 0 0 0-.5.5V8h16V6.5a.5.5 0 0 0-.5-.5H18v1a1 1 0 1 1-2 0V6H8v1a1 1 0 1 1-2 0V6Z">
-              </path>
-            </svg>
-          </span><input id="endDate" onchange="handleDateChange('endDate')" type="date" />
-        </div>
-        <div id="endDateDisp" class="date-disp"></div>
-      </div>
-    </div>
-
+    <!-- Status Bar -->
     <div class="status-row">
-      <div class="status-item"><span>Ledger:</span> <b id="ledgerCount">0</b> <span>records</span></div>
-      <div class="status-item"><span>Trades:</span> <b id="tradesCount">0</b> <span>records</span></div>
-      <div class="status-item"><span>Recipients:</span> <b id="recipientCount">0</b></div>
-      <div class="status-item"><span>Tolerance:</span> <b id="toleranceDisp">2</b>%</div>
+      <div class="status-item"><span>Withdrawals:</span> <b id="withdrawalCount">0</b></div>
+      <div class="status-item"><span>Addresses:</span> <b id="addressCount">0</b></div>
       <div class="status-item" id="stagingHint" style="flex:1; text-align:right; font-size:0.65rem; color:#7f8c8d;">
       </div>
     </div>
 
+    <!-- Bottom Actions -->
     <div class="actions">
-      <button class="action-main" onclick="generateReport()" style="background:var(--kraken);">Generate Report</button>
       <button class="action-main" id="sync_btn" onclick="handleSync()" style="background:var(--bridge);">Send
         Report<br />to Sheets</button>
+      <button class="action-main" onclick="saveLocalData()" style="background:var(--accent);">Save<br />Local</button>
+      <button class="action-main" onclick="loadLocalData()" style="background:#8e44ad;">Load<br />Local</button>
       <button class="action-main" id="wipeBtn" onclick="handleWipeConfirm()"
-        style="background:var(--danger); opacity:0.85;">Clear<br />Staging</button>
+        style="background:var(--danger); opacity:0.85;">Clear</button>
     </div>
 
     <div class="preview-wrap" id="previewArea"></div>
 
     <button id="log_btn" onclick="toggleLog(true)">Display Trace Log</button>
-    <div id="trace_log" onclick="toggleLog(false)">Trace: v1.03 Kraken Ledger Report initialized.</div>
+    <div id="trace_log" onclick="toggleLog(false)">Trace: v2.0 Kraken Ledger Report initialized.</div>
   </div>
 
   <script>
@@ -489,14 +482,12 @@
     const DEFAULT_API_KEY = "";
     const DEFAULT_PRIVATE_KEY = "";
 
-    // Cache data structure
+    // Cache data structure (v2.0)
     let cacheData = {
-      settings: { tolerancePercent: 2 },
-      destTags: [],   // [{recipient, destTag, address}]
-      wallets: [],    // [{recipient, asset, address}]
-      ledger: [],     // raw ledger rows
-      trades: [],     // raw trades rows
-      krakenAddresses: [] // from Kraken API WithdrawAddresses
+      withdrawals: [],        // from Kraken Ledgers API (withdrawals only)
+      withdrawalHistory: [],  // from Kraken WithdrawStatus API
+      krakenAddresses: [],    // from Kraken WithdrawAddresses API
+      ratesCache: {}          // { "2024-11-02": { USDTGBP: 0.79, USDTEUR: 0.92, ... } }
     };
 
     let stagingRecords = [];
@@ -510,7 +501,7 @@
       const now = new Date().toLocaleTimeString();
       const base = log.textContent && log.textContent.trim().length
         ? log.textContent
-        : "Trace: v1.03 Kraken Ledger Report initialized.";
+        : "Trace: v2.0 Kraken Ledger Report initialized.";
       log.textContent = base + "\n[" + now + "] " + msg;
       log.scrollTop = log.scrollHeight;
       console.log(msg);
@@ -580,51 +571,56 @@
     function localReset() {
       document.getElementById("startDate").value = "";
       document.getElementById("endDate").value = "";
-      document.getElementById("startDateDisp").innerText = "";
-      document.getElementById("endDateDisp").innerText = "";
       updateStatusCounts();
       logTrace("UI Reset.");
     }
 
     // ---------- Status Display ----------
     function updateStatusCounts() {
-      document.getElementById("ledgerCount").innerText = cacheData.ledger.length;
-      document.getElementById("tradesCount").innerText = cacheData.trades.length;
-      document.getElementById("recipientCount").innerText = cacheData.destTags.length + cacheData.wallets.length;
-      document.getElementById("toleranceDisp").innerText = cacheData.settings.tolerancePercent;
+      document.getElementById("withdrawalCount").innerText = cacheData.withdrawals.length;
+      document.getElementById("addressCount").innerText = cacheData.krakenAddresses.length;
     }
 
-    // ---------- Local Cache ----------
-    function cacheSave() {
-      if (cacheData.ledger.length === 0 && cacheData.destTags.length === 0) {
-        alert("Refresh Lookups First");
+    // ---------- Local Save/Load (v2.0) ----------
+    function saveLocalData() {
+      if (cacheData.withdrawals.length === 0) {
+        alert("Fetch data first before saving.");
         return;
       }
-      if (!confirm("Snapshot current data to local storage?")) return;
-      localStorage.setItem("kraken_cache_settings", JSON.stringify(cacheData.settings));
-      localStorage.setItem("kraken_cache_dest_tags", JSON.stringify(cacheData.destTags));
-      localStorage.setItem("kraken_cache_wallets", JSON.stringify(cacheData.wallets));
-      localStorage.setItem("kraken_cache_ledger", JSON.stringify(cacheData.ledger));
-      localStorage.setItem("kraken_cache_trades", JSON.stringify(cacheData.trades));
-      logTrace("Cache saved to localStorage.");
+      localStorage.setItem("kraken_v2_withdrawals", JSON.stringify(cacheData.withdrawals));
+      localStorage.setItem("kraken_v2_history", JSON.stringify(cacheData.withdrawalHistory));
+      localStorage.setItem("kraken_v2_addresses", JSON.stringify(cacheData.krakenAddresses));
+      localStorage.setItem("kraken_v2_rates", JSON.stringify(cacheData.ratesCache));
+      logTrace("Data saved to localStorage.");
       alert("Data saved to local storage.");
     }
 
-    function cachePull() {
-      if (!confirm("Load data from local storage?")) return;
-      const cached = localStorage.getItem("kraken_cache_ledger");
+    function loadLocalData() {
+      const cached = localStorage.getItem("kraken_v2_withdrawals");
       if (!cached) {
-        alert("No local data found. Use 'Refresh Lookups from Sheets' first.");
+        alert("No saved data found. Use 'Fetch & Generate Report' first.");
         return;
       }
-      cacheData.settings = JSON.parse(localStorage.getItem("kraken_cache_settings") || '{"tolerancePercent":2}');
-      cacheData.destTags = JSON.parse(localStorage.getItem("kraken_cache_dest_tags") || "[]");
-      cacheData.wallets = JSON.parse(localStorage.getItem("kraken_cache_wallets") || "[]");
-      cacheData.ledger = JSON.parse(localStorage.getItem("kraken_cache_ledger") || "[]");
-      cacheData.trades = JSON.parse(localStorage.getItem("kraken_cache_trades") || "[]");
+      cacheData.withdrawals = JSON.parse(cached || "[]");
+      cacheData.withdrawalHistory = JSON.parse(localStorage.getItem("kraken_v2_history") || "[]");
+      cacheData.krakenAddresses = JSON.parse(localStorage.getItem("kraken_v2_addresses") || "[]");
+      cacheData.ratesCache = JSON.parse(localStorage.getItem("kraken_v2_rates") || "{}");
       updateStatusCounts();
-      logTrace("Cache pulled from localStorage. Ledger=" + cacheData.ledger.length + " Trades=" + cacheData.trades.length);
-      alert("Data loaded from local storage.");
+      logTrace("Loaded from localStorage. Withdrawals=" + cacheData.withdrawals.length);
+
+      // Regenerate report from cached data
+      generateReportFromCache();
+    }
+
+    function saveApiConfig() {
+      const apiKey = document.getElementById("krakenApiKey").value;
+      const privateKey = document.getElementById("krakenPrivateKey").value;
+      const proxy = document.getElementById("corsProxy").value;
+      localStorage.setItem("kraken_api_key", apiKey);
+      localStorage.setItem("kraken_private_key", privateKey);
+      localStorage.setItem("kraken_cors_proxy", proxy);
+      logTrace("API credentials saved.");
+      alert("Credentials saved.");
     }
 
     // ---------- Staging Table Render ----------
@@ -1360,19 +1356,9 @@
       return { apiKey, privateKey, proxy };
     }
 
+    // Use same credentials for all Kraken API calls (v2.0 - single key pair)
     function getWithdrawCredentials() {
-      let apiKey = document.getElementById("withdrawApiKey").value.trim();
-      let privateKey = document.getElementById("withdrawPrivateKey").value.trim();
-      if (!apiKey || !privateKey) {
-        throw new Error("Please enter Withdrawal API credentials in API Config");
-      }
-      // Log credential lengths for debugging (not the actual values)
-      logTrace("Withdraw API Key length: " + apiKey.length + ", Private Key length: " + privateKey.length);
-      // Save for next time
-      localStorage.setItem("kraken_withdraw_api_key", apiKey);
-      localStorage.setItem("kraken_withdraw_private_key", privateKey);
-      const proxy = document.getElementById("corsProxy").value.trim();
-      return { apiKey, privateKey, proxy };
+      return getApiCredentials();
     }
 
     // Base64 helpers
@@ -1644,6 +1630,206 @@
       return rates;
     }
 
+    // ========== MAIN FUNCTION: Fetch & Generate Report (v2.0) ==========
+    async function fetchAndGenerateReport() {
+      // Step 0: Validate date range
+      const startDate = document.getElementById("startDate").value;
+      const endDate = document.getElementById("endDate").value;
+
+      if (!startDate || !endDate) {
+        alert("Please select Start Date and End Date first.");
+        return;
+      }
+
+      const startTime = new Date(startDate).getTime() / 1000;
+      const endTime = new Date(endDate + "T23:59:59").getTime() / 1000;
+
+      logTrace("Date range: " + startDate + " to " + endDate);
+      logTrace("Unix range: " + startTime + " to " + endTime);
+
+      // Step 1: Prompt for 2FA
+      const otp = prompt("Enter your Kraken 2FA code:");
+      if (!otp || otp.trim() === "") {
+        logTrace("2FA cancelled by user");
+        return;
+      }
+
+      try {
+        const creds = getApiCredentials();
+        updateStatus("Fetching...", "sync");
+
+        // Step 2: Call Kraken Ledgers API for withdrawals
+        logTrace("Calling Kraken Ledgers API...");
+        const ledgerResult = await callKrakenPrivateAPI("Ledgers", {
+          type: "withdrawal",
+          start: Math.floor(startTime),
+          end: Math.floor(endTime),
+          otp: otp.trim()
+        }, creds);
+
+        // ledgerResult is { ledger_id: { refid, time, type, subtype, aclass, asset, amount, fee, balance } }
+        const allWithdrawals = [];
+        for (const [ledgerId, entry] of Object.entries(ledgerResult.ledger || ledgerResult || {})) {
+          const asset = (entry.asset || "").toUpperCase();
+          // Filter to USDT and XRP only
+          if (asset.includes("USDT") || asset.includes("XRP") || asset === "XXRP") {
+            allWithdrawals.push({
+              ledgerId,
+              refid: entry.refid,
+              time: entry.time,
+              asset: asset,
+              amount: parseFloat(entry.amount || 0),
+              fee: parseFloat(entry.fee || 0),
+              balance: parseFloat(entry.balance || 0)
+            });
+          }
+        }
+
+        cacheData.withdrawals = allWithdrawals;
+        logTrace("Fetched " + allWithdrawals.length + " USDT/XRP withdrawals from Ledgers API");
+
+        // Step 3: Call WithdrawStatus for destination details
+        logTrace("Fetching withdrawal details...");
+        await fetchWithdrawalHistory(otp.trim());
+
+        // Step 4: Call WithdrawAddresses for recipient names
+        logTrace("Fetching saved addresses...");
+        const addresses = await callKrakenPrivateAPI("WithdrawAddresses", { otp: otp.trim() }, creds);
+        cacheData.krakenAddresses = addresses || [];
+        logTrace("Fetched " + cacheData.krakenAddresses.length + " saved addresses");
+
+        updateStatusCounts();
+
+        // Step 5: Generate report from fetched data
+        await generateReportFromCache();
+
+        updateStatus("Ready", "active");
+
+      } catch (e) {
+        updateStatus("Error", "error");
+        logTrace("Error: " + (e.message || e));
+        alert("Error: " + (e.message || e));
+      }
+    }
+
+    // Generate report from cached data (no API calls except for rates)
+    async function generateReportFromCache() {
+      if (cacheData.withdrawals.length === 0) {
+        alert("No withdrawal data. Please Fetch first.");
+        return;
+      }
+
+      updateStatus("Generating...", "sync");
+      logTrace("Generating report from " + cacheData.withdrawals.length + " withdrawals...");
+
+      stagingRecords = [];
+
+      // Step 1: Collect unique dates for batch rate lookup
+      const uniqueDates = new Set();
+      for (const w of cacheData.withdrawals) {
+        const dateStr = new Date(w.time * 1000).toISOString().split("T")[0];
+        uniqueDates.add(dateStr);
+      }
+      logTrace("Unique dates: " + Array.from(uniqueDates).join(", "));
+
+      // Step 2: Batch fetch rates for each unique date
+      const ratesToFetch = [];
+      for (const dateStr of uniqueDates) {
+        const timestamp = new Date(dateStr).getTime() / 1000 + 43200; // noon
+        if (!cacheData.ratesCache[dateStr]) {
+          ratesToFetch.push({ dateStr, timestamp });
+        }
+      }
+
+      if (ratesToFetch.length > 0) {
+        logTrace("Fetching rates for " + ratesToFetch.length + " dates...");
+        updateStatus("Fetching rates...", "sync");
+
+        for (const { dateStr, timestamp } of ratesToFetch) {
+          // Fetch all 4 pairs for this date
+          const usdtRates = await getKrakenRate("USDT", timestamp);
+          const xrpRates = await getKrakenRate("XRP", timestamp);
+
+          cacheData.ratesCache[dateStr] = {
+            USDTGBP: usdtRates.gbpRate,
+            USDTEUR: usdtRates.eurRate,
+            XRPGBP: xrpRates.gbpRate,
+            XRPEUR: xrpRates.eurRate
+          };
+          logTrace("Rates for " + dateStr + ": USDTGBP=" + usdtRates.gbpRate + ", XRPGBP=" + xrpRates.gbpRate);
+        }
+      }
+
+      // Step 3: Build records
+      for (const w of cacheData.withdrawals) {
+        const dateStr = new Date(w.time * 1000).toISOString().split("T")[0];
+        const rates = cacheData.ratesCache[dateStr] || {};
+
+        // Find matching withdrawal in history (for address/tag)
+        const historyMatch = cacheData.withdrawalHistory.find(h => h.refid === w.refid);
+
+        // Get address and destination tag
+        let walletAddr = historyMatch ? (historyMatch.info || historyMatch.address || "") : "";
+        let destTag = historyMatch ? (historyMatch.dest || historyMatch.tag || "") : "";
+
+        // Find recipient from krakenAddresses
+        let recipient = "";
+        const addrMatch = cacheData.krakenAddresses.find(a =>
+          a.address === walletAddr || (a.tag && a.tag === destTag)
+        );
+        if (addrMatch) {
+          recipient = (addrMatch.key || "").replace(/\s*(XRP|USDT|TRC20|ERC20)\\s*/gi, "").trim();
+        }
+
+        // Calculate GBP equivalent
+        let gbpEquivalent = "";
+        let eurEquivalent = "";
+        const absAmount = Math.abs(w.amount);
+
+        if (w.asset.includes("USDT")) {
+          if (rates.USDTGBP) gbpEquivalent = (absAmount * rates.USDTGBP).toFixed(2);
+          if (rates.USDTEUR) eurEquivalent = (absAmount * rates.USDTEUR).toFixed(2);
+        } else if (w.asset.includes("XRP") || w.asset === "XXRP") {
+          if (rates.XRPGBP) gbpEquivalent = (absAmount * rates.XRPGBP).toFixed(2);
+          if (rates.XRPEUR) eurEquivalent = (absAmount * rates.XRPEUR).toFixed(2);
+        }
+
+        const record = {
+          dateSent: formatTimestamp(w.time),
+          entryDate: "",
+          recipient: recipient,
+          asset: w.asset,
+          amount: w.amount.toFixed(6),
+          fee: w.fee.toFixed(6),
+          balance: w.balance.toFixed(6),
+          originalCurrency: gbpEquivalent ? "GBP" : (eurEquivalent ? "EUR" : ""),
+          originalAmount: gbpEquivalent || eurEquivalent || "",
+          gbpEquivalent: gbpEquivalent,
+          destTag: destTag,
+          wallet: walletAddr,
+          txId: w.refid,
+          matched: addrMatch ? "Yes" : "No"
+        };
+
+        stagingRecords.push(record);
+      }
+
+      localStorage.setItem("kraken_staging", JSON.stringify(stagingRecords));
+      renderPreview();
+      updateStatus("Ready", "active");
+      logTrace("Report generated: " + stagingRecords.length + " records");
+    }
+
+    // Format unix timestamp to DD/MM/YYYY
+    function formatTimestamp(unixTime) {
+      if (!unixTime) return "";
+      const dt = new Date(unixTime * 1000);
+      const d = String(dt.getDate()).padStart(2, "0");
+      const m = String(dt.getMonth() + 1).padStart(2, "0");
+      const y = dt.getFullYear();
+      return d + "/" + m + "/" + y;
+    }
+
     // ---------- Boot ----------
     async function waitFor(cond, timeoutMs) {
       const t0 = Date.now();
@@ -1672,13 +1858,9 @@
       const savedKey = localStorage.getItem("kraken_api_key");
       const savedPrivate = localStorage.getItem("kraken_private_key");
       const savedProxy = localStorage.getItem("kraken_cors_proxy");
-      const savedWithdrawKey = localStorage.getItem("kraken_withdraw_api_key");
-      const savedWithdrawPrivate = localStorage.getItem("kraken_withdraw_private_key");
       if (savedKey) document.getElementById("krakenApiKey").value = savedKey;
       if (savedPrivate) document.getElementById("krakenPrivateKey").value = savedPrivate;
       if (savedProxy) document.getElementById("corsProxy").value = savedProxy;
-      if (savedWithdrawKey) document.getElementById("withdrawApiKey").value = savedWithdrawKey;
-      if (savedWithdrawPrivate) document.getElementById("withdrawPrivateKey").value = savedWithdrawPrivate;
 
       try {
         await waitFor(() => typeof gapi !== "undefined", 8000);
@@ -1693,6 +1875,8 @@
       } catch (_) {
         logTrace("GIS not available.");
       }
+
+      logTrace("v2.0 Ready. Set date range, then click 'Fetch & Generate Report'.");
     }
 
     window.addEventListener("load", boot);
