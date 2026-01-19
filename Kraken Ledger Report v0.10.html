@@ -358,7 +358,7 @@
       <div
         style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; position:relative;">
         <div class="branding-row" style="margin-bottom:0;"><b>Kraken Ledger Report</b> <span
-            style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.14</span></div>
+            style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.15</span></div>
         <div id="auth_status"
           style="position:absolute; left:50%; transform:translateX(-50%); font-size:0.7rem; font-weight:700;">Status:
           Ready</div>
@@ -538,12 +538,12 @@
     <button id="copy_trace_btn" onclick="copyTraceToClipboard()"
       style="width:100%; padding:8px; margin-top:6px; background:#16a085; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Copy
       Trace to Clipboard</button>
-    <div id="trace_log" onclick="toggleLog(false)">Trace: v2.14 Kraken Ledger Report initialized.</div>
+    <div id="trace_log" onclick="toggleLog(false)">Trace: v2.15 Kraken Ledger Report initialized.</div>
   </div>
 
   <script>
     const SHEET_ID = "1Vf0iqthwHv0kFqTRJkYShH_RBpbokLmiEDWGJN3Q0_E";
-    const VER = "Kraken Ledger Report (v2.14)";
+    const VER = "Kraken Ledger Report (v2.15)";
     const KRAKEN_API_URL = "https://api.kraken.com";
 
     // Default API credentials (enter your own in API Config)
@@ -569,7 +569,7 @@
       const now = new Date().toLocaleTimeString();
       const base = log.textContent && log.textContent.trim().length
         ? log.textContent
-        : "Trace: v2.14 Kraken Ledger Report initialized.";
+        : "Trace: v2.15 Kraken Ledger Report initialized.";
       log.textContent = base + "\n[" + now + "] " + msg;
       log.scrollTop = log.scrollHeight;
       console.log(msg);
@@ -590,7 +590,7 @@
     function copyTraceToClipboard() {
       const log = document.getElementById("trace_log");
       const text = log.textContent || "";
-      if (!text.trim() || text.trim() === "Trace: v2.14 Kraken Ledger Report initialized.") {
+      if (!text.trim() || text.trim() === "Trace: v2.15 Kraken Ledger Report initialized.") {
         alert("There are no trace log records to copy.");
         return;
       }
@@ -987,293 +987,6 @@
       return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
     }
 
-    // ---------- Report Generation ----------
-    async function generateReport() {
-      const startVal = document.getElementById("startDate").value;
-      const endVal = document.getElementById("endDate").value;
-
-      if (!startVal || !endVal) {
-        alert("Please select both Start Date and End Date.");
-        return;
-      }
-
-      if (cacheData.ledger.length === 0) {
-        alert("No ledger data. Use 'Pull local Lookups' or 'Refresh Lookups from Sheets' first.");
-        return;
-      }
-
-      const startTime = new Date(startVal + "T00:00:00").getTime() / 1000;
-      const endTime = new Date(endVal + "T23:59:59").getTime() / 1000;
-      const tolerance = cacheData.settings.tolerancePercent / 100;
-
-      logTrace("Generating report. Start=" + startVal + " End=" + endVal + " Tolerance=" + (tolerance * 100) + "%");
-
-      // Prompt for 2FA once to fetch withdrawal history
-      let otp = null;
-      const hasWithdrawCreds = document.getElementById("withdrawApiKey").value.trim() &&
-        document.getElementById("withdrawPrivateKey").value.trim();
-
-      if (hasWithdrawCreds) {
-        otp = prompt("Enter your 2FA code for Kraken Withdrawal API (or Cancel to skip API lookup):");
-        if (otp && otp.trim()) {
-          updateStatus("Fetching withdrawal history...", "sync");
-          try {
-            await fetchWithdrawalHistory(otp.trim());
-            logTrace("Withdrawal history fetched for matching.");
-          } catch (e) {
-            logTrace("Failed to fetch withdrawal history: " + e.message);
-          }
-        }
-      }
-
-      // STEP 1: Get USDT and XRP withdrawals only (exclude fiat GBP/EUR)
-      const allWithdrawals = cacheData.ledger.filter(entry => {
-        const entryType = (entry.type || "").toLowerCase();
-        const asset = (entry.asset || "").toUpperCase();
-        // Only include USDT (including TRC20) and XRP
-        const isTarget = asset.includes("USDT") || asset.includes("XRP") || asset === "XXRP";
-        return entryType === "withdrawal" && isTarget;
-      });
-      logTrace("STEP 1: Found " + allWithdrawals.length + " USDT/XRP withdrawals in ledger.");
-
-      // STEP 2: Parse times and filter by date range
-      const withdrawals = [];
-      for (const w of allWithdrawals) {
-        const timeRaw = w.time;
-        const timeParsed = parseDateString(timeRaw);
-
-        // Show first withdrawal for debugging
-        if (withdrawals.length === 0 && allWithdrawals.length > 0) {
-          logTrace("STEP 2: First withdrawal - time raw='" + timeRaw + "' (typeof " + typeof timeRaw + ") parsed=" + timeParsed);
-          if (timeParsed > 0) {
-            logTrace("STEP 2: Parsed to " + new Date(timeParsed * 1000).toISOString());
-          }
-          logTrace("STEP 2: Date range check: " + startTime + " <= " + timeParsed + " <= " + endTime);
-        }
-
-        // Include if date is valid and within range (or if date is 0, include anyway to show in report)
-        if (timeParsed === 0 || (timeParsed >= startTime && timeParsed <= endTime)) {
-          withdrawals.push({ ...w, _parsedTime: timeParsed });
-        }
-      }
-      logTrace("STEP 2: " + withdrawals.length + " withdrawals in date range (or with unparseable dates).");
-
-      // Debug: show ledger sample BEFORE filtering
-      if (cacheData.ledger.length > 0) {
-        const sample = cacheData.ledger[0];
-        logTrace("DEBUG: Ledger sample entry keys: " + Object.keys(sample).join(", "));
-        logTrace("DEBUG: Ledger sample type field: '" + sample.type + "' time field: '" + sample.time + "' (typeof: " + typeof sample.time + ")");
-
-        // Parse and show the sample time
-        const sampleParsed = parseDateString(sample.time);
-        logTrace("DEBUG: Sample parsed time: " + sampleParsed + " => " + new Date(sampleParsed * 1000).toISOString());
-
-        // Count entries by type
-        const typeCounts = {};
-        for (const e of cacheData.ledger) {
-          const t = (e.type || "unknown").toLowerCase();
-          typeCounts[t] = (typeCounts[t] || 0) + 1;
-        }
-        logTrace("DEBUG: Ledger types: " + JSON.stringify(typeCounts));
-
-        // Find one withdrawal and show its details
-        const sampleWithdrawal = cacheData.ledger.find(e => (e.type || "").toLowerCase() === "withdrawal");
-        if (sampleWithdrawal) {
-          const wTime = parseDateString(sampleWithdrawal.time);
-          logTrace("DEBUG: Sample withdrawal - time raw: '" + sampleWithdrawal.time + "' parsed: " + wTime + " => " + new Date(wTime * 1000).toISOString());
-          logTrace("DEBUG: Comparison: " + startTime + " <= " + wTime + " <= " + endTime + " = " + (wTime >= startTime && wTime <= endTime));
-        }
-      }
-
-      // Debug: show date range info
-      if (cacheData.ledger.length > 0) {
-        const allDates = cacheData.ledger.map(e => e.time || "").filter(t => t).sort();
-        logTrace("DEBUG: Ledger date range (raw): " + allDates[0] + " to " + allDates[allDates.length - 1]);
-        logTrace("DEBUG: Selected range: startTime=" + startTime + " endTime=" + endTime);
-        logTrace("DEBUG: Selected range (ISO): " + new Date(startTime * 1000).toISOString() + " to " + new Date(endTime * 1000).toISOString());
-      }
-
-      // Debug: show withdrawal history info
-      logTrace("DEBUG: Withdrawal history entries: " + (cacheData.withdrawalHistory || []).length);
-      if ((cacheData.withdrawalHistory || []).length > 0) {
-        const sample = cacheData.withdrawalHistory[0];
-        logTrace("DEBUG: Sample history entry keys: " + Object.keys(sample).join(", "));
-      }
-
-      stagingRecords = [];
-
-      for (const w of withdrawals) {
-        // Ledger columns: txid, refid, time, type, subtype, aclass, subclass, asset, wallet, amount, fee, balance
-        const txid = w.txid || "";
-        const refid = w.refid || "";
-        const wTime = parseDateString(w.time || "");
-        const wType = w.type || "";
-        const wAsset = w.asset || "";
-        const wAmount = parseFloat(w.amount || 0);
-        const wFee = parseFloat(w.fee || 0);
-        const wBalance = parseFloat(w.balance || 0);
-
-        // Find recipient - first try withdrawal history from API, then address lookups
-        let recipient = "";
-        let destTag = "";
-        let walletAddr = "";
-
-        // Try to find in withdrawal history from API (matched by refid)
-        const historyMatch = (cacheData.withdrawalHistory || []).find(h => h.refid === refid);
-        if (historyMatch) {
-          walletAddr = historyMatch.info || historyMatch.address || "";
-          destTag = historyMatch.dest || historyMatch.tag || "";
-
-          // Find recipient from address lookups
-          if (wAsset.includes("XRP") || wAsset === "XXRP") {
-            const addrMatch = cacheData.destTags.find(d =>
-              String(d.destTag) === destTag || String(d[1]) === destTag ||
-              (d.address && d.address === walletAddr)
-            );
-            recipient = addrMatch ? (addrMatch.recipient || addrMatch[0] || "") : "";
-          } else {
-            const addrMatch = cacheData.wallets.find(d =>
-              (d.address || d[2] || "") === walletAddr
-            );
-            recipient = addrMatch ? (addrMatch.recipient || addrMatch[0] || "") : "";
-          }
-
-          if (!recipient) {
-            // Try to find by savedAddress key name in krakenAddresses
-            const keyMatch = cacheData.krakenAddresses.find(a =>
-              a.address === walletAddr || (a.tag && a.tag === destTag)
-            );
-            if (keyMatch) {
-              recipient = (keyMatch.key || "").replace(/\s*(XRP|USDT|TRC20|ERC20|BTC|ETH)\s*/gi, "").trim();
-            }
-          }
-
-          logTrace("Matched refid " + refid.substring(0, 10) + "... to address " + walletAddr.substring(0, 15) + "... recipient: " + recipient);
-        } else {
-          // Fallback: try extracting from refid (old method - likely won't work)
-          if (wAsset.includes("XRP") || wAsset === "XXRP") {
-            destTag = extractDestTag(refid);
-            const match = cacheData.destTags.find(d => String(d.destTag) === destTag || String(d[1]) === destTag);
-            recipient = match ? (match.recipient || match[0] || "") : "";
-          } else if (wAsset.includes("USDT")) {
-            walletAddr = extractWallet(refid);
-            const match = cacheData.wallets.find(d => (d.address || d[2] || "") === walletAddr);
-            recipient = match ? (match.recipient || match[0] || "") : "";
-          }
-        }
-
-        // Find matching trade (fuzzy)
-        const trade = findMatchingTrade(wAmount, wTime, wAsset, tolerance);
-
-        // Get exchange rates for GBP/EUR equivalent
-        let originalCurrency = "";
-        let originalAmount = "";
-        let gbpEquivalent = "";
-
-        // If trade matched, use trade data
-        if (trade) {
-          originalCurrency = extractFiatCurrency(trade);
-          originalAmount = (parseFloat(trade.cost || trade[7] || 0)).toFixed(2);
-          gbpEquivalent = calculateGBPEquivalent(trade);
-        }
-
-        // For fiat withdrawals (GBP, EUR, USD), show directly
-        if (wAsset === "ZGBP" || wAsset === "GBP") {
-          originalCurrency = "GBP";
-          originalAmount = Math.abs(wAmount).toFixed(2);
-          gbpEquivalent = Math.abs(wAmount).toFixed(2);
-        } else if (wAsset === "ZEUR" || wAsset === "EUR") {
-          originalCurrency = "EUR";
-          originalAmount = Math.abs(wAmount).toFixed(2);
-          gbpEquivalent = (Math.abs(wAmount) * 0.86).toFixed(2);
-        } else if (wAsset === "ZUSD" || wAsset === "USD") {
-          originalCurrency = "USD";
-          originalAmount = Math.abs(wAmount).toFixed(2);
-          gbpEquivalent = (Math.abs(wAmount) * 0.79).toFixed(2);
-        } else {
-          // For crypto (USDT, XRP), look up exchange rate from Kraken API
-          try {
-            const rates = await getKrakenRate(wAsset, wTime);
-            const absAmount = Math.abs(wAmount);
-
-            if (rates.gbpRate) {
-              gbpEquivalent = (absAmount * rates.gbpRate).toFixed(2);
-              originalCurrency = "GBP";
-              originalAmount = gbpEquivalent;
-            } else if (rates.eurRate) {
-              originalCurrency = "EUR";
-              originalAmount = (absAmount * rates.eurRate).toFixed(2);
-              // Convert EUR to GBP
-              gbpEquivalent = (parseFloat(originalAmount) * 0.86).toFixed(2);
-            } else if (rates.usdRate) {
-              originalCurrency = "USD";
-              originalAmount = (absAmount * rates.usdRate).toFixed(2);
-              gbpEquivalent = (parseFloat(originalAmount) * 0.79).toFixed(2);
-            }
-
-            logTrace("Rate for " + wAsset + ": GBP=" + rates.gbpRate + " EUR=" + rates.eurRate + " USD=" + rates.usdRate);
-          } catch (e) {
-            logTrace("Rate lookup failed for " + wAsset + ": " + e.message);
-          }
-        }
-
-        const record = {
-          dateSent: formatTimestamp(wTime),
-          entryDate: trade ? formatTimestamp(parseDateString(trade.time || "")) : "",
-          recipient: recipient,
-          asset: wAsset,
-          amount: wAmount.toFixed(6),
-          fee: wFee.toFixed(6),
-          balance: wBalance.toFixed(6),
-          originalCurrency: originalCurrency,
-          originalAmount: originalAmount,
-          gbpEquivalent: gbpEquivalent,
-          destTag: destTag,
-          wallet: walletAddr,
-          txId: refid,
-          matched: trade ? "Yes" : "No"
-        };
-
-        stagingRecords.push(record);
-      }
-
-      localStorage.setItem("kraken_staging", JSON.stringify(stagingRecords));
-      renderPreview();
-      logTrace("Report generated. " + stagingRecords.length + " records in staging.");
-      alert("Report generated: " + stagingRecords.length + " records.");
-    }
-
-    function findMatchingTrade(withdrawalAmount, withdrawalTime, asset, tolerance) {
-      const absAmount = Math.abs(withdrawalAmount);
-
-      // Filter trades that are BEFORE the withdrawal and for the same asset
-      // Trades columns: txid, ordertxid, pair, aclass, subclass, time, type, ordertype, price, cost, fee, vol
-      const candidates = cacheData.trades.filter(trade => {
-        const tradeTime = parseDateString(trade.time || "");
-        const tradePair = (trade.pair || "").toUpperCase();
-        const assetNorm = asset.replace("X", "").replace("Z", "");
-        return tradeTime < withdrawalTime && tradePair.includes(assetNorm);
-      });
-
-      // Sort by time descending (most recent first)
-      candidates.sort((a, b) => {
-        const tA = parseDateString(a.time || "");
-        const tB = parseDateString(b.time || "");
-        return tB - tA;
-      });
-
-      // Find first trade where vol ≈ withdrawal amount
-      for (const trade of candidates) {
-        const tradeVol = Math.abs(parseFloat(trade.vol || 0));
-        const diff = Math.abs(tradeVol - absAmount) / absAmount;
-        if (diff <= tolerance) {
-          return trade;
-        }
-      }
-
-      return null;
-    }
-
     // Parse Kraken date strings like "2024-11-02 08:42:24" to Unix timestamp
     function parseDateString(dateStr) {
       try {
@@ -1416,104 +1129,6 @@
         return;
       }
       requestToken(true, onOk);
-    }
-
-    async function fetchAllSheets() {
-      updateStatus("Fetching data...", "sync");
-      try {
-        // Fetch Settings
-        logTrace("Fetching Settings...");
-        const settingsRes = await gapi.client.sheets.spreadsheets.values.get({
-          spreadsheetId: SHEET_ID,
-          range: "Settings!A2:B10"
-        });
-        const settingsRows = settingsRes.result.values || [];
-        for (const row of settingsRows) {
-          if (row[0] === "TolerancePercent") {
-            cacheData.settings.tolerancePercent = parseFloat(row[1]) || 2;
-          }
-        }
-
-        // Fetch DEST_TAG
-        logTrace("Fetching DEST_TAG...");
-        const destTagRes = await gapi.client.sheets.spreadsheets.values.get({
-          spreadsheetId: SHEET_ID,
-          range: "DEST_TAG!A2:B500"
-        });
-        cacheData.destTags = (destTagRes.result.values || []).map(r => ({
-          recipient: r[0] || "",
-          destTag: r[1] || ""
-        }));
-
-        // Fetch WALLET
-        logTrace("Fetching WALLET...");
-        const walletRes = await gapi.client.sheets.spreadsheets.values.get({
-          spreadsheetId: SHEET_ID,
-          range: "WALLET!A2:C500"
-        });
-        cacheData.wallets = (walletRes.result.values || []).map(r => ({
-          recipient: r[0] || "",
-          asset: r[1] || "",
-          address: r[2] || ""
-        }));
-
-        // Fetch csv-ledger
-        // Columns: A:txid, B:refid, C:time, D:type, E:subtype, F:aclass, G:subclass, H:asset, I:wallet, J:amount, K:fee, L:balance
-        logTrace("Fetching csv-ledger...");
-        const ledgerRes = await gapi.client.sheets.spreadsheets.values.get({
-          spreadsheetId: SHEET_ID,
-          range: "'csv-ledger'!A2:L5000"
-        });
-        cacheData.ledger = (ledgerRes.result.values || []).map(r => ({
-          txid: r[0] || "",
-          refid: r[1] || "",
-          time: r[2] || "",
-          type: r[3] || "",
-          subtype: r[4] || "",
-          aclass: r[5] || "",
-          subclass: r[6] || "",
-          asset: r[7] || "",
-          wallet: r[8] || "",
-          amount: r[9] || "",
-          fee: r[10] || "",
-          balance: r[11] || ""
-        }));
-
-        // Fetch csv-trades
-        // Columns: A:txid, B:ordertxid, C:pair, D:aclass, E:subclass, F:time, G:type, H:ordertype, I:price, J:cost, K:fee, L:vol, M:margin, N:misc, O:ledgers
-        logTrace("Fetching csv-trades...");
-        const tradesRes = await gapi.client.sheets.spreadsheets.values.get({
-          spreadsheetId: SHEET_ID,
-          range: "'csv-trades'!A2:O5000"
-        });
-        cacheData.trades = (tradesRes.result.values || []).map(r => ({
-          txid: r[0] || "",
-          ordertxid: r[1] || "",
-          pair: r[2] || "",
-          aclass: r[3] || "",
-          subclass: r[4] || "",
-          time: r[5] || "",
-          type: r[6] || "",
-          ordertype: r[7] || "",
-          price: r[8] || "",
-          cost: r[9] || "",
-          fee: r[10] || "",
-          vol: r[11] || "",
-          margin: r[12] || "",
-          misc: r[13] || "",
-          ledgers: r[14] || ""
-        }));
-
-        updateStatusCounts();
-        updateStatus("Token Active", "active");
-        logTrace("Refresh complete. Ledger=" + cacheData.ledger.length + " Trades=" + cacheData.trades.length);
-        alert("Refresh complete.\nLedger: " + cacheData.ledger.length + " records\nTrades: " + cacheData.trades.length + " records");
-
-      } catch (e) {
-        updateStatus("Error", "error");
-        logTrace("Fetch error: " + (e.message || e));
-        alert("Error fetching data. Check trace log.");
-      }
     }
 
     async function handleSync() {
