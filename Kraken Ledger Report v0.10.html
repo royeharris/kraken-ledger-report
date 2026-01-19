@@ -358,7 +358,7 @@
       <div
         style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; position:relative;">
         <div class="branding-row" style="margin-bottom:0;"><b>Kraken Ledger Report</b> <span
-            style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.12</span></div>
+            style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.13</span></div>
         <div id="auth_status"
           style="position:absolute; left:50%; transform:translateX(-50%); font-size:0.7rem; font-weight:700;">Status:
           Ready</div>
@@ -445,13 +445,14 @@
       style="width:100%; padding:8px; margin-top:10px; background:#27ae60; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Display
       Saved Addresses</button>
 
-    <!-- Address Viewer Panel (hidden by default) -->
-    <div id="addressViewerSection"
-      style="display:none; margin-bottom:15px; padding:10px; background:#e8f5e9; border-radius:6px; max-height:300px; overflow-y:auto; border:2px solid #27ae60;">
+    <!-- Address Viewer Panel (hidden by default) - click to close -->
+    <div id="addressViewerSection" onclick="toggleAddressViewer()"
+      style="display:none; margin-bottom:15px; padding:10px; background:#e8f5e9; border-radius:6px; max-height:300px; overflow-y:auto; border:2px solid #27ae60; cursor:pointer;">
       <div
         style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; padding-bottom:6px; border-bottom:1px solid #a5d6a7;">
-        <span style="font-size:0.85rem; font-weight:700; color:#27ae60;">📋 Saved Withdrawal Addresses</span>
-        <button onclick="copyAddressesToClipboard()"
+        <span style="font-size:0.85rem; font-weight:700; color:#27ae60;">📋 Saved Withdrawal Addresses (click to
+          close)</span>
+        <button onclick="event.stopPropagation(); copyAddressesToClipboard();"
           style="padding:4px 8px; background:#27ae60; color:#fff; border:none; border-radius:4px; font-size:0.6rem; cursor:pointer;">Copy
           to Clipboard</button>
       </div>
@@ -478,13 +479,13 @@
       style="width:100%; padding:8px; margin-top:6px; background:#16a085; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Display
       Raw Ledger Data</button>
 
-    <!-- Ledger Viewer Panel (hidden by default) -->
-    <div id="ledgerViewerSection"
-      style="display:none; margin-bottom:15px; padding:10px; background:#e3f2fd; border-radius:6px; max-height:300px; overflow-y:auto; border:2px solid #16a085;">
+    <!-- Ledger Viewer Panel (hidden by default) - click to close -->
+    <div id="ledgerViewerSection" onclick="toggleLedgerViewer()"
+      style="display:none; margin-bottom:15px; padding:10px; background:#e3f2fd; border-radius:6px; max-height:300px; overflow-y:auto; border:2px solid #16a085; cursor:pointer;">
       <div
         style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; padding-bottom:6px; border-bottom:1px solid #90caf9;">
-        <span style="font-size:0.85rem; font-weight:700; color:#16a085;">📊 Raw Ledger Data</span>
-        <button onclick="copyLedgerToClipboard()"
+        <span style="font-size:0.85rem; font-weight:700; color:#16a085;">📊 Raw Ledger Data (click to close)</span>
+        <button onclick="event.stopPropagation(); copyLedgerToClipboard();"
           style="padding:4px 8px; background:#16a085; color:#fff; border:none; border-radius:4px; font-size:0.6rem; cursor:pointer;">Copy
           to Clipboard</button>
       </div>
@@ -537,12 +538,12 @@
     <button id="copy_trace_btn" onclick="copyTraceToClipboard()"
       style="width:100%; padding:8px; margin-top:6px; background:#16a085; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Copy
       Trace to Clipboard</button>
-    <div id="trace_log" onclick="toggleLog(false)">Trace: v2.12 Kraken Ledger Report initialized.</div>
+    <div id="trace_log" onclick="toggleLog(false)">Trace: v2.13 Kraken Ledger Report initialized.</div>
   </div>
 
   <script>
     const SHEET_ID = "1Vf0iqthwHv0kFqTRJkYShH_RBpbokLmiEDWGJN3Q0_E";
-    const VER = "Kraken Ledger Report (v2.12)";
+    const VER = "Kraken Ledger Report (v2.13)";
     const KRAKEN_API_URL = "https://api.kraken.com";
 
     // Default API credentials (enter your own in API Config)
@@ -568,7 +569,7 @@
       const now = new Date().toLocaleTimeString();
       const base = log.textContent && log.textContent.trim().length
         ? log.textContent
-        : "Trace: v2.12 Kraken Ledger Report initialized.";
+        : "Trace: v2.13 Kraken Ledger Report initialized.";
       log.textContent = base + "\n[" + now + "] " + msg;
       log.scrollTop = log.scrollHeight;
       console.log(msg);
@@ -589,7 +590,7 @@
     function copyTraceToClipboard() {
       const log = document.getElementById("trace_log");
       const text = log.textContent || "";
-      if (!text.trim() || text.trim() === "Trace: v2.12 Kraken Ledger Report initialized.") {
+      if (!text.trim() || text.trim() === "Trace: v2.13 Kraken Ledger Report initialized.") {
         alert("There are no trace log records to copy.");
         return;
       }
@@ -867,8 +868,8 @@
         html += "<tr>";
         html += '<td style="padding:4px; border:1px solid #90caf9;">' + escHtml(dateStr) + "</td>";
         html += '<td style="padding:4px; border:1px solid #90caf9;">' + escHtml(w.asset) + "</td>";
-        html += '<td style="padding:4px; border:1px solid #90caf9;">' + w.amount.toFixed(4) + "</td>";
-        html += '<td style="padding:4px; border:1px solid #90caf9;">' + w.fee.toFixed(4) + "</td>";
+        html += '<td style="padding:4px; border:1px solid #90caf9;">' + Math.abs(w.amount).toFixed(4) + "</td>";
+        html += '<td style="padding:4px; border:1px solid #90caf9;">' + Math.abs(w.fee).toFixed(4) + "</td>";
         html += '<td style="padding:4px; border:1px solid #90caf9; word-break:break-all;">' + escHtml(w.refid || "") + "</td>";
         html += "</tr>";
       }
@@ -899,7 +900,7 @@
       }
       let text = "Date\tAsset\tAmount\tFee\tRefID\n";
       for (const w of cacheData.withdrawals) {
-        text += formatTimestamp(w.time) + "\t" + w.asset + "\t" + w.amount + "\t" + w.fee + "\t" + (w.refid || "") + "\n";
+        text += formatTimestamp(w.time) + "\t" + w.asset + "\t" + Math.abs(w.amount) + "\t" + Math.abs(w.fee) + "\t" + (w.refid || "") + "\n";
       }
       navigator.clipboard.writeText(text).then(() => {
         alert("Ledger data copied to clipboard!");
