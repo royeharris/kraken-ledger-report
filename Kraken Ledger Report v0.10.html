@@ -408,37 +408,50 @@
 
     <!-- Kraken API Config (hidden by default) -->
     <div id="apiConfigSection"
-      style="display:none; margin-bottom:15px; padding:10px; background:#f1f2f6; border-radius:6px;">
-      <div style="font-size:0.7rem; font-weight:700; color:var(--primary); margin-bottom:6px;">Kraken API Credentials
-      </div>
+      style="display:none; margin-bottom:15px; padding:10px; background:#f1f2f6; border-radius:6px; border:2px solid #34495e;">
+      <div
+        style="font-size:0.85rem; font-weight:700; color:var(--primary); margin-bottom:10px; padding-bottom:6px; border-bottom:1px solid #ddd;">
+        ⚙️ Kraken API Configuration</div>
+
+      <div style="font-size:0.7rem; font-weight:700; color:var(--primary); margin-bottom:4px;">Query API (for Ledger
+        data)</div>
       <label>API Key</label>
-      <input type="text" id="krakenApiKey" placeholder="API Key" style="margin-bottom:6px;">
+      <input type="text" id="krakenApiKey" placeholder="API Key with Query permissions" style="margin-bottom:4px;">
       <label>Private Key</label>
       <input type="password" id="krakenPrivateKey" placeholder="Private Key (Base64)" style="margin-bottom:10px;">
 
+      <div
+        style="font-size:0.7rem; font-weight:700; color:var(--kraken); margin-bottom:4px; padding-top:8px; border-top:1px solid #ddd;">
+        Withdraw API (for Addresses - requires 2FA)</div>
+      <label>API Key</label>
+      <input type="text" id="withdrawApiKey" placeholder="API Key with Withdraw permissions" style="margin-bottom:4px;">
+      <label>Private Key</label>
+      <input type="password" id="withdrawPrivateKey" placeholder="Private Key (Base64)" style="margin-bottom:10px;">
+
       <label>CORS Proxy URL (optional)</label>
       <input type="text" id="corsProxy" placeholder="https://cors-anywhere.herokuapp.com/" value="">
-      <div style="font-size:0.65rem; color:#7f8c8d; margin-top:4px;">Note: Browser security (CORS) blocks direct Kraken
-        API calls. Use a CORS proxy or leave blank to try direct call.</div>
+      <div style="font-size:0.6rem; color:#7f8c8d; margin-top:2px;">Browser CORS blocks direct Kraken calls. Use a proxy
+        or leave blank.</div>
 
       <button onclick="saveApiConfig()"
-        style="margin-top:10px; padding:8px 16px; background:var(--accent); color:#fff; border:none; border-radius:4px; cursor:pointer;">Save
-        Credentials</button>
+        style="margin-top:10px; padding:8px 16px; background:var(--accent); color:#fff; border:none; border-radius:4px; cursor:pointer; font-weight:600;">Save
+        API Keys</button>
     </div>
 
     <!-- Address Viewer Panel (hidden by default) -->
     <div id="addressViewerSection"
-      style="display:none; margin-bottom:15px; padding:10px; background:#e8f5e9; border-radius:6px; max-height:300px; overflow-y:auto;">
-      <div style="font-size:0.75rem; font-weight:700; color:#27ae60; margin-bottom:8px;">Saved Withdrawal Addresses
-      </div>
-      <table id="addressTable" style="width:100%; font-size:0.65rem; border-collapse:collapse; table-layout:fixed;">
+      style="display:none; margin-bottom:15px; padding:10px; background:#e8f5e9; border-radius:6px; max-height:300px; overflow-y:auto; border:2px solid #27ae60;">
+      <div
+        style="font-size:0.85rem; font-weight:700; color:#27ae60; margin-bottom:8px; padding-bottom:6px; border-bottom:1px solid #a5d6a7;">
+        📋 Saved Withdrawal Addresses</div>
+      <table id="addressTable" style="width:100%; font-size:0.6rem; border-collapse:collapse; table-layout:fixed;">
         <thead>
           <tr style="background:#c8e6c9; text-align:left;">
-            <th style="padding:4px; border:1px solid #a5d6a7; width:45px;">Asset</th>
-            <th style="padding:4px; border:1px solid #a5d6a7; width:130px;">Recipient</th>
-            <th style="padding:4px; border:1px solid #a5d6a7; width:180px;">Key Name</th>
-            <th style="padding:4px; border:1px solid #a5d6a7;">Address</th>
-            <th style="padding:4px; border:1px solid #a5d6a7; width:70px;">Dest Tag</th>
+            <th style="padding:4px; border:1px solid #a5d6a7; width:40px;">Asset</th>
+            <th style="padding:4px; border:1px solid #a5d6a7; width:100px;">Recipient</th>
+            <th style="padding:4px; border:1px solid #a5d6a7; width:140px;">Key Name</th>
+            <th style="padding:4px; border:1px solid #a5d6a7; width:200px;">Address</th>
+            <th style="padding:4px; border:1px solid #a5d6a7; width:60px;">Dest Tag</th>
           </tr>
         </thead>
         <tbody id="addressTableBody">
@@ -458,13 +471,17 @@
     </div>
 
     <!-- Bottom Actions -->
-    <div class="actions">
-      <button class="action-main" id="sync_btn" onclick="handleSync()" style="background:var(--bridge);">Send
+    <div style="display:flex; gap:6px; margin-top:10px;">
+      <button onclick="handleSync()"
+        style="flex:1; padding:8px 4px; background:var(--bridge); color:#fff; border:none; border-radius:4px; font-size:0.65rem; font-weight:600; cursor:pointer;">Send
         Report<br />to Sheets</button>
-      <button class="action-main" onclick="saveLocalData()" style="background:var(--accent);">Save<br />Local</button>
-      <button class="action-main" onclick="loadLocalData()" style="background:#8e44ad;">Load<br />Local</button>
-      <button class="action-main" id="wipeBtn" onclick="handleWipeConfirm()"
-        style="background:var(--danger); opacity:0.85;">Clear</button>
+      <button onclick="saveLocalData()"
+        style="flex:1; padding:8px 4px; background:var(--accent); color:#fff; border:none; border-radius:4px; font-size:0.65rem; font-weight:600; cursor:pointer;">Save<br />Local</button>
+      <button id="wipeBtn" onclick="handleWipeConfirm()"
+        style="flex:1; padding:8px 4px; background:var(--danger); color:#fff; border:none; border-radius:4px; font-size:0.65rem; font-weight:600; cursor:pointer; opacity:0.85;">Clear
+        Report<br />Staging</button>
+      <button onclick="loadLocalData()"
+        style="flex:1; padding:8px 4px; background:#8e44ad; color:#fff; border:none; border-radius:4px; font-size:0.65rem; font-weight:600; cursor:pointer;">Load<br />Local</button>
     </div>
 
     <div class="preview-wrap" id="previewArea"></div>
@@ -615,12 +632,18 @@
     function saveApiConfig() {
       const apiKey = document.getElementById("krakenApiKey").value;
       const privateKey = document.getElementById("krakenPrivateKey").value;
+      const withdrawKey = document.getElementById("withdrawApiKey").value;
+      const withdrawPrivate = document.getElementById("withdrawPrivateKey").value;
       const proxy = document.getElementById("corsProxy").value;
+
       localStorage.setItem("kraken_api_key", apiKey);
       localStorage.setItem("kraken_private_key", privateKey);
+      localStorage.setItem("kraken_withdraw_api_key", withdrawKey);
+      localStorage.setItem("kraken_withdraw_private_key", withdrawPrivate);
       localStorage.setItem("kraken_cors_proxy", proxy);
-      logTrace("API credentials saved.");
-      alert("Credentials saved.");
+
+      logTrace("API credentials saved (Query + Withdraw).");
+      alert("API keys saved.");
     }
 
     // ---------- Staging Table Render ----------
@@ -1356,9 +1379,15 @@
       return { apiKey, privateKey, proxy };
     }
 
-    // Use same credentials for all Kraken API calls (v2.0 - single key pair)
+    // Withdraw API uses separate credentials (requires 2FA permission)
     function getWithdrawCredentials() {
-      return getApiCredentials();
+      let apiKey = document.getElementById("withdrawApiKey").value.trim();
+      let privateKey = document.getElementById("withdrawPrivateKey").value.trim();
+      if (!apiKey || !privateKey) {
+        throw new Error("Please enter Withdraw API credentials in API Config (requires 2FA permission)");
+      }
+      const proxy = document.getElementById("corsProxy").value.trim();
+      return { apiKey, privateKey, proxy };
     }
 
     // Base64 helpers
@@ -1858,9 +1887,13 @@
       const savedKey = localStorage.getItem("kraken_api_key");
       const savedPrivate = localStorage.getItem("kraken_private_key");
       const savedProxy = localStorage.getItem("kraken_cors_proxy");
+      const savedWithdrawKey = localStorage.getItem("kraken_withdraw_api_key");
+      const savedWithdrawPrivate = localStorage.getItem("kraken_withdraw_private_key");
       if (savedKey) document.getElementById("krakenApiKey").value = savedKey;
       if (savedPrivate) document.getElementById("krakenPrivateKey").value = savedPrivate;
       if (savedProxy) document.getElementById("corsProxy").value = savedProxy;
+      if (savedWithdrawKey) document.getElementById("withdrawApiKey").value = savedWithdrawKey;
+      if (savedWithdrawPrivate) document.getElementById("withdrawPrivateKey").value = savedWithdrawPrivate;
 
       try {
         await waitFor(() => typeof gapi !== "undefined", 8000);
