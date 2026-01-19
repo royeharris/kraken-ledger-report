@@ -358,7 +358,7 @@
       <div
         style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; position:relative;">
         <div class="branding-row" style="margin-bottom:0;"><b>Kraken Ledger Report</b> <span
-            style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.1</span></div>
+            style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.11</span></div>
         <div id="auth_status"
           style="position:absolute; left:50%; transform:translateX(-50%); font-size:0.7rem; font-weight:700;">Status:
           Ready</div>
@@ -526,13 +526,18 @@
 
     <div class="preview-wrap" id="previewArea"></div>
 
-    <button id="log_btn" onclick="toggleLog(true)">Display Trace Log</button>
-    <div id="trace_log" onclick="toggleLog(false)">Trace: v2.1 Kraken Ledger Report initialized.</div>
+    <div style="display:flex; gap:6px; margin-top:10px;">
+      <button id="log_btn" onclick="toggleLog(true)" style="flex:0 0 auto;">Display Trace Log</button>
+      <button onclick="copyTraceToClipboard()"
+        style="flex:0 0 auto; padding:8px 12px; background:#16a085; color:#fff; border:none; border-radius:4px; font-size:0.7rem; cursor:pointer;">Copy
+        Trace to Clipboard</button>
+    </div>
+    <div id="trace_log" onclick="toggleLog(false)">Trace: v2.11 Kraken Ledger Report initialized.</div>
   </div>
 
   <script>
     const SHEET_ID = "1Vf0iqthwHv0kFqTRJkYShH_RBpbokLmiEDWGJN3Q0_E";
-    const VER = "Kraken Ledger Report (v1.03)";
+    const VER = "Kraken Ledger Report (v2.11)";
     const KRAKEN_API_URL = "https://api.kraken.com";
 
     // Default API credentials (enter your own in API Config)
@@ -558,7 +563,7 @@
       const now = new Date().toLocaleTimeString();
       const base = log.textContent && log.textContent.trim().length
         ? log.textContent
-        : "Trace: v2.1 Kraken Ledger Report initialized.";
+        : "Trace: v2.11 Kraken Ledger Report initialized.";
       log.textContent = base + "\n[" + now + "] " + msg;
       log.scrollTop = log.scrollHeight;
       console.log(msg);
@@ -576,6 +581,18 @@
       document.getElementById("trace_log").style.display = show ? "block" : "none";
     }
 
+    function copyTraceToClipboard() {
+      const log = document.getElementById("trace_log");
+      const text = log.textContent || "";
+      if (!text.trim() || text.trim() === "Trace: v2.11 Kraken Ledger Report initialized.") {
+        alert("There are no trace log records to copy.");
+        return;
+      }
+      navigator.clipboard.writeText(text).then(() => {
+        alert("Trace log copied to clipboard!");
+      });
+    }
+
     function updateStatus(label, state) {
       const el = document.getElementById("auth_status");
       el.innerText = "Sync Status: " + label;
@@ -587,6 +604,7 @@
     function handleDateChange(id) {
       const dStr = document.getElementById(id).value;
       const dispEl = document.getElementById(id + "Disp");
+      if (!dispEl) return; // Element doesn't exist in new design
       if (!dStr) { dispEl.innerText = ""; return; }
       const [y, m, d] = dStr.split("-").map(Number);
       const dt = new Date(y, m - 1, d);
@@ -1689,6 +1707,7 @@
         const url = (proxy ? proxy : "") + KRAKEN_API_URL + urlPath;
 
         logTrace("Calling Kraken API: " + endpoint + " (with OTP: " + (params.otp ? "yes" : "no") + ")");
+        logTrace("URL: " + url);
 
         const response = await fetch(url, {
           method: "POST",
@@ -1701,7 +1720,19 @@
         });
 
         if (!response.ok) {
-          throw new Error("HTTP " + response.status + ": " + response.statusText);
+          // Try to get more details from the response
+          let errorDetails = "";
+          try {
+            const errorText = await response.text();
+            errorDetails = errorText.substring(0, 200);
+            logTrace("Error response body: " + errorDetails);
+          } catch (e) { }
+
+          if (response.status === 403 && proxy && proxy.includes("cors-anywhere")) {
+            logTrace("*** CORS-ANYWHERE 403: You may need to visit " + proxy + " and click 'Request temporary access' ***");
+            throw new Error("CORS Proxy 403: Visit " + proxy + " to request access first");
+          }
+          throw new Error("HTTP " + response.status + ": " + response.statusText + (errorDetails ? " - " + errorDetails : ""));
         }
 
         const data = await response.json();
