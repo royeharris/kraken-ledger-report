@@ -261,6 +261,11 @@
       text-align: right;
     }
 
+    .w-time {
+      width: 8ch;
+      text-align: center;
+    }
+
     .w-desttag {
       width: 10ch;
     }
@@ -359,7 +364,7 @@
         style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; position:relative;">
         <div class="branding-row" style="margin-bottom:0; line-height:1.2;">
           <div><b>Kraken Withdrawals Report</b> <span
-              style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.19</span></div>
+              style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.20</span></div>
           <div style="font-size:0.65rem; color:#b0b0b0; font-weight:400;">(GBP equivalent for all XRP and USDT transfers
             in Date range)</div>
         </div>
@@ -566,12 +571,12 @@
     <button id="copy_trace_btn" onclick="copyTraceToClipboard()"
       style="width:100%; padding:8px; margin-top:6px; background:#16a085; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Copy
       Trace to Clipboard</button>
-    <div id="trace_log" onclick="toggleLog(false)">Trace: v2.19 Kraken Withdrawals Report initialized.</div>
+    <div id="trace_log" onclick="toggleLog(false)">Trace: v2.20 Kraken Withdrawals Report initialized.</div>
   </div>
 
   <script>
     const SHEET_ID = "1Vf0iqthwHv0kFqTRJkYShH_RBpbokLmiEDWGJN3Q0_E";
-    const VER = "Kraken Withdrawals Report (v2.19)";
+    const VER = "Kraken Withdrawals Report (v2.20)";
     const KRAKEN_API_URL = "https://api.kraken.com";
 
     // Default API credentials (enter your own in API Config)
@@ -599,7 +604,7 @@
       const now = new Date().toLocaleTimeString();
       const base = log.textContent && log.textContent.trim().length
         ? log.textContent
-        : "Trace: v2.19 Kraken Withdrawals Report initialized.";
+        : "Trace: v2.20 Kraken Withdrawals Report initialized.";
       log.textContent = base + "\n[" + now + "] " + msg;
       log.scrollTop = log.scrollHeight;
       console.log(msg);
@@ -1702,6 +1707,7 @@
 
     // Get historical exchange rate from Kraken public API
     // Returns { gbpRate, eurRate } for the given asset at the given timestamp
+    // Strategy: Fetch USD pair (more history) and convert via GBP/USD rate
     async function getKrakenRate(asset, timestamp) {
       // Map Kraken asset names to pair names
       const assetMap = {
@@ -1714,82 +1720,63 @@
 
       const baseAsset = assetMap[asset] || asset.replace(/^X|^Z/, "");
       const rates = { gbpRate: null, eurRate: null, usdRate: null };
-
-      // Try GBP pair first, then EUR, then USD as fallback
-      const pairs = [
-        { pair: baseAsset + "GBP", target: "gbpRate" },
-        { pair: baseAsset + "EUR", target: "eurRate" },
-        { pair: baseAsset + "USD", target: "usdRate" }
-      ];
-
       const proxy = getSelectedProxy();
-      const ohlcUrl = proxy + "https://api.kraken.com/0/public/OHLC";
 
-      // Use daily interval (1440 min) and request from 2 days before target
-      // to ensure we get data that includes our target date
-      const twoDaysBefore = timestamp - (2 * 24 * 60 * 60);
+      // Use 30 days before to ensure we get historical data
+      const thirtyDaysBefore = timestamp - (30 * 24 * 60 * 60);
 
-      for (const { pair, target } of pairs) {
+      // Helper to fetch rate from OHLC
+      async function fetchOHLC(pair, since) {
         try {
-          // interval=1440 = daily candles
-          const url = ohlcUrl + "?pair=" + pair + "&interval=1440&since=" + Math.floor(twoDaysBefore);
+          const url = proxy + "https://api.kraken.com/0/public/OHLC?pair=" + pair + "&interval=1440&since=" + Math.floor(since);
           const response = await fetch(url);
           const data = await response.json();
 
           if (data.result && Object.keys(data.result).length > 0) {
             const pairData = Object.values(data.result).find(v => Array.isArray(v));
             if (pairData && pairData.length > 0) {
-              // Find the candle closest to our timestamp that is not in the future
+              // Find the candle closest to our timestamp
               let bestCandle = null;
               let bestDiff = Infinity;
 
               for (const candle of pairData) {
-                const candleTime = candle[0];
-                const diff = Math.abs(candleTime - timestamp);
-                // Prefer candles on or before the target timestamp
-                if (diff < bestDiff && candleTime <= timestamp + 86400) {
+                const diff = Math.abs(candle[0] - timestamp);
+                if (diff < bestDiff) {
                   bestDiff = diff;
                   bestCandle = candle;
                 }
               }
 
-              if (bestCandle && bestDiff < 7 * 24 * 60 * 60) { // Within 7 days
-                // Candle format: [time, open, high, low, close, vwap, volume, count]
-                rates[target] = parseFloat(bestCandle[4]); // close price
+              // Accept if within 60 days
+              if (bestCandle && bestDiff < 60 * 24 * 60 * 60) {
+                return parseFloat(bestCandle[4]); // close price
               }
             }
           }
         } catch (e) {
-          // Pair might not exist, continue
+          // Pair might not exist
+        }
+        return null;
+      }
+
+      // Step 1: Try USD pair first (has best historical coverage)
+      rates.usdRate = await fetchOHLC(baseAsset + "USD", thirtyDaysBefore);
+
+      // Step 2: If we have USD rate, get GBP/USD to convert
+      if (rates.usdRate !== null) {
+        const gbpusdRate = await fetchOHLC("GBPUSD", thirtyDaysBefore);
+        if (gbpusdRate !== null) {
+          rates.gbpRate = rates.usdRate / gbpusdRate;
         }
       }
 
-      // If no GBP rate but we have USD rate, get actual GBP/USD rate and convert
-      if (rates.gbpRate === null && rates.usdRate !== null) {
-        try {
-          // Fetch actual GBP/USD rate for this date
-          const gbpusdUrl = proxy + "https://api.kraken.com/0/public/OHLC?pair=GBPUSD&interval=1440&since=" + Math.floor(twoDaysBefore);
-          const response = await fetch(gbpusdUrl);
-          const data = await response.json();
-          if (data.result && Object.keys(data.result).length > 0) {
-            const pairData = Object.values(data.result).find(v => Array.isArray(v));
-            if (pairData && pairData.length > 0) {
-              // Find candle closest to timestamp
-              let bestCandle = pairData[0];
-              for (const candle of pairData) {
-                if (Math.abs(candle[0] - timestamp) < Math.abs(bestCandle[0] - timestamp)) {
-                  bestCandle = candle;
-                }
-              }
-              const gbpusdRate = parseFloat(bestCandle[4]); // GBP/USD close price
-              rates.gbpRate = rates.usdRate / gbpusdRate; // Convert USD to GBP
-              logTrace("Converted USD to GBP using GBP/USD=" + gbpusdRate.toFixed(4));
-            }
-          }
-        } catch (e) {
-          logTrace("Could not fetch GBP/USD rate for conversion");
-        }
+      // Step 3: If still no GBP rate, try direct GBP pair
+      if (rates.gbpRate === null) {
+        rates.gbpRate = await fetchOHLC(baseAsset + "GBP", thirtyDaysBefore);
       }
+
+      // Step 4: Try EUR pair for eurRate
+      rates.eurRate = await fetchOHLC(baseAsset + "EUR", thirtyDaysBefore);
 
       return rates;
     }
