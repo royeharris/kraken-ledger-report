@@ -238,8 +238,19 @@
       width: 9ch;
     }
 
+    .w-time {
+      width: 9ch;
+      text-align: center;
+    }
+
     .w-recipient {
-      width: 30ch;
+      width: 18ch;
+      /* Reduced from 30ch */
+    }
+
+    .w-sentto {
+      width: 18ch;
+      /* New column, similar to recipient */
     }
 
     .w-asset {
@@ -248,23 +259,18 @@
     }
 
     .w-amount {
-      width: 9ch;
+      width: 12ch;
       text-align: right;
     }
 
     .w-cur {
-      width: 5ch;
+      width: 4ch;
       text-align: center;
     }
 
     .w-gbp {
-      width: 8ch;
+      width: 10ch;
       text-align: right;
-    }
-
-    .w-time {
-      width: 8ch;
-      text-align: center;
     }
 
     .w-desttag {
@@ -276,16 +282,23 @@
     }
 
     .w-txid {
-      width: 20ch;
+      width: 30ch;
+      /* Increased from 20ch */
     }
 
     .w-source {
-      width: 25ch;
+      width: 20ch;
+      /* Max 20ch per user request */
     }
 
-
     .w-fee {
-      width: 7ch;
+      width: 9ch;
+      text-align: right;
+    }
+
+    .w-rate {
+      width: 10ch;
+      /* Reduced from implied larger */
       text-align: right;
     }
 
@@ -293,6 +306,7 @@
       width: 10ch;
       text-align: right;
     }
+
 
     #auth_status {
       font-size: 0.75rem;
@@ -365,7 +379,7 @@
         style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; position:relative;">
         <div class="branding-row" style="margin-bottom:0; line-height:1.2;">
           <div><b>Kraken Withdrawals Report</b> <span
-              style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.34</span></div>
+              style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.35</span></div>
           <div style="font-size:0.65rem; color:#b0b0b0; font-weight:400;">(GBP equivalent for all XRP and USDT transfers
             in Date range)</div>
         </div>
@@ -573,12 +587,12 @@
     <button id="copy_trace_btn" onclick="copyTraceToClipboard()"
       style="width:100%; padding:8px; margin-top:6px; background:#16a085; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Copy
       Trace to Clipboard</button>
-    <div id="trace_log" onclick="toggleLog(false)">Trace: v2.34 Kraken Withdrawals Report initialized.</div>
+    <div id="trace_log" onclick="toggleLog(false)">Trace: v2.35 Kraken Withdrawals Report initialized.</div>
   </div>
 
   <script>
     const SHEET_ID = "1Vf0iqthwHv0kFqTRJkYShH_RBpbokLmiEDWGJN3Q0_E";
-    const VER = "Kraken Withdrawals Report (v2.34)";
+    const VER = "Kraken Withdrawals Report (v2.35)";
     const KRAKEN_API_URL = "https://api.kraken.com";
 
     // Default API credentials (enter your own in API Config)
@@ -606,7 +620,7 @@
       const now = new Date().toLocaleTimeString();
       const base = log.textContent && log.textContent.trim().length
         ? log.textContent
-        : "Trace: v2.34 Kraken Withdrawals Report initialized.";
+        : "Trace: v2.35 Kraken Withdrawals Report initialized.";
       log.textContent = base + "\n[" + now + "] " + msg;
       log.scrollTop = log.scrollHeight;
       console.log(msg);
@@ -736,7 +750,7 @@
       }
 
       // Build header row - match the report table order
-      const headers = ["Date", "Time (UTC)", "Recipient", "Sent to", "GBP", "Asset", "Amount", "Fee", "Conv Cur", "Conv Rate", "Destination", "Dest Tag", "TX ID", "Source"];
+      const headers = ["Date", "Time (UTC)", "Recipient", "Sent to", "GBP", "Asset", "Amount", "Fee", "Conv Cur", "Conv Rate", "Destination", "Dest Tag", "Transaction ID", "Source"];
 
       // Build data rows
       let text = headers.join("\t") + "\n";
@@ -1135,7 +1149,7 @@
       html += '<th class="w-rate">Conv Rate</th>';
       html += '<th class="w-wallet">Destination</th>';
       html += '<th class="w-desttag">Dest Tag</th>';
-      html += '<th class="w-txid">TX ID</th>';
+      html += '<th class="w-txid">Transaction ID</th>';
       html += '<th class="w-source">Source</th>';;
       html += '</tr></thead><tbody>';
 
@@ -1333,7 +1347,7 @@
           // Prepare values - must match Report Staging table on screen exactly
           const headers = [
             "Date", "Time (UTC)", "Recipient", "Sent to", "GBP", "Asset", "Amount", "Fee",
-            "Conv Cur", "Conv Rate", "Destination", "Dest Tag", "TX ID", "Source"
+            "Conv Cur", "Conv Rate", "Destination", "Dest Tag", "Transaction ID", "Source"
           ];
 
           const vals = stagingRecords.map(r => [
@@ -1894,27 +1908,23 @@
         }
       }
 
-
-      // Final fallback for XRP: Use CoinGecko for historical XRP/USD, then forex for USD/GBP
+      // Final fallback for XRP: Use CryptoCompare for historical XRP/USD, then forex for USD/GBP
       if (rates.gbpRate === null && baseAsset === "XRP") {
         try {
-          const txDate = new Date(timestamp * 1000);
-          const dateStr = txDate.toISOString().split("T")[0];
-          // CoinGecko format: dd-mm-yyyy
-          const cgDate = `${String(txDate.getDate()).padStart(2, '0')}-${String(txDate.getMonth() + 1).padStart(2, '0')}-${txDate.getFullYear()}`;
+          const dateStr = new Date(timestamp * 1000).toISOString().split("T")[0];
+          logTrace("XRP fallback: trying CryptoCompare for " + dateStr);
 
-          logTrace("XRP fallback: trying CoinGecko for " + dateStr);
+          // Get XRP/USD from CryptoCompare (free API, no auth needed)
+          const ccUrl = `https://min-api.cryptocompare.com/data/v2/histoday?fsym=XRP&tsym=USD&limit=1&toTs=${timestamp}`;
+          const ccResp = await fetch(ccUrl);
+          logTrace("CryptoCompare response status: " + ccResp.status);
 
-          // Get XRP/USD from CoinGecko
-          const cgUrl = `https://api.coingecko.com/api/v3/coins/ripple/history?date=${cgDate}&localization=false`;
-          const cgResp = await fetch(cgUrl);
-          logTrace("CoinGecko response status: " + cgResp.status);
-
-          if (cgResp.ok) {
-            const cgData = await cgResp.json();
-            if (cgData.market_data && cgData.market_data.current_price && cgData.market_data.current_price.usd) {
-              const xrpUsd = cgData.market_data.current_price.usd;
-              logTrace("CoinGecko XRP/USD: " + xrpUsd);
+          if (ccResp.ok) {
+            const ccData = await ccResp.json();
+            if (ccData.Response === "Success" && ccData.Data && ccData.Data.Data && ccData.Data.Data.length > 0) {
+              // Use the close price from the first data point
+              const xrpUsd = ccData.Data.Data[0].close;
+              logTrace("CryptoCompare XRP/USD: " + xrpUsd);
 
               // Now get USD/GBP from forex API
               const forexUrl = `https://api.frankfurter.app/${dateStr}?from=USD&to=GBP`;
@@ -1923,21 +1933,22 @@
                 const forexData = await forexResp.json();
                 if (forexData.rates && forexData.rates.GBP) {
                   rates.gbpRate = xrpUsd * forexData.rates.GBP;
-                  rates.rateSource = "CoinGecko + frankfurter";
-                  logTrace("XRP/GBP via CoinGecko+Forex: " + rates.gbpRate);
+                  rates.rateSource = "CryptoCompare";
+                  logTrace("XRP/GBP via CryptoCompare+Forex: " + rates.gbpRate);
                 }
               }
             } else {
-              logTrace("CoinGecko returned no market_data for XRP");
+              logTrace("CryptoCompare returned no data for XRP: " + (ccData.Message || "No data"));
             }
           } else {
-            const errText = await cgResp.text();
-            logTrace("CoinGecko error: " + cgResp.status + " - " + errText.substring(0, 100));
+            const errText = await ccResp.text();
+            logTrace("CryptoCompare error: " + ccResp.status + " - " + errText.substring(0, 100));
           }
         } catch (e) {
-          logTrace("CoinGecko/Forex API fallback for XRP failed: " + e.message);
+          logTrace("CryptoCompare/Forex API fallback for XRP failed: " + e.message);
         }
       }
+
 
 
 
