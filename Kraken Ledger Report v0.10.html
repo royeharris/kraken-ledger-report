@@ -278,8 +278,8 @@
     }
 
     .w-cur {
-      min-width: 13ch;
-      width: 13ch;
+      min-width: 6ch;
+      width: 6ch;
       /* fits "Conv Currency" */
       text-align: center;
     }
@@ -291,8 +291,8 @@
     }
 
     .w-gbpfee {
-      min-width: 8ch;
-      width: 8ch;
+      min-width: 6ch;
+      width: 6ch;
       /* fits "GBP Fee" header */
       text-align: right;
     }
@@ -410,7 +410,7 @@
         style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; position:relative;">
         <div class="branding-row" style="margin-bottom:0; line-height:1.2;">
           <div><b>Kraken Withdrawals Report</b> <span
-              style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.45</span></div>
+              style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.46</span></div>
           <div style="font-size:0.65rem; color:#b0b0b0; font-weight:400;">(GBP equivalent for all XRP and USDT transfers
             in Date range)</div>
         </div>
@@ -418,6 +418,9 @@
           style="position:absolute; left:50%; transform:translateX(-50%); font-size:0.7rem; font-weight:700;">Status:
           Ready</div>
         <div style="display:flex; gap:4px;">
+          <button onclick="copyTraceToClipboard()"
+            style="background:#16a085; padding:4px 8px; height:auto; font-size:0.65rem; border-radius:6px; border:none; color:#fff; cursor:pointer; font-weight:800;">Copy
+            Trace</button>
           <button id="resetBtn" onclick="handleReportReset()"
             style="background:var(--danger); padding:4px 8px; height:auto; font-size:0.65rem; border-radius:6px; border:none; color:#fff; cursor:pointer; font-weight:800; box-shadow: 0 0 6px rgba(192,57,43,0.5);">Reset</button>
         </div>
@@ -527,7 +530,7 @@
           to Clipboard</button>
       </div>
       <table id="addressTable" style="width:100%; font-size:0.6rem; border-collapse:collapse; table-layout:fixed;">
-        <thead>
+        <thead style="position:sticky; top:0; z-index:1;">
           <tr style="background:#c8e6c9; text-align:left;">
             <th style="padding:4px; border:1px solid #a5d6a7; width:40px;">Asset</th>
             <th style="padding:4px; border:1px solid #a5d6a7; width:100px;">Recipient</th>
@@ -560,7 +563,7 @@
           to Clipboard</button>
       </div>
       <table id="ledgerTable" style="width:100%; font-size:0.6rem; border-collapse:collapse; table-layout:fixed;">
-        <thead>
+        <thead style="position:sticky; top:0; z-index:1;">
           <tr style="background:#bbdefb; text-align:left;">
             <th style="padding:4px; border:1px solid #90caf9; width:70px;">Date</th>
             <th style="padding:4px; border:1px solid #90caf9; width:70px;">Type</th>
@@ -569,7 +572,7 @@
             <th style="padding:4px; border:1px solid #90caf9; width:60px;">Fee</th>
             <th style="padding:4px; border:1px solid #90caf9; width:50px;">Asset</th>
             <th style="padding:4px; border:1px solid #90caf9; width:80px;">Balance</th>
-            <th style="padding:4px; border:1px solid #90caf9; width:100px;">Ledger ID</th>
+            <th style="padding:4px; border:1px solid #90caf9; width:140px;">Ledger ID</th>
             <th style="padding:4px; border:1px solid #90caf9;">Ref ID</th>
           </tr>
         </thead>
@@ -616,18 +619,15 @@
 
     <div class="preview-wrap" id="previewArea" style="display:none;"></div>
 
-    <button id="log_btn" onclick="toggleLog(true)"
+    <button id="log_btn" onclick="toggleLog()"
       style="width:100%; padding:8px; margin-top:10px; background:#8e44ad; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Display
       Trace Log</button>
-    <button id="copy_trace_btn" onclick="copyTraceToClipboard()"
-      style="width:100%; padding:8px; margin-top:6px; background:#16a085; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Copy
-      Trace to Clipboard</button>
-    <div id="trace_log" onclick="toggleLog(false)">Trace: v2.45 Kraken Withdrawals Report initialized.</div>
+    <div id="trace_log" onclick="toggleLog()">Trace: v2.46 Kraken Withdrawals Report initialized.</div>
   </div>
 
   <script>
     const SHEET_ID = "1Vf0iqthwHv0kFqTRJkYShH_RBpbokLmiEDWGJN3Q0_E";
-    const VER = "Kraken Withdrawals Report (v2.45)";
+    const VER = "Kraken Withdrawals Report (v2.46)";
     const KRAKEN_API_URL = "https://api.kraken.com";
 
     // Default API credentials (enter your own in API Config)
@@ -655,7 +655,7 @@
       const now = new Date().toLocaleTimeString();
       const base = log.textContent && log.textContent.trim().length
         ? log.textContent
-        : "Trace: v2.45 Kraken Withdrawals Report initialized.";
+        : "Trace: v2.46 Kraken Withdrawals Report initialized.";
       log.textContent = base + "\n[" + now + "] " + msg;
       log.scrollTop = log.scrollHeight;
       console.log(msg);
@@ -668,9 +668,18 @@
       logTrace("FATAL PROMISE: " + (ev && ev.reason ? (ev.reason.message || ev.reason) : "unknown"));
     };
 
-    function toggleLog(show) {
-      document.getElementById("log_btn").style.display = show ? "none" : "block";
-      document.getElementById("trace_log").style.display = show ? "block" : "none";
+    function toggleLog() {
+      const btn = document.getElementById("log_btn");
+      const log = document.getElementById("trace_log");
+      const isHidden = log.style.display === "none";
+      // Keep button visible, just change label
+      if (isHidden) {
+        btn.textContent = "Display Trace Log (click to close)";
+        log.style.display = "block";
+      } else {
+        btn.textContent = "Display Trace Log";
+        log.style.display = "none";
+      }
     }
 
     // Toggle report preview visibility
@@ -1128,7 +1137,7 @@
         const timeStr = formatTime(w.time);
         html += "<tr>";
         html += '<td style="padding:4px; border:1px solid #90caf9;">' + escHtml(dateStr) + "</td>";
-        html += '<td style="padding:4px; border:1px solid #90caf9;">' + escHtml(w.type || "") + "</td>";
+        html += '<td style="padding:4px 4px 4px 1px; border:1px solid #90caf9;">' + escHtml(w.type || "") + "</td>";
         html += '<td style="padding:4px; border:1px solid #90caf9;">' + escHtml(timeStr) + "</td>";
         html += '<td style="padding:4px; border:1px solid #90caf9;">' + w.amount.toFixed(6) + "</td>";
         html += '<td style="padding:4px; border:1px solid #90caf9;">' + Math.abs(w.fee).toFixed(6) + "</td>";
@@ -2264,7 +2273,8 @@
 
 
       // Step 3: Build records (only for withdrawals, but use sortedLedger for trade matching)
-      for (let idx = 0; idx < sortedLedger.length; idx++) {
+      // Iterate REVERSE (end to start) so report is Newest -> Oldest
+      for (let idx = sortedLedger.length - 1; idx >= 0; idx--) {
         const w = sortedLedger[idx];
 
         // Only process withdrawals (skip trades, deposits, etc.)
@@ -2281,15 +2291,29 @@
         let destTag = historyMatch ? (historyMatch.dest || historyMatch.tag || "") : "";
 
         // Find recipient from krakenAddresses
+        // Find recipient from krakenAddresses
         let fullRecipient = "";
         const addrMatch = cacheData.krakenAddresses.find(a =>
-          a.address === walletAddr || (a.tag && a.tag === destTag)
+          a.address === walletAddr && (
+            // If we have a dest tag in history, it MUST match the address book tag
+            // If history has no tag, we match address book entry with no tag
+            (destTag ? (a.tag === destTag) : (!a.tag))
+          )
         );
+
         if (addrMatch) {
           fullRecipient = (addrMatch.key || "").replace(/\\s*/g, "").trim();
-          // If destTag is empty but address table has tag for XRP, use it
-          if (!destTag && addrMatch.tag && (w.asset.includes("XRP") || w.asset === "XXRP")) {
-            destTag = addrMatch.tag;
+        } else {
+          // Fallback: if strict match failed, try matching just address if it's NOT XRP/XLM (which usually require tags)
+          // Or if it IS XRP but the address book entry has no tag
+          const looseMatch = cacheData.krakenAddresses.find(a => a.address === walletAddr);
+          if (looseMatch) {
+            // For XRP, only use loose match if we really don't have a tag involved
+            if ((w.asset.includes("XRP") || w.asset === "XXRP") && (destTag || looseMatch.tag)) {
+              // Mismatch in tags -> treat as unknown or partial
+            } else {
+              fullRecipient = (looseMatch.key || "").replace(/\\s*/g, "").trim();
+            }
           }
         }
 
