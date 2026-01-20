@@ -144,6 +144,12 @@
       background: transparent;
     }
 
+    .date-input-container:hover,
+    .date-input-container:focus-within {
+      border: 1px solid var(--primary);
+      box-shadow: 0 0 0 1px var(--primary);
+    }
+
     .date-disp {
       font-size: 0.65rem;
       color: #7f8c8d;
@@ -231,6 +237,14 @@
       font-weight: 900 !important;
       color: var(--primary);
       font-size: 0.58rem !important;
+    }
+
+    /* Fixed header enhancement */
+    thead tr th {
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
     }
 
     /* Column widths - use min-width to prevent shrinking with fixed table layout */
@@ -410,7 +424,7 @@
         style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; position:relative;">
         <div class="branding-row" style="margin-bottom:0; line-height:1.2;">
           <div><b>Kraken Withdrawals Report</b> <span
-              style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.46</span></div>
+              style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.47</span></div>
           <div style="font-size:0.65rem; color:#b0b0b0; font-weight:400;">(GBP equivalent for all XRP and USDT transfers
             in Date range)</div>
         </div>
@@ -587,8 +601,9 @@
 
     <!-- Status Bar -->
     <div class="status-row">
-      <div class="status-item"><span>Withdrawals:</span> <b id="withdrawalCount">0</b></div>
-      <div class="status-item"><span>Addresses:</span> <b id="addressCount">0</b></div>
+      <div id="statusSummary" style="flex:4; display:flex; gap:12px; font-size:0.7rem;">
+        <div>Ref: <b id="withdrawalCount">0</b></div>
+      </div>
       <div class="status-item" id="stagingHint" style="flex:1; text-align:right; font-size:0.65rem; color:#7f8c8d;">
       </div>
     </div>
@@ -622,12 +637,12 @@
     <button id="log_btn" onclick="toggleLog()"
       style="width:100%; padding:8px; margin-top:10px; background:#8e44ad; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Display
       Trace Log</button>
-    <div id="trace_log" onclick="toggleLog()">Trace: v2.46 Kraken Withdrawals Report initialized.</div>
+    <div id="trace_log" onclick="toggleLog()">Trace: v2.47 Kraken Withdrawals Report initialized.</div>
   </div>
 
   <script>
     const SHEET_ID = "1Vf0iqthwHv0kFqTRJkYShH_RBpbokLmiEDWGJN3Q0_E";
-    const VER = "Kraken Withdrawals Report (v2.46)";
+    const VER = "Kraken Withdrawals Report (v2.47)";
     const KRAKEN_API_URL = "https://api.kraken.com";
 
     // Default API credentials (enter your own in API Config)
@@ -655,7 +670,7 @@
       const now = new Date().toLocaleTimeString();
       const base = log.textContent && log.textContent.trim().length
         ? log.textContent
-        : "Trace: v2.46 Kraken Withdrawals Report initialized.";
+        : "Trace: v2.47 Kraken Withdrawals Report initialized.";
       log.textContent = base + "\n[" + now + "] " + msg;
       log.scrollTop = log.scrollHeight;
       console.log(msg);
@@ -841,8 +856,39 @@
 
     // ---------- Status Display ----------
     function updateStatusCounts() {
-      document.getElementById("withdrawalCount").innerText = cacheData.withdrawals.length;
-      document.getElementById("addressCount").innerText = cacheData.krakenAddresses.length;
+      // Calculate categorized counts
+      let wCrypto = 0, wFiat = 0, dFiat = 0, trades = 0;
+
+      for (const w of cacheData.withdrawals) {
+        const type = (w.type || "").toLowerCase();
+        const asset = (w.asset || "").toUpperCase();
+        const isFiat = asset.includes("GBP") || asset.includes("EUR") || asset.includes("USD") || asset === "ZGBP" || asset === "ZEUR" || asset === "ZUSD";
+
+        if (type === "withdrawal") {
+          if (isFiat) wFiat++; else wCrypto++;
+        } else if (type === "deposit") {
+          if (isFiat) dFiat++;
+        } else if (type === "trade") {
+          trades++;
+        }
+      }
+
+      const summaryHtml = `
+        <div class="status-item"><span style="color:#27ae60;">Withdrawals:</span> <b>${wCrypto}</b> (Crypto) / <b>${wFiat}</b> (Fiat)</div>
+        <div class="status-item"><span style="color:#2980b9;">Deposits:</span> <b>${dFiat}</b> (Fiat)</div>
+        <div class="status-item"><span style="color:#8e44ad;">Trades:</span> <b>${trades}</b></div>
+        <div class="status-item"><span style="color:#d35400;">Addr:</span> <b id="addressCount">${cacheData.krakenAddresses.length}</b></div>
+      `;
+
+      const el = document.getElementById("statusSummary");
+      if (el) el.innerHTML = summaryHtml;
+
+      // Keep legacy IDs updated just in case
+      const wCount = document.getElementById("withdrawalCount");
+      if (wCount) wCount.innerText = cacheData.withdrawals.length;
+
+      const aCount = document.getElementById("addressCount");
+      if (aCount) aCount.innerText = cacheData.krakenAddresses.length;
     }
 
     // ---------- CORS Proxy Handling ----------
@@ -975,7 +1021,12 @@
           // Parse and filter for USDT/XRP
           for (const [ledgerId, entry] of Object.entries(ledgerData)) {
             const asset = (entry.asset || "").toUpperCase();
-            if (asset.includes("USDT") || asset.includes("XRP") || asset === "XXRP") {
+            // Include USDT, XRP. Also include Fiat assets (GBP, EUR, USD) to detect Fiat Deposits
+            const isCrypto = asset.includes("USDT") || asset.includes("XRP") || asset === "XXRP";
+            const isFiat = asset.includes("GBP") || asset.includes("EUR") || asset.includes("USD") ||
+              asset === "ZGBP" || asset === "ZEUR" || asset === "ZUSD";
+
+            if (isCrypto || isFiat) {
               allLedgerEntries.push({
                 ledgerId,
                 refid: entry.refid,
