@@ -365,7 +365,7 @@
         style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; position:relative;">
         <div class="branding-row" style="margin-bottom:0; line-height:1.2;">
           <div><b>Kraken Withdrawals Report</b> <span
-              style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.30</span></div>
+              style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.31</span></div>
           <div style="font-size:0.65rem; color:#b0b0b0; font-weight:400;">(GBP equivalent for all XRP and USDT transfers
             in Date range)</div>
         </div>
@@ -573,12 +573,12 @@
     <button id="copy_trace_btn" onclick="copyTraceToClipboard()"
       style="width:100%; padding:8px; margin-top:6px; background:#16a085; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Copy
       Trace to Clipboard</button>
-    <div id="trace_log" onclick="toggleLog(false)">Trace: v2.30 Kraken Withdrawals Report initialized.</div>
+    <div id="trace_log" onclick="toggleLog(false)">Trace: v2.31 Kraken Withdrawals Report initialized.</div>
   </div>
 
   <script>
     const SHEET_ID = "1Vf0iqthwHv0kFqTRJkYShH_RBpbokLmiEDWGJN3Q0_E";
-    const VER = "Kraken Withdrawals Report (v2.30)";
+    const VER = "Kraken Withdrawals Report (v2.31)";
     const KRAKEN_API_URL = "https://api.kraken.com";
 
     // Default API credentials (enter your own in API Config)
@@ -606,7 +606,7 @@
       const now = new Date().toLocaleTimeString();
       const base = log.textContent && log.textContent.trim().length
         ? log.textContent
-        : "Trace: v2.30 Kraken Withdrawals Report initialized.";
+        : "Trace: v2.31 Kraken Withdrawals Report initialized.";
       log.textContent = base + "\n[" + now + "] " + msg;
       log.scrollTop = log.scrollHeight;
       console.log(msg);
@@ -1972,7 +1972,11 @@
         logTrace("Fetching rates for " + ratesToFetch.length + " dates...");
         updateStatus("Fetching rates...", "sync");
 
+        let fetchCount = 0;
         for (const { dateStr, timestamp } of ratesToFetch) {
+          fetchCount++;
+          updateStatus("Fetching rates... " + fetchCount + "/" + ratesToFetch.length, "sync");
+
           // Fetch all 4 pairs for this date
           const usdtRates = await getKrakenRate("USDT", timestamp);
           const xrpRates = await getKrakenRate("XRP", timestamp);
@@ -1984,8 +1988,12 @@
             XRPEUR: xrpRates.eurRate
           };
           logTrace("Rates for " + dateStr + ": USDTGBP=" + usdtRates.gbpRate + ", XRPGBP=" + xrpRates.gbpRate);
+
+          // Small delay to avoid API rate limiting
+          await new Promise(r => setTimeout(r, 200));
         }
       }
+
 
       // Step 3: Build records
       for (const w of cacheData.withdrawals) {
