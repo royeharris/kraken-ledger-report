@@ -410,7 +410,7 @@
         style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; position:relative;">
         <div class="branding-row" style="margin-bottom:0; line-height:1.2;">
           <div><b>Kraken Withdrawals Report</b> <span
-              style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.43</span></div>
+              style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.44</span></div>
           <div style="font-size:0.65rem; color:#b0b0b0; font-weight:400;">(GBP equivalent for all XRP and USDT transfers
             in Date range)</div>
         </div>
@@ -513,14 +513,14 @@
     <!-- Display Buttons for Address and Ledger Viewers -->
     <button id="address_btn" onclick="toggleAddressViewer()"
       style="width:100%; padding:8px; margin-top:10px; background:#27ae60; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Display
-      Saved Addresses</button>
+      Addresses</button>
 
     <!-- Address Viewer Panel (hidden by default) - click to close -->
     <div id="addressViewerSection" onclick="toggleAddressViewer()"
       style="display:none; margin-bottom:15px; padding:10px; background:#e8f5e9; border-radius:6px; max-height:300px; overflow-y:auto; border:2px solid #27ae60; cursor:pointer;">
       <div
         style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; padding-bottom:6px; border-bottom:1px solid #a5d6a7;">
-        <span style="font-size:0.85rem; font-weight:700; color:#27ae60;">📋 Saved Withdrawal Addresses (click to
+        <span style="font-size:0.85rem; font-weight:700; color:#27ae60;">📋 Withdrawal Addresses (click to
           close)</span>
         <button onclick="event.stopPropagation(); copyAddressesToClipboard();"
           style="padding:4px 8px; background:#27ae60; color:#fff; border:none; border-radius:4px; font-size:0.6rem; cursor:pointer;">Copy
@@ -547,14 +547,14 @@
 
     <button id="ledger_btn" onclick="toggleLedgerViewer()"
       style="width:100%; padding:8px; margin-top:6px; background:#16a085; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Display
-      Raw Ledger Data</button>
+      Ledger</button>
 
     <!-- Ledger Viewer Panel (hidden by default) - click to close -->
     <div id="ledgerViewerSection" onclick="toggleLedgerViewer()"
       style="display:none; margin-bottom:15px; padding:10px; background:#e3f2fd; border-radius:6px; max-height:300px; overflow-y:auto; border:2px solid #16a085; cursor:pointer;">
       <div
         style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; padding-bottom:6px; border-bottom:1px solid #90caf9;">
-        <span style="font-size:0.85rem; font-weight:700; color:#16a085;">📊 Raw Ledger Data (click to close)</span>
+        <span style="font-size:0.85rem; font-weight:700; color:#16a085;">📊 Ledger Data (click to close)</span>
         <button onclick="event.stopPropagation(); copyLedgerToClipboard();"
           style="padding:4px 8px; background:#16a085; color:#fff; border:none; border-radius:4px; font-size:0.6rem; cursor:pointer;">Copy
           to Clipboard</button>
@@ -562,16 +562,20 @@
       <table id="ledgerTable" style="width:100%; font-size:0.6rem; border-collapse:collapse; table-layout:fixed;">
         <thead>
           <tr style="background:#bbdefb; text-align:left;">
-            <th style="padding:4px; border:1px solid #90caf9; width:80px;">Date</th>
-            <th style="padding:4px; border:1px solid #90caf9; width:50px;">Asset</th>
+            <th style="padding:4px; border:1px solid #90caf9; width:70px;">Date</th>
+            <th style="padding:4px; border:1px solid #90caf9; width:70px;">Type</th>
+            <th style="padding:4px; border:1px solid #90caf9; width:70px;">Time</th>
             <th style="padding:4px; border:1px solid #90caf9; width:80px;">Amount</th>
             <th style="padding:4px; border:1px solid #90caf9; width:60px;">Fee</th>
-            <th style="padding:4px; border:1px solid #90caf9;">RefID</th>
+            <th style="padding:4px; border:1px solid #90caf9; width:50px;">Asset</th>
+            <th style="padding:4px; border:1px solid #90caf9; width:80px;">Balance</th>
+            <th style="padding:4px; border:1px solid #90caf9; width:100px;">Ledger ID</th>
+            <th style="padding:4px; border:1px solid #90caf9;">Ref ID</th>
           </tr>
         </thead>
         <tbody id="ledgerTableBody">
           <tr>
-            <td colspan="5" style="padding:8px; text-align:center; color:#7f8c8d;">No ledger data loaded. Click "Read
+            <td colspan="9" style="padding:8px; text-align:center; color:#7f8c8d;">No ledger data loaded. Click "Read
               Ledger" first.</td>
           </tr>
         </tbody>
@@ -618,12 +622,12 @@
     <button id="copy_trace_btn" onclick="copyTraceToClipboard()"
       style="width:100%; padding:8px; margin-top:6px; background:#16a085; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Copy
       Trace to Clipboard</button>
-    <div id="trace_log" onclick="toggleLog(false)">Trace: v2.43 Kraken Withdrawals Report initialized.</div>
+    <div id="trace_log" onclick="toggleLog(false)">Trace: v2.44 Kraken Withdrawals Report initialized.</div>
   </div>
 
   <script>
     const SHEET_ID = "1Vf0iqthwHv0kFqTRJkYShH_RBpbokLmiEDWGJN3Q0_E";
-    const VER = "Kraken Withdrawals Report (v2.43)";
+    const VER = "Kraken Withdrawals Report (v2.44)";
     const KRAKEN_API_URL = "https://api.kraken.com";
 
     // Default API credentials (enter your own in API Config)
@@ -651,7 +655,7 @@
       const now = new Date().toLocaleTimeString();
       const base = log.textContent && log.textContent.trim().length
         ? log.textContent
-        : "Trace: v2.43 Kraken Withdrawals Report initialized.";
+        : "Trace: v2.44 Kraken Withdrawals Report initialized.";
       log.textContent = base + "\n[" + now + "] " + msg;
       log.scrollTop = log.scrollHeight;
       console.log(msg);
@@ -1099,10 +1103,14 @@
       const btn = document.getElementById("ledger_btn");
       const section = document.getElementById("ledgerViewerSection");
       const isHidden = section.style.display === "none";
-      btn.style.display = isHidden ? "none" : "block";
-      section.style.display = isHidden ? "block" : "none";
+      // Keep button visible, just change label
       if (isHidden) {
+        btn.textContent = "Display Ledger (click to close)";
+        section.style.display = "block";
         renderLedgerTable();
+      } else {
+        btn.textContent = "Display Ledger";
+        section.style.display = "none";
       }
     }
 
@@ -1110,18 +1118,23 @@
     function renderLedgerTable() {
       const tbody = document.getElementById("ledgerTableBody");
       if (cacheData.withdrawals.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" style="padding:8px; text-align:center; color:#7f8c8d;">No ledger data loaded.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="9" style="padding:8px; text-align:center; color:#7f8c8d;">No ledger data loaded.</td></tr>';
         return;
       }
 
       let html = "";
       for (const w of cacheData.withdrawals) {
         const dateStr = formatTimestamp(w.time);
+        const timeStr = formatTime(w.time);
         html += "<tr>";
         html += '<td style="padding:4px; border:1px solid #90caf9;">' + escHtml(dateStr) + "</td>";
+        html += '<td style="padding:4px; border:1px solid #90caf9;">' + escHtml(w.type || "") + "</td>";
+        html += '<td style="padding:4px; border:1px solid #90caf9;">' + escHtml(timeStr) + "</td>";
+        html += '<td style="padding:4px; border:1px solid #90caf9;">' + w.amount.toFixed(6) + "</td>";
+        html += '<td style="padding:4px; border:1px solid #90caf9;">' + Math.abs(w.fee).toFixed(6) + "</td>";
         html += '<td style="padding:4px; border:1px solid #90caf9;">' + escHtml(w.asset) + "</td>";
-        html += '<td style="padding:4px; border:1px solid #90caf9;">' + Math.abs(w.amount).toFixed(4) + "</td>";
-        html += '<td style="padding:4px; border:1px solid #90caf9;">' + Math.abs(w.fee).toFixed(4) + "</td>";
+        html += '<td style="padding:4px; border:1px solid #90caf9;">' + w.balance.toFixed(6) + "</td>";
+        html += '<td style="padding:4px; border:1px solid #90caf9; word-break:break-all;">' + escHtml(w.ledgerId || "") + "</td>";
         html += '<td style="padding:4px; border:1px solid #90caf9; word-break:break-all;">' + escHtml(w.refid || "") + "</td>";
         html += "</tr>";
       }
@@ -1425,15 +1438,17 @@
 
           // Also export raw ledger data to KrakenLedger worksheet
           if (cacheData.withdrawals && cacheData.withdrawals.length > 0) {
-            const ledgerHeaders = ["Ledger ID", "Type", "Time", "Asset", "Amount", "Fee", "Balance", "Ref ID"];
+            // Must match raw ledger display: Date, Type, Time, Amount, Fee, Asset, Balance, Ledger ID, Ref ID
+            const ledgerHeaders = ["Date", "Type", "Time", "Amount", "Fee", "Asset", "Balance", "Ledger ID", "Ref ID"];
             const ledgerVals = cacheData.withdrawals.map(w => [
-              w.ledgerId || '',
+              w.time ? formatTimestamp(w.time) : '',
               w.type || '',
-              w.time ? new Date(w.time * 1000).toISOString() : '',
-              w.asset || '',
+              w.time ? formatTime(w.time) : '',
               w.amount || 0,
               w.fee || 0,
+              w.asset || '',
               w.balance || 0,
+              w.ledgerId || '',
               w.refid || ''
             ]);
 
@@ -1446,7 +1461,7 @@
             // Write headers
             await gapi.client.sheets.spreadsheets.values.update({
               spreadsheetId: SHEET_ID,
-              range: "'KrakenLedger'!A1:H1",
+              range: "'KrakenLedger'!A1:I1",
               valueInputOption: "USER_ENTERED",
               resource: { values: [ledgerHeaders] }
             });
@@ -1454,7 +1469,7 @@
             // Write data
             await gapi.client.sheets.spreadsheets.values.update({
               spreadsheetId: SHEET_ID,
-              range: "'KrakenLedger'!A2:H" + (1 + ledgerVals.length),
+              range: "'KrakenLedger'!A2:I" + (1 + ledgerVals.length),
               valueInputOption: "USER_ENTERED",
               resource: { values: ledgerVals }
             });
@@ -1479,10 +1494,14 @@
       const btn = document.getElementById("address_btn");
       const section = document.getElementById("addressViewerSection");
       const isHidden = section.style.display === "none";
-      btn.style.display = isHidden ? "none" : "block";
-      section.style.display = isHidden ? "block" : "none";
+      // Keep button visible, just change label
       if (isHidden) {
+        btn.textContent = "Display Addresses (click to close)";
+        section.style.display = "block";
         renderAddressTable();
+      } else {
+        btn.textContent = "Display Addresses";
+        section.style.display = "none";
       }
     }
 
