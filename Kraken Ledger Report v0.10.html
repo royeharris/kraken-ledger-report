@@ -365,7 +365,7 @@
         style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; position:relative;">
         <div class="branding-row" style="margin-bottom:0; line-height:1.2;">
           <div><b>Kraken Withdrawals Report</b> <span
-              style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.26</span></div>
+              style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.27</span></div>
           <div style="font-size:0.65rem; color:#b0b0b0; font-weight:400;">(GBP equivalent for all XRP and USDT transfers
             in Date range)</div>
         </div>
@@ -573,12 +573,12 @@
     <button id="copy_trace_btn" onclick="copyTraceToClipboard()"
       style="width:100%; padding:8px; margin-top:6px; background:#16a085; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Copy
       Trace to Clipboard</button>
-    <div id="trace_log" onclick="toggleLog(false)">Trace: v2.26 Kraken Withdrawals Report initialized.</div>
+    <div id="trace_log" onclick="toggleLog(false)">Trace: v2.27 Kraken Withdrawals Report initialized.</div>
   </div>
 
   <script>
     const SHEET_ID = "1Vf0iqthwHv0kFqTRJkYShH_RBpbokLmiEDWGJN3Q0_E";
-    const VER = "Kraken Withdrawals Report (v2.26)";
+    const VER = "Kraken Withdrawals Report (v2.27)";
     const KRAKEN_API_URL = "https://api.kraken.com";
 
     // Default API credentials (enter your own in API Config)
@@ -606,7 +606,7 @@
       const now = new Date().toLocaleTimeString();
       const base = log.textContent && log.textContent.trim().length
         ? log.textContent
-        : "Trace: v2.26 Kraken Withdrawals Report initialized.";
+        : "Trace: v2.27 Kraken Withdrawals Report initialized.";
       log.textContent = base + "\n[" + now + "] " + msg;
       log.scrollTop = log.scrollHeight;
       console.log(msg);
@@ -733,7 +733,7 @@
       }
 
       // Build header row - match the report table order
-      const headers = ["Date", "Time (UTC)", "Recipient", "GBP", "Asset", "Amount", "Fee", "Orig Cur", "Destination", "Dest Tag", "TX ID", "No match"];
+      const headers = ["Date", "Time (UTC)", "Recipient", "GBP", "Asset", "Amount", "Fee", "Conv Cur", "Conv Rate", "Destination", "Dest Tag", "TX ID", "No match"];
 
       // Build data rows
       let text = headers.join("\t") + "\n";
@@ -746,7 +746,8 @@
           r.asset,
           r.amount,
           r.fee,
-          r.originalCurrency,
+          r.conversionCurrency || r.originalCurrency || '',
+          r.conversionRate || '',
           r.wallet,
           r.destTag,
           r.txId,
@@ -754,6 +755,7 @@
         ];
         text += row.join("\t") + "\n";
       }
+
 
       navigator.clipboard.writeText(text).then(() => {
         alert("Report copied to clipboard! (" + stagingRecords.length + " records)");
@@ -1122,7 +1124,8 @@
       html += '<th class="w-asset">Asset</th>';
       html += '<th class="w-amount">Amount</th>';
       html += '<th class="w-fee">Fee</th>';
-      html += '<th class="w-cur">Orig Cur</th>';
+      html += '<th class="w-cur">Conv Cur</th>';
+      html += '<th class="w-rate">Conv Rate</th>';
       html += '<th class="w-wallet">Destination</th>';
       html += '<th class="w-desttag">Dest Tag</th>';
       html += '<th class="w-txid">TX ID</th>';
@@ -1138,10 +1141,12 @@
         html += '<td class="w-asset">' + escHtml(r.asset) + '</td>';
         html += '<td class="w-amount">' + escHtml(r.amount) + '</td>';
         html += '<td class="w-fee">' + escHtml(r.fee) + '</td>';
-        html += '<td class="w-cur">' + escHtml(r.originalCurrency) + '</td>';
+        html += '<td class="w-cur">' + escHtml(r.conversionCurrency || r.originalCurrency || '') + '</td>';
+        html += '<td class="w-rate">' + escHtml(r.conversionRate || '') + '</td>';
         html += '<td class="w-wallet">' + escHtml(r.wallet) + '</td>';
         html += '<td class="w-desttag">' + escHtml(r.destTag) + '</td>';
         html += '<td class="w-txid">' + escHtml(r.txId) + '</td>';
+
         // Show X only if no match (missing destination or no address matched)
         const noMatch = r.matched !== 'Yes';
         html += '<td class="w-matched" style="font-weight:800; color:var(--danger); text-align:center;">' + (noMatch ? 'X' : '') + '</td>';
@@ -1319,34 +1324,33 @@
           const used = meta.result.values ? meta.result.values.length : 0;
           const startRow = 2 + used;
 
-          // Prepare values
+          // Prepare values - must match Report Staging table on screen exactly
           const headers = [
             "Date", "Time (UTC)", "Recipient", "GBP", "Asset", "Amount", "Fee",
-            "Orig Cur", "Orig Amt", "Destination", "Dest Tag", "TX ID", "Match", "Version"
+            "Conv Cur", "Conv Rate", "Destination", "Dest Tag", "TX ID", "No match"
           ];
 
           const vals = stagingRecords.map(r => [
             r.dateSent,
-            r.timeSent,
+            r.timeSent || '',
             r.recipient,
             r.gbpEquivalent,
             r.asset,
             r.amount,
             r.fee,
-            r.originalCurrency,
-            r.originalAmount,
+            r.conversionCurrency || r.originalCurrency || '',
+            r.conversionRate || '',
             r.wallet,
             r.destTag,
             r.txId,
-            r.matched,
-            VER
+            r.matched === 'Yes' ? '' : 'X'
           ]);
 
           // If sheet is empty, add headers first
           if (startRow === 2) {
             await gapi.client.sheets.spreadsheets.values.update({
               spreadsheetId: SHEET_ID,
-              range: "'ReportStaging'!A1:O1",
+              range: "'ReportStaging'!A1:M1",
               valueInputOption: "USER_ENTERED",
               resource: { values: [headers] }
             });
@@ -1354,7 +1358,7 @@
 
           await gapi.client.sheets.spreadsheets.values.update({
             spreadsheetId: SHEET_ID,
-            range: "'ReportStaging'!A" + startRow + ":O" + (startRow + vals.length - 1),
+            range: "'ReportStaging'!A" + startRow + ":M" + (startRow + vals.length - 1),
             valueInputOption: "USER_ENTERED",
             resource: { values: vals }
           });
@@ -1967,17 +1971,33 @@
           recipient = (addrMatch.key || "").replace(/\s*(XRP|USDT|TRC20|ERC20)\\s*/gi, "").trim();
         }
 
-        // Calculate GBP equivalent
+        // Calculate GBP equivalent and track the rate used
         let gbpEquivalent = "";
         let eurEquivalent = "";
+        let conversionRate = "";
+        let conversionCurrency = "";
         const absAmount = Math.abs(w.amount);
 
         if (w.asset.includes("USDT")) {
-          if (rates.USDTGBP) gbpEquivalent = (absAmount * rates.USDTGBP).toFixed(2);
-          if (rates.USDTEUR) eurEquivalent = (absAmount * rates.USDTEUR).toFixed(2);
+          if (rates.USDTGBP) {
+            gbpEquivalent = (absAmount * rates.USDTGBP).toFixed(2);
+            conversionRate = rates.USDTGBP.toFixed(6);
+            conversionCurrency = "GBP";
+          } else if (rates.USDTEUR) {
+            eurEquivalent = (absAmount * rates.USDTEUR).toFixed(2);
+            conversionRate = rates.USDTEUR.toFixed(6);
+            conversionCurrency = "EUR";
+          }
         } else if (w.asset.includes("XRP") || w.asset === "XXRP") {
-          if (rates.XRPGBP) gbpEquivalent = (absAmount * rates.XRPGBP).toFixed(2);
-          if (rates.XRPEUR) eurEquivalent = (absAmount * rates.XRPEUR).toFixed(2);
+          if (rates.XRPGBP) {
+            gbpEquivalent = (absAmount * rates.XRPGBP).toFixed(2);
+            conversionRate = rates.XRPGBP.toFixed(6);
+            conversionCurrency = "GBP";
+          } else if (rates.XRPEUR) {
+            eurEquivalent = (absAmount * rates.XRPEUR).toFixed(2);
+            conversionRate = rates.XRPEUR.toFixed(6);
+            conversionCurrency = "EUR";
+          }
         }
 
         // Normalize asset name (XXRP -> XRP, USDT stays USDT)
@@ -1993,14 +2013,15 @@
           amount: Math.abs(w.amount).toFixed(6),
           fee: Math.abs(w.fee).toFixed(6),
           balance: w.balance.toFixed(6),
-          originalCurrency: gbpEquivalent ? "GBP" : (eurEquivalent ? "EUR" : ""),
-          originalAmount: gbpEquivalent || eurEquivalent || "",
-          gbpEquivalent: gbpEquivalent,
+          conversionCurrency: conversionCurrency,
+          conversionRate: conversionRate,
+          gbpEquivalent: gbpEquivalent || eurEquivalent || "",
           destTag: destTag,
           wallet: walletAddr,
           txId: w.refid,
           matched: addrMatch ? "Yes" : "No"
         };
+
 
         stagingRecords.push(record);
       }
@@ -2011,15 +2032,17 @@
       logTrace("Report generated: " + stagingRecords.length + " records");
     }
 
-    // Format unix timestamp to DD/MM/YYYY
+    // Format unix timestamp to DD Mon YYYY
     function formatTimestamp(unixTime) {
       if (!unixTime) return "";
       const dt = new Date(unixTime * 1000);
+      const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
       const d = String(dt.getUTCDate()).padStart(2, "0");
-      const m = String(dt.getUTCMonth() + 1).padStart(2, "0");
+      const m = months[dt.getUTCMonth()];
       const y = dt.getUTCFullYear();
-      return d + "/" + m + "/" + y;
+      return d + " " + m + " " + y;
     }
+
 
     // Format unix timestamp to HH:MM:SS (UTC)
     function formatTime(unixTime) {
