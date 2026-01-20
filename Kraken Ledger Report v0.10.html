@@ -365,7 +365,7 @@
         style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; position:relative;">
         <div class="branding-row" style="margin-bottom:0; line-height:1.2;">
           <div><b>Kraken Withdrawals Report</b> <span
-              style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.31</span></div>
+              style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.32</span></div>
           <div style="font-size:0.65rem; color:#b0b0b0; font-weight:400;">(GBP equivalent for all XRP and USDT transfers
             in Date range)</div>
         </div>
@@ -573,12 +573,12 @@
     <button id="copy_trace_btn" onclick="copyTraceToClipboard()"
       style="width:100%; padding:8px; margin-top:6px; background:#16a085; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Copy
       Trace to Clipboard</button>
-    <div id="trace_log" onclick="toggleLog(false)">Trace: v2.31 Kraken Withdrawals Report initialized.</div>
+    <div id="trace_log" onclick="toggleLog(false)">Trace: v2.32 Kraken Withdrawals Report initialized.</div>
   </div>
 
   <script>
     const SHEET_ID = "1Vf0iqthwHv0kFqTRJkYShH_RBpbokLmiEDWGJN3Q0_E";
-    const VER = "Kraken Withdrawals Report (v2.31)";
+    const VER = "Kraken Withdrawals Report (v2.32)";
     const KRAKEN_API_URL = "https://api.kraken.com";
 
     // Default API credentials (enter your own in API Config)
@@ -606,7 +606,7 @@
       const now = new Date().toLocaleTimeString();
       const base = log.textContent && log.textContent.trim().length
         ? log.textContent
-        : "Trace: v2.31 Kraken Withdrawals Report initialized.";
+        : "Trace: v2.32 Kraken Withdrawals Report initialized.";
       log.textContent = base + "\n[" + now + "] " + msg;
       log.scrollTop = log.scrollHeight;
       console.log(msg);
@@ -736,7 +736,7 @@
       }
 
       // Build header row - match the report table order
-      const headers = ["Date", "Time (UTC)", "Recipient", "Sent to", "GBP", "Asset", "Amount", "Fee", "Conv Cur", "Conv Rate", "Destination", "Dest Tag", "TX ID", "No match"];
+      const headers = ["Date", "Time (UTC)", "Recipient", "Sent to", "GBP", "Asset", "Amount", "Fee", "Conv Cur", "Conv Rate", "Destination", "Dest Tag", "TX ID", "External rate"];
 
       // Build data rows
       let text = headers.join("\t") + "\n";
@@ -755,10 +755,11 @@
           r.wallet,
           r.destTag,
           r.txId,
-          r.matched === 'Yes' ? '' : 'X'
+          r.externalRate || ''
         ];
         text += row.join("\t") + "\n";
       }
+
 
 
 
@@ -1135,7 +1136,7 @@
       html += '<th class="w-wallet">Destination</th>';
       html += '<th class="w-desttag">Dest Tag</th>';
       html += '<th class="w-txid">TX ID</th>';
-      html += '<th class="w-matched">No match</th>';
+      html += '<th class="w-external">External rate</th>';
       html += '</tr></thead><tbody>';
 
       for (const r of stagingRecords) {
@@ -1153,13 +1154,10 @@
         html += '<td class="w-wallet">' + escHtml(r.wallet) + '</td>';
         html += '<td class="w-desttag">' + escHtml(r.destTag) + '</td>';
         html += '<td class="w-txid">' + escHtml(r.txId) + '</td>';
-
-
-        // Show X only if no match (missing destination or no address matched)
-        const noMatch = r.matched !== 'Yes';
-        html += '<td class="w-matched" style="font-weight:800; color:var(--danger); text-align:center;">' + (noMatch ? 'X' : '') + '</td>';
+        html += '<td class="w-external" style="text-align:center;">' + escHtml(r.externalRate || '') + '</td>';
         html += '</tr>';
       }
+
       html += '</tbody></table>';
       area.innerHTML = html;
     }
@@ -1335,7 +1333,7 @@
           // Prepare values - must match Report Staging table on screen exactly
           const headers = [
             "Date", "Time (UTC)", "Recipient", "Sent to", "GBP", "Asset", "Amount", "Fee",
-            "Conv Cur", "Conv Rate", "Destination", "Dest Tag", "TX ID", "No match"
+            "Conv Cur", "Conv Rate", "Destination", "Dest Tag", "TX ID", "External rate"
           ];
 
           const vals = stagingRecords.map(r => [
@@ -1352,8 +1350,9 @@
             r.wallet,
             r.destTag,
             r.txId,
-            r.matched === 'Yes' ? '' : 'X'
+            r.externalRate || ''
           ]);
+
 
           // If sheet is empty, add headers first
           if (startRow === 2) {
@@ -1810,6 +1809,23 @@
             const gbpusdRate = await fetchOHLC("GBPUSD", thirtyDaysBefore);
             if (gbpusdRate !== null) {
               rates.gbpRate = rates.usdRate / gbpusdRate;
+            } else {
+              // Final fallback: use external forex API for GBP/USD
+              try {
+                const dateStr = new Date(timestamp * 1000).toISOString().split("T")[0];
+                const forexUrl = `https://api.frankfurter.app/${dateStr}?from=USD&to=GBP`;
+                const resp = await fetch(forexUrl);
+                if (resp.ok) {
+                  const data = await resp.json();
+                  if (data.rates && data.rates.GBP) {
+                    rates.gbpRate = rates.usdRate * data.rates.GBP;
+                    rates.externalRate = true;
+                    console.log("Forex fallback for " + baseAsset + " on " + dateStr + ": USD/GBP=" + data.rates.GBP);
+                  }
+                }
+              } catch (e) {
+                console.log("Forex API fallback failed: " + e.message);
+              }
             }
           }
         }
@@ -1819,6 +1835,7 @@
           rates.gbpRate = await fetchOHLC(baseAsset + "GBP", thirtyDaysBefore);
         }
       }
+
 
 
       // Try EUR pair for eurRate
@@ -1843,7 +1860,27 @@
         }
       }
 
+      // Final fallback: Use external forex API for GBP/USD rate if USDT still has no GBP rate
+      if (rates.gbpRate === null && baseAsset === "USDT") {
+        try {
+          const dateStr = new Date(timestamp * 1000).toISOString().split("T")[0];
+          const forexUrl = `https://api.frankfurter.app/${dateStr}?from=USD&to=GBP`;
+          const resp = await fetch(forexUrl);
+          if (resp.ok) {
+            const data = await resp.json();
+            if (data.rates && data.rates.GBP) {
+              rates.gbpRate = data.rates.GBP;
+              rates.externalRate = true;  // Flag that external forex API was used
+              console.log("Forex fallback for " + dateStr + ": USD/GBP=" + rates.gbpRate);
+            }
+          }
+        } catch (e) {
+          console.log("Forex API fallback failed: " + e.message);
+        }
+      }
+
       return rates;
+
     }
 
     // ========== MAIN FUNCTION: Fetch & Generate Report (v2.0) ==========
@@ -1984,9 +2021,13 @@
           cacheData.ratesCache[dateStr] = {
             USDTGBP: usdtRates.gbpRate,
             USDTEUR: usdtRates.eurRate,
+            USDTExternal: usdtRates.externalRate || false,
             XRPGBP: xrpRates.gbpRate,
-            XRPEUR: xrpRates.eurRate
+            XRPEUR: xrpRates.eurRate,
+            XRPExternal: xrpRates.externalRate || false
           };
+
+
           logTrace("Rates for " + dateStr + ": USDTGBP=" + usdtRates.gbpRate + ", XRPGBP=" + xrpRates.gbpRate);
 
           // Small delay to avoid API rate limiting
@@ -2055,6 +2096,12 @@
         const normalizedAsset = w.asset.includes("XRP") || w.asset === "XXRP" ? "XRP" :
           w.asset.includes("USDT") ? "USDT" : w.asset;
 
+        // Check if external forex rate was used for this date
+        const usedExternalRate =
+          (normalizedAsset === "USDT" && rates.USDTExternal === true) ||
+          (normalizedAsset === "XRP" && rates.XRPExternal === true);
+
+
         const record = {
           dateSent: formatTimestamp(w.time),
           timeSent: formatTime(w.time),
@@ -2071,8 +2118,9 @@
           destTag: destTag,
           wallet: walletAddr,
           txId: w.refid,
-          matched: addrMatch ? "Yes" : "No"
+          externalRate: usedExternalRate ? "Yes" : ""
         };
+
 
 
 
