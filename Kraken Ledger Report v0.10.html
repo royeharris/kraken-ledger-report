@@ -365,7 +365,7 @@
         style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; position:relative;">
         <div class="branding-row" style="margin-bottom:0; line-height:1.2;">
           <div><b>Kraken Withdrawals Report</b> <span
-              style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.27</span></div>
+              style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.28</span></div>
           <div style="font-size:0.65rem; color:#b0b0b0; font-weight:400;">(GBP equivalent for all XRP and USDT transfers
             in Date range)</div>
         </div>
@@ -573,12 +573,12 @@
     <button id="copy_trace_btn" onclick="copyTraceToClipboard()"
       style="width:100%; padding:8px; margin-top:6px; background:#16a085; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Copy
       Trace to Clipboard</button>
-    <div id="trace_log" onclick="toggleLog(false)">Trace: v2.27 Kraken Withdrawals Report initialized.</div>
+    <div id="trace_log" onclick="toggleLog(false)">Trace: v2.28 Kraken Withdrawals Report initialized.</div>
   </div>
 
   <script>
     const SHEET_ID = "1Vf0iqthwHv0kFqTRJkYShH_RBpbokLmiEDWGJN3Q0_E";
-    const VER = "Kraken Withdrawals Report (v2.27)";
+    const VER = "Kraken Withdrawals Report (v2.28)";
     const KRAKEN_API_URL = "https://api.kraken.com";
 
     // Default API credentials (enter your own in API Config)
@@ -606,7 +606,7 @@
       const now = new Date().toLocaleTimeString();
       const base = log.textContent && log.textContent.trim().length
         ? log.textContent
-        : "Trace: v2.27 Kraken Withdrawals Report initialized.";
+        : "Trace: v2.28 Kraken Withdrawals Report initialized.";
       log.textContent = base + "\n[" + now + "] " + msg;
       log.scrollTop = log.scrollHeight;
       console.log(msg);
@@ -1924,11 +1924,22 @@
 
       // Step 2: Batch fetch rates for each unique date
       const ratesToFetch = [];
+      const cachedDates = [];
       for (const dateStr of uniqueDates) {
         const timestamp = new Date(dateStr).getTime() / 1000 + 43200; // noon
-        if (!cacheData.ratesCache[dateStr]) {
+        const cached = cacheData.ratesCache[dateStr];
+        if (!cached) {
           ratesToFetch.push({ dateStr, timestamp });
+        } else if (cached.USDTGBP === null || cached.XRPGBP === null) {
+          // Retry dates where GBP rate is null (API might return data on retry)
+          ratesToFetch.push({ dateStr, timestamp });
+          logTrace("Retrying rate for " + dateStr + " (had null GBP)");
+        } else {
+          cachedDates.push(dateStr);
         }
+      }
+      if (cachedDates.length > 0) {
+        logTrace("Using cached rates for " + cachedDates.length + " dates: " + cachedDates.join(", "));
       }
 
       if (ratesToFetch.length > 0) {
