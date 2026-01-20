@@ -365,7 +365,7 @@
         style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; position:relative;">
         <div class="branding-row" style="margin-bottom:0; line-height:1.2;">
           <div><b>Kraken Withdrawals Report</b> <span
-              style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.32</span></div>
+              style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.33</span></div>
           <div style="font-size:0.65rem; color:#b0b0b0; font-weight:400;">(GBP equivalent for all XRP and USDT transfers
             in Date range)</div>
         </div>
@@ -573,12 +573,12 @@
     <button id="copy_trace_btn" onclick="copyTraceToClipboard()"
       style="width:100%; padding:8px; margin-top:6px; background:#16a085; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Copy
       Trace to Clipboard</button>
-    <div id="trace_log" onclick="toggleLog(false)">Trace: v2.32 Kraken Withdrawals Report initialized.</div>
+    <div id="trace_log" onclick="toggleLog(false)">Trace: v2.33 Kraken Withdrawals Report initialized.</div>
   </div>
 
   <script>
     const SHEET_ID = "1Vf0iqthwHv0kFqTRJkYShH_RBpbokLmiEDWGJN3Q0_E";
-    const VER = "Kraken Withdrawals Report (v2.32)";
+    const VER = "Kraken Withdrawals Report (v2.33)";
     const KRAKEN_API_URL = "https://api.kraken.com";
 
     // Default API credentials (enter your own in API Config)
@@ -606,7 +606,7 @@
       const now = new Date().toLocaleTimeString();
       const base = log.textContent && log.textContent.trim().length
         ? log.textContent
-        : "Trace: v2.32 Kraken Withdrawals Report initialized.";
+        : "Trace: v2.33 Kraken Withdrawals Report initialized.";
       log.textContent = base + "\n[" + now + "] " + msg;
       log.scrollTop = log.scrollHeight;
       console.log(msg);
@@ -1544,7 +1544,7 @@
       return arrayBufferToBase64(signature);
     }
 
-    async function callKrakenPrivateAPI(endpoint, params = {}, credentials = null) {
+    async function callKrakenPrivateAPI(endpoint, params = {}, credentials = null, retryCount = 0) {
       const { apiKey, privateKey, proxy } = credentials || getApiCredentials();
       const urlPath = "/0/private/" + endpoint;
       const nonce = Date.now().toString();
@@ -1579,6 +1579,13 @@
             logTrace("Error response body: " + errorDetails);
           } catch (e) { }
 
+          // Retry on HTTP 5xx errors (transient proxy issues like 526)
+          if (response.status >= 500 && retryCount < 2) {
+            logTrace("HTTP " + response.status + " error, retrying in 1 second... (attempt " + (retryCount + 2) + "/3)");
+            await new Promise(r => setTimeout(r, 1000));
+            return callKrakenPrivateAPI(endpoint, params, credentials, retryCount + 1);
+          }
+
           if (response.status === 403 && proxy && proxy.includes("cors-anywhere")) {
             logTrace("*** CORS-ANYWHERE 403: You may need to visit " + proxy + " and click 'Request temporary access' ***");
             throw new Error("CORS Proxy 403: Visit " + proxy + " to request access first");
@@ -1596,12 +1603,19 @@
 
       } catch (e) {
         if (e.message.includes("Failed to fetch") || e.message.includes("NetworkError")) {
+          // Retry on network errors
+          if (retryCount < 2) {
+            logTrace("Network error, retrying in 1 second... (attempt " + (retryCount + 2) + "/3)");
+            await new Promise(r => setTimeout(r, 1000));
+            return callKrakenPrivateAPI(endpoint, params, credentials, retryCount + 1);
+          }
           logTrace("CORS blocked. Try using a CORS proxy in API Config.");
           throw new Error("CORS blocked. Please configure a CORS proxy in API Config.");
         }
         throw e;
       }
     }
+
 
     async function fetchKrakenAddresses() {
       logTrace("Fetching Kraken withdrawal addresses...");
@@ -1878,6 +1892,41 @@
           console.log("Forex API fallback failed: " + e.message);
         }
       }
+
+      // Final fallback for XRP: Use CoinGecko for historical XRP/USD, then forex for USD/GBP
+      if (rates.gbpRate === null && baseAsset === "XRP") {
+        try {
+          const txDate = new Date(timestamp * 1000);
+          const dateStr = txDate.toISOString().split("T")[0];
+          // CoinGecko format: dd-mm-yyyy
+          const cgDate = `${String(txDate.getDate()).padStart(2, '0')}-${String(txDate.getMonth() + 1).padStart(2, '0')}-${txDate.getFullYear()}`;
+
+          // Get XRP/USD from CoinGecko
+          const cgUrl = `https://api.coingecko.com/api/v3/coins/ripple/history?date=${cgDate}&localization=false`;
+          const cgResp = await fetch(cgUrl);
+          if (cgResp.ok) {
+            const cgData = await cgResp.json();
+            if (cgData.market_data && cgData.market_data.current_price && cgData.market_data.current_price.usd) {
+              const xrpUsd = cgData.market_data.current_price.usd;
+
+              // Now get USD/GBP from forex API
+              const forexUrl = `https://api.frankfurter.app/${dateStr}?from=USD&to=GBP`;
+              const forexResp = await fetch(forexUrl);
+              if (forexResp.ok) {
+                const forexData = await forexResp.json();
+                if (forexData.rates && forexData.rates.GBP) {
+                  rates.gbpRate = xrpUsd * forexData.rates.GBP;
+                  rates.externalRate = true;
+                  console.log("CoinGecko+Forex fallback for XRP on " + dateStr + ": XRP/USD=" + xrpUsd + ", USD/GBP=" + forexData.rates.GBP + ", XRP/GBP=" + rates.gbpRate);
+                }
+              }
+            }
+          }
+        } catch (e) {
+          console.log("CoinGecko/Forex API fallback for XRP failed: " + e.message);
+        }
+      }
+
 
       return rates;
 
