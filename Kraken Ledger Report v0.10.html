@@ -1770,13 +1770,21 @@
         // Try direct GBP pair for USDT
         rates.gbpRate = await fetchOHLC("USDTGBP", thirtyDaysBefore);
 
-        // If no direct GBP, use GBP/USD to convert
+        // If no direct GBP, try USD/GBP conversion
         if (rates.gbpRate === null) {
-          const gbpusdRate = await fetchOHLC("GBPUSD", thirtyDaysBefore);
-          if (gbpusdRate !== null) {
-            rates.gbpRate = 1.0 / gbpusdRate; // 1 USDT = 1 USD, convert to GBP
+          // Try USDGBP (gives GBP per USD directly)
+          const usdgbpRate = await fetchOHLC("USDGBP", thirtyDaysBefore);
+          if (usdgbpRate !== null) {
+            rates.gbpRate = usdgbpRate; // 1 USDT = 1 USD = x GBP
+          } else {
+            // Fallback: Try GBPUSD (gives USD per GBP, so invert)
+            const gbpusdRate = await fetchOHLC("GBPUSD", thirtyDaysBefore);
+            if (gbpusdRate !== null) {
+              rates.gbpRate = 1.0 / gbpusdRate; // 1 USDT = 1 USD, convert to GBP
+            }
           }
         }
+
       } else {
         // For other assets (XRP, etc.), try USD pair first
         rates.usdRate = await fetchOHLC(baseAsset + "USD", thirtyDaysBefore);
