@@ -236,7 +236,6 @@
     /* Column widths */
     .w-date {
       width: 7ch;
-      /* -2ch */
     }
 
     .w-time {
@@ -246,12 +245,10 @@
 
     .w-recipient {
       width: 13ch;
-      /* -5ch from 18 */
     }
 
     .w-sentto {
       width: 14ch;
-      /* -4ch from 18 */
     }
 
     .w-asset {
@@ -260,26 +257,26 @@
     }
 
     .w-amount {
-      width: 8ch;
-      /* -4ch from 12 */
+      width: 6ch;
+      /* -2ch */
       text-align: right;
     }
 
     .w-cur {
-      width: 19ch;
-      /* +15ch for Conv Currency label */
+      width: 12ch;
+      /* -7ch */
       text-align: center;
     }
 
     .w-gbp {
-      width: 6ch;
-      /* -4ch from 10 */
+      width: 4ch;
+      /* -2ch */
       text-align: right;
     }
 
     .w-gbpfee {
-      width: 6ch;
-      /* New column */
+      width: 1ch;
+      /* -5ch */
       text-align: right;
     }
 
@@ -288,26 +285,27 @@
     }
 
     .w-wallet {
-      width: 34ch;
+      width: 30ch;
+      /* -4ch */
     }
 
     .w-txid {
-      width: 25ch;
-      /* -5ch from 30 */
+      width: 21ch;
+      /* -4ch */
     }
 
     .w-source {
-      width: 16ch;
-      /* -4ch from 20 */
+      width: 9ch;
+      /* -7ch */
     }
 
     .w-fee {
       width: 5ch;
-      /* -4ch from 9 */
       text-align: right;
     }
 
     .w-rate {
+
       width: 6ch;
       /* -4ch from 10 */
       text-align: right;
@@ -392,7 +390,7 @@
         style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; position:relative;">
         <div class="branding-row" style="margin-bottom:0; line-height:1.2;">
           <div><b>Kraken Withdrawals Report</b> <span
-              style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.36</span></div>
+              style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.37</span></div>
           <div style="font-size:0.65rem; color:#b0b0b0; font-weight:400;">(GBP equivalent for all XRP and USDT transfers
             in Date range)</div>
         </div>
@@ -600,12 +598,12 @@
     <button id="copy_trace_btn" onclick="copyTraceToClipboard()"
       style="width:100%; padding:8px; margin-top:6px; background:#16a085; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Copy
       Trace to Clipboard</button>
-    <div id="trace_log" onclick="toggleLog(false)">Trace: v2.36 Kraken Withdrawals Report initialized.</div>
+    <div id="trace_log" onclick="toggleLog(false)">Trace: v2.37 Kraken Withdrawals Report initialized.</div>
   </div>
 
   <script>
     const SHEET_ID = "1Vf0iqthwHv0kFqTRJkYShH_RBpbokLmiEDWGJN3Q0_E";
-    const VER = "Kraken Withdrawals Report (v2.36)";
+    const VER = "Kraken Withdrawals Report (v2.37)";
     const KRAKEN_API_URL = "https://api.kraken.com";
 
     // Default API credentials (enter your own in API Config)
@@ -633,7 +631,7 @@
       const now = new Date().toLocaleTimeString();
       const base = log.textContent && log.textContent.trim().length
         ? log.textContent
-        : "Trace: v2.36 Kraken Withdrawals Report initialized.";
+        : "Trace: v2.37 Kraken Withdrawals Report initialized.";
       log.textContent = base + "\n[" + now + "] " + msg;
       log.scrollTop = log.scrollHeight;
       console.log(msg);
@@ -763,7 +761,7 @@
       }
 
       // Build header row - match the report table order
-      const headers = ["Date", "Time (UTC)", "Recipient", "Sent to", "GBP Sent", "Amount", "Fee", "Asset", "GBP Fee", "Conv Currency", "Conv Rate", "Source", "Destination", "Dest Tag", "Transaction ID"];
+      const headers = ["Date", "Time (UTC)", "Recipient", "Sent to", "GBP Sent", "Amount", "Fee", "Asset", "GBP Fee", "Conv Rate", "Conv Currency", "Source", "Destination", "Dest Tag", "Transaction ID"];
 
       // Build data rows
       let text = headers.join("\t") + "\n";
@@ -778,8 +776,8 @@
           r.fee,
           r.asset,
           r.gbpFee || '',
-          r.conversionCurrency || '',
           r.conversionRate || '',
+          r.conversionCurrency || '',
           r.rateSource || '',
           r.wallet,
           r.destTag,
@@ -1160,8 +1158,8 @@
       html += '<th class="w-fee">Fee</th>';
       html += '<th class="w-asset">Asset</th>';
       html += '<th class="w-gbpfee">GBP Fee</th>';
-      html += '<th class="w-cur">Conv Currency</th>';
       html += '<th class="w-rate">Conv Rate</th>';
+      html += '<th class="w-cur">Conv Currency</th>';
       html += '<th class="w-source">Source</th>';
       html += '<th class="w-wallet">Destination</th>';
       html += '<th class="w-desttag">Dest Tag</th>';
@@ -1179,8 +1177,8 @@
         html += '<td class="w-fee">' + escHtml(r.fee) + '</td>';
         html += '<td class="w-asset">' + escHtml(r.asset) + '</td>';
         html += '<td class="w-gbpfee">' + escHtml(r.gbpFee || '') + '</td>';
-        html += '<td class="w-cur">' + escHtml(r.conversionCurrency || '') + '</td>';
         html += '<td class="w-rate">' + escHtml(r.conversionRate || '') + '</td>';
+        html += '<td class="w-cur">' + escHtml(r.conversionCurrency || '') + '</td>';
         html += '<td class="w-source">' + escHtml(r.rateSource || '') + '</td>';
         html += '<td class="w-wallet">' + escHtml(r.wallet) + '</td>';
         html += '<td class="w-desttag">' + escHtml(r.destTag) + '</td>';
@@ -1364,7 +1362,7 @@
           // Prepare values - must match Report Staging table on screen exactly
           const headers = [
             "Date", "Time (UTC)", "Recipient", "Sent to", "GBP Sent", "Amount", "Fee", "Asset",
-            "GBP Fee", "Conv Currency", "Conv Rate", "Source", "Destination", "Dest Tag", "Transaction ID"
+            "GBP Fee", "Conv Rate", "Conv Currency", "Source", "Destination", "Dest Tag", "Transaction ID"
           ];
 
           const vals = stagingRecords.map(r => [
@@ -1377,8 +1375,8 @@
             r.fee,
             r.asset,
             r.gbpFee || '',
-            r.conversionCurrency || '',
             r.conversionRate || '',
+            r.conversionCurrency || '',
             r.rateSource || '',
             r.wallet,
             r.destTag,
