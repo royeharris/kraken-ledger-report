@@ -235,7 +235,8 @@
 
     /* Column widths */
     .w-date {
-      width: 9ch;
+      width: 7ch;
+      /* -2ch */
     }
 
     .w-time {
@@ -244,13 +245,13 @@
     }
 
     .w-recipient {
-      width: 18ch;
-      /* Reduced from 30ch */
+      width: 13ch;
+      /* -5ch from 18 */
     }
 
     .w-sentto {
-      width: 18ch;
-      /* New column, similar to recipient */
+      width: 14ch;
+      /* -4ch from 18 */
     }
 
     .w-asset {
@@ -259,17 +260,26 @@
     }
 
     .w-amount {
-      width: 12ch;
+      width: 8ch;
+      /* -4ch from 12 */
       text-align: right;
     }
 
     .w-cur {
-      width: 4ch;
+      width: 19ch;
+      /* +15ch for Conv Currency label */
       text-align: center;
     }
 
     .w-gbp {
-      width: 10ch;
+      width: 6ch;
+      /* -4ch from 10 */
+      text-align: right;
+    }
+
+    .w-gbpfee {
+      width: 6ch;
+      /* New column */
       text-align: right;
     }
 
@@ -282,30 +292,33 @@
     }
 
     .w-txid {
-      width: 30ch;
-      /* Increased from 20ch */
+      width: 25ch;
+      /* -5ch from 30 */
     }
 
     .w-source {
-      width: 20ch;
-      /* Max 20ch per user request */
+      width: 16ch;
+      /* -4ch from 20 */
     }
 
     .w-fee {
-      width: 9ch;
+      width: 5ch;
+      /* -4ch from 9 */
       text-align: right;
     }
 
     .w-rate {
-      width: 10ch;
-      /* Reduced from implied larger */
+      width: 6ch;
+      /* -4ch from 10 */
       text-align: right;
     }
 
     .w-balance {
-      width: 10ch;
+      width: 6ch;
+      /* -4ch from 10 */
       text-align: right;
     }
+
 
 
     #auth_status {
@@ -379,7 +392,7 @@
         style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; position:relative;">
         <div class="branding-row" style="margin-bottom:0; line-height:1.2;">
           <div><b>Kraken Withdrawals Report</b> <span
-              style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.35</span></div>
+              style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.36</span></div>
           <div style="font-size:0.65rem; color:#b0b0b0; font-weight:400;">(GBP equivalent for all XRP and USDT transfers
             in Date range)</div>
         </div>
@@ -587,12 +600,12 @@
     <button id="copy_trace_btn" onclick="copyTraceToClipboard()"
       style="width:100%; padding:8px; margin-top:6px; background:#16a085; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Copy
       Trace to Clipboard</button>
-    <div id="trace_log" onclick="toggleLog(false)">Trace: v2.35 Kraken Withdrawals Report initialized.</div>
+    <div id="trace_log" onclick="toggleLog(false)">Trace: v2.36 Kraken Withdrawals Report initialized.</div>
   </div>
 
   <script>
     const SHEET_ID = "1Vf0iqthwHv0kFqTRJkYShH_RBpbokLmiEDWGJN3Q0_E";
-    const VER = "Kraken Withdrawals Report (v2.35)";
+    const VER = "Kraken Withdrawals Report (v2.36)";
     const KRAKEN_API_URL = "https://api.kraken.com";
 
     // Default API credentials (enter your own in API Config)
@@ -620,7 +633,7 @@
       const now = new Date().toLocaleTimeString();
       const base = log.textContent && log.textContent.trim().length
         ? log.textContent
-        : "Trace: v2.35 Kraken Withdrawals Report initialized.";
+        : "Trace: v2.36 Kraken Withdrawals Report initialized.";
       log.textContent = base + "\n[" + now + "] " + msg;
       log.scrollTop = log.scrollHeight;
       console.log(msg);
@@ -661,7 +674,7 @@
 
     function updateStatus(label, state) {
       const el = document.getElementById("auth_status");
-      el.innerText = "Sync Status: " + label;
+      el.innerText = "Status: " + label;
       const colors = { idle: "#7f8c8d", active: "#27ae60", sync: "#e67e22", error: "#c0392b" };
       el.style.color = colors[state] || colors.idle;
     }
@@ -750,7 +763,7 @@
       }
 
       // Build header row - match the report table order
-      const headers = ["Date", "Time (UTC)", "Recipient", "Sent to", "GBP", "Asset", "Amount", "Fee", "Conv Cur", "Conv Rate", "Destination", "Dest Tag", "Transaction ID", "Source"];
+      const headers = ["Date", "Time (UTC)", "Recipient", "Sent to", "GBP Sent", "Amount", "Fee", "Asset", "GBP Fee", "Conv Currency", "Conv Rate", "Source", "Destination", "Dest Tag", "Transaction ID"];
 
       // Build data rows
       let text = headers.join("\t") + "\n";
@@ -760,16 +773,17 @@
           r.timeSent || '',
           r.recipient,
           r.sentTo || '',
-          r.gbpEquivalent,
-          r.asset,
+          r.gbpSent || '',
           r.amount,
           r.fee,
-          r.conversionCurrency || r.originalCurrency || '',
+          r.asset,
+          r.gbpFee || '',
+          r.conversionCurrency || '',
           r.conversionRate || '',
+          r.rateSource || '',
           r.wallet,
           r.destTag,
-          r.txId,
-          r.rateSource || ''
+          r.txId
         ];
         text += row.join("\t") + "\n";
       }
@@ -1134,23 +1148,24 @@
         if (hint) hint.textContent = "No staging records. Click 'Generate Report' after loading data.";
         return;
       }
-      if (hint) hint.textContent = stagingRecords.length + " staging record(s)";
+      if (hint) hint.textContent = stagingRecords.length + " Report record(s)";
 
       let html = '<table><thead><tr>';
       html += '<th class="w-date">Date</th>';
       html += '<th class="w-time">Time (UTC)</th>';
       html += '<th class="w-recipient">Recipient</th>';
       html += '<th class="w-sentto">Sent to</th>';
-      html += '<th class="w-gbp">GBP</th>';
-      html += '<th class="w-asset">Asset</th>';
+      html += '<th class="w-gbp">GBP Sent</th>';
       html += '<th class="w-amount">Amount</th>';
       html += '<th class="w-fee">Fee</th>';
-      html += '<th class="w-cur">Conv Cur</th>';
+      html += '<th class="w-asset">Asset</th>';
+      html += '<th class="w-gbpfee">GBP Fee</th>';
+      html += '<th class="w-cur">Conv Currency</th>';
       html += '<th class="w-rate">Conv Rate</th>';
+      html += '<th class="w-source">Source</th>';
       html += '<th class="w-wallet">Destination</th>';
       html += '<th class="w-desttag">Dest Tag</th>';
       html += '<th class="w-txid">Transaction ID</th>';
-      html += '<th class="w-source">Source</th>';;
       html += '</tr></thead><tbody>';
 
       for (const r of stagingRecords) {
@@ -1159,22 +1174,24 @@
         html += '<td class="w-time">' + escHtml(r.timeSent || '') + '</td>';
         html += '<td class="w-recipient">' + escHtml(r.recipient) + '</td>';
         html += '<td class="w-sentto">' + escHtml(r.sentTo || '') + '</td>';
-        html += '<td class="w-gbp">' + escHtml(r.gbpEquivalent) + '</td>';
-        html += '<td class="w-asset">' + escHtml(r.asset) + '</td>';
+        html += '<td class="w-gbp">' + escHtml(r.gbpSent || '') + '</td>';
         html += '<td class="w-amount">' + escHtml(r.amount) + '</td>';
         html += '<td class="w-fee">' + escHtml(r.fee) + '</td>';
-        html += '<td class="w-cur">' + escHtml(r.conversionCurrency || r.originalCurrency || '') + '</td>';
+        html += '<td class="w-asset">' + escHtml(r.asset) + '</td>';
+        html += '<td class="w-gbpfee">' + escHtml(r.gbpFee || '') + '</td>';
+        html += '<td class="w-cur">' + escHtml(r.conversionCurrency || '') + '</td>';
         html += '<td class="w-rate">' + escHtml(r.conversionRate || '') + '</td>';
+        html += '<td class="w-source">' + escHtml(r.rateSource || '') + '</td>';
         html += '<td class="w-wallet">' + escHtml(r.wallet) + '</td>';
         html += '<td class="w-desttag">' + escHtml(r.destTag) + '</td>';
         html += '<td class="w-txid">' + escHtml(r.txId) + '</td>';
-        html += '<td class="w-source">' + escHtml(r.rateSource || '') + '</td>';
         html += '</tr>';
       }
 
       html += '</tbody></table>';
       area.innerHTML = html;
     }
+
 
     function escHtml(s) {
       if (s === null || s === undefined) return "";
@@ -1346,8 +1363,8 @@
 
           // Prepare values - must match Report Staging table on screen exactly
           const headers = [
-            "Date", "Time (UTC)", "Recipient", "Sent to", "GBP", "Asset", "Amount", "Fee",
-            "Conv Cur", "Conv Rate", "Destination", "Dest Tag", "Transaction ID", "Source"
+            "Date", "Time (UTC)", "Recipient", "Sent to", "GBP Sent", "Amount", "Fee", "Asset",
+            "GBP Fee", "Conv Currency", "Conv Rate", "Source", "Destination", "Dest Tag", "Transaction ID"
           ];
 
           const vals = stagingRecords.map(r => [
@@ -1355,16 +1372,17 @@
             r.timeSent || '',
             r.recipient,
             r.sentTo || '',
-            r.gbpEquivalent,
-            r.asset,
+            r.gbpSent || '',
             r.amount,
             r.fee,
-            r.conversionCurrency || r.originalCurrency || '',
+            r.asset,
+            r.gbpFee || '',
+            r.conversionCurrency || '',
             r.conversionRate || '',
+            r.rateSource || '',
             r.wallet,
             r.destTag,
-            r.txId,
-            r.rateSource || ''
+            r.txId
           ]);
 
 
@@ -1372,7 +1390,7 @@
           if (startRow === 2) {
             await gapi.client.sheets.spreadsheets.values.update({
               spreadsheetId: SHEET_ID,
-              range: "'ReportStaging'!A1:N1",
+              range: "'ReportStaging'!A1:O1",
               valueInputOption: "USER_ENTERED",
               resource: { values: [headers] }
             });
@@ -1380,7 +1398,7 @@
 
           await gapi.client.sheets.spreadsheets.values.update({
             spreadsheetId: SHEET_ID,
-            range: "'ReportStaging'!A" + startRow + ":N" + (startRow + vals.length - 1),
+            range: "'ReportStaging'!A" + startRow + ":O" + (startRow + vals.length - 1),
             valueInputOption: "USER_ENTERED",
             resource: { values: vals }
           });
@@ -2118,7 +2136,7 @@
         // Find matching withdrawal in history (for address/tag)
         const historyMatch = cacheData.withdrawalHistory.find(h => h.refid === w.refid);
 
-        // Get address and destination tag
+        // Get address from history
         let walletAddr = historyMatch ? (historyMatch.info || historyMatch.address || "") : "";
         let destTag = historyMatch ? (historyMatch.dest || historyMatch.tag || "") : "";
 
@@ -2129,6 +2147,10 @@
         );
         if (addrMatch) {
           fullRecipient = (addrMatch.key || "").replace(/\\s*/g, "").trim();
+          // If destTag is empty but address table has tag for XRP, use it
+          if (!destTag && addrMatch.tag && (w.asset.includes("XRP") || w.asset === "XXRP")) {
+            destTag = addrMatch.tag;
+          }
         }
 
         // Split recipient: first 2 words = name, rest = sent to destination
@@ -2138,29 +2160,35 @@
 
 
         // Calculate GBP equivalent and track the rate used
-        let gbpEquivalent = "";
-        let eurEquivalent = "";
+        let gbpSent = "";
+        let gbpFee = "";
         let conversionRate = "";
         let conversionCurrency = "";
         const absAmount = Math.abs(w.amount);
+        const absFee = Math.abs(w.fee);
+        const netAmount = absAmount - absFee;  // Amount after fee deduction
 
         if (w.asset.includes("USDT")) {
           if (rates.USDTGBP) {
-            gbpEquivalent = (absAmount * rates.USDTGBP).toFixed(2);
+            gbpSent = (netAmount * rates.USDTGBP).toFixed(2);
+            gbpFee = (absFee * rates.USDTGBP).toFixed(2);
             conversionRate = rates.USDTGBP.toFixed(6);
             conversionCurrency = "GBP";
           } else if (rates.USDTEUR) {
-            eurEquivalent = (absAmount * rates.USDTEUR).toFixed(2);
+            gbpSent = (netAmount * rates.USDTEUR).toFixed(2);
+            gbpFee = (absFee * rates.USDTEUR).toFixed(2);
             conversionRate = rates.USDTEUR.toFixed(6);
             conversionCurrency = "EUR";
           }
         } else if (w.asset.includes("XRP") || w.asset === "XXRP") {
           if (rates.XRPGBP) {
-            gbpEquivalent = (absAmount * rates.XRPGBP).toFixed(2);
+            gbpSent = (netAmount * rates.XRPGBP).toFixed(2);
+            gbpFee = (absFee * rates.XRPGBP).toFixed(2);
             conversionRate = rates.XRPGBP.toFixed(6);
             conversionCurrency = "GBP";
           } else if (rates.XRPEUR) {
-            eurEquivalent = (absAmount * rates.XRPEUR).toFixed(2);
+            gbpSent = (netAmount * rates.XRPEUR).toFixed(2);
+            gbpFee = (absFee * rates.XRPEUR).toFixed(2);
             conversionRate = rates.XRPEUR.toFixed(6);
             conversionCurrency = "EUR";
           }
@@ -2187,7 +2215,8 @@
           balance: w.balance.toFixed(6),
           conversionCurrency: conversionCurrency,
           conversionRate: conversionRate,
-          gbpEquivalent: gbpEquivalent || eurEquivalent || "",
+          gbpSent: gbpSent,
+          gbpFee: gbpFee,
           destTag: destTag,
           wallet: walletAddr,
           txId: w.refid,
