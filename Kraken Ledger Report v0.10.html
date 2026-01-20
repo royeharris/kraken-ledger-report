@@ -386,7 +386,7 @@
         style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; position:relative;">
         <div class="branding-row" style="margin-bottom:0; line-height:1.2;">
           <div><b>Kraken Withdrawals Report</b> <span
-              style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.38</span></div>
+              style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.39</span></div>
           <div style="font-size:0.65rem; color:#b0b0b0; font-weight:400;">(GBP equivalent for all XRP and USDT transfers
             in Date range)</div>
         </div>
@@ -594,12 +594,12 @@
     <button id="copy_trace_btn" onclick="copyTraceToClipboard()"
       style="width:100%; padding:8px; margin-top:6px; background:#16a085; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Copy
       Trace to Clipboard</button>
-    <div id="trace_log" onclick="toggleLog(false)">Trace: v2.38 Kraken Withdrawals Report initialized.</div>
+    <div id="trace_log" onclick="toggleLog(false)">Trace: v2.39 Kraken Withdrawals Report initialized.</div>
   </div>
 
   <script>
     const SHEET_ID = "1Vf0iqthwHv0kFqTRJkYShH_RBpbokLmiEDWGJN3Q0_E";
-    const VER = "Kraken Withdrawals Report (v2.38)";
+    const VER = "Kraken Withdrawals Report (v2.39)";
     const KRAKEN_API_URL = "https://api.kraken.com";
 
     // Default API credentials (enter your own in API Config)
@@ -627,7 +627,7 @@
       const now = new Date().toLocaleTimeString();
       const base = log.textContent && log.textContent.trim().length
         ? log.textContent
-        : "Trace: v2.38 Kraken Withdrawals Report initialized.";
+        : "Trace: v2.39 Kraken Withdrawals Report initialized.";
       log.textContent = base + "\n[" + now + "] " + msg;
       log.scrollTop = log.scrollHeight;
       console.log(msg);
@@ -1347,15 +1347,7 @@
 
       ensureTokenThen(async () => {
         try {
-          // Find first empty row in ReportStaging
-          const meta = await gapi.client.sheets.spreadsheets.values.get({
-            spreadsheetId: SHEET_ID,
-            range: "'ReportStaging'!A2:A"
-          });
-          const used = meta.result.values ? meta.result.values.length : 0;
-          const startRow = 2 + used;
-
-          // Prepare values - must match Report Staging table on screen exactly
+          // Prepare headers and values - must match Report table on screen exactly
           const headers = [
             "Date", "Time (UTC)", "Recipient", "Sent to", "GBP Sent", "Amount", "Fee", "Asset",
             "GBP Fee", "Conv Rate", "Conv Currency", "Source", "Destination", "Dest Tag", "Transaction ID"
@@ -1379,28 +1371,31 @@
             r.txId
           ]);
 
+          // Clear sheet first, then write headers + data from row 1
+          await gapi.client.sheets.spreadsheets.values.clear({
+            spreadsheetId: SHEET_ID,
+            range: "'ReportStaging'!A:Z"
+          });
 
-          // If sheet is empty, add headers first
-          if (startRow === 2) {
-            await gapi.client.sheets.spreadsheets.values.update({
-              spreadsheetId: SHEET_ID,
-              range: "'ReportStaging'!A1:O1",
-              valueInputOption: "USER_ENTERED",
-              resource: { values: [headers] }
-            });
-          }
-
+          // Write headers in row 1
           await gapi.client.sheets.spreadsheets.values.update({
             spreadsheetId: SHEET_ID,
-            range: "'ReportStaging'!A" + startRow + ":O" + (startRow + vals.length - 1),
+            range: "'ReportStaging'!A1:O1",
+            valueInputOption: "USER_ENTERED",
+            resource: { values: [headers] }
+          });
+
+          // Write data starting row 2
+          await gapi.client.sheets.spreadsheets.values.update({
+            spreadsheetId: SHEET_ID,
+            range: "'ReportStaging'!A2:O" + (1 + vals.length),
             valueInputOption: "USER_ENTERED",
             resource: { values: vals }
           });
 
-
           updateStatus("Token Active", "active");
-          logTrace("Sync complete. StartRow=" + startRow);
-          alert("Sync completed. " + vals.length + " records sent to ReportStaging.");
+          logTrace("Sync complete. " + vals.length + " records written to ReportStaging.");
+          alert("Sync completed. " + vals.length + " records written to ReportStaging (replaced).");
 
         } catch (e) {
           updateStatus("Sync error", "error");
