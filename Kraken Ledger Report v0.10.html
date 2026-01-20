@@ -233,81 +233,99 @@
       font-size: 0.58rem !important;
     }
 
-    /* Column widths */
+    /* Column widths - use min-width to prevent shrinking with fixed table layout */
     .w-date {
-      width: 5ch;
-      /* -2ch from 7 */
+      min-width: 6ch;
+      width: 6ch;
+      /* fits "Date" + padding */
     }
 
     .w-time {
-      width: 5ch;
-      /* -4ch from 9 */
+      min-width: 6ch;
+      width: 6ch;
+      /* fits "Time (UTC)" abbreviated */
       text-align: center;
     }
 
     .w-recipient {
-      width: 13ch;
+      min-width: 8ch;
+      width: 8ch;
+      /* -5ch as requested */
     }
 
     .w-sentto {
+      min-width: 14ch;
       width: 14ch;
     }
 
     .w-asset {
-      width: 5ch;
+      min-width: 3ch;
+      width: 3ch;
+      /* -2ch as requested */
       text-align: center;
     }
 
     .w-amount {
+      min-width: 6ch;
       width: 6ch;
       text-align: right;
     }
 
     .w-cur {
-      width: 6ch;
-      /* -6ch from 12 */
+      min-width: 13ch;
+      width: 13ch;
+      /* fits "Conv Currency" */
       text-align: center;
     }
 
     .w-gbp {
+      min-width: 4ch;
       width: 4ch;
       text-align: right;
     }
 
     .w-gbpfee {
-      width: 6ch;
-      /* Fixed: was 1ch (broken), now 6ch for "GBP Fee" header */
+      min-width: 3ch;
+      width: 3ch;
+      /* -3ch as requested */
       text-align: right;
     }
 
     .w-desttag {
+      min-width: 10ch;
       width: 10ch;
     }
 
     .w-wallet {
+      min-width: 30ch;
       width: 30ch;
     }
 
     .w-txid {
+      min-width: 21ch;
       width: 21ch;
     }
 
     .w-source {
+      min-width: 9ch;
       width: 9ch;
     }
 
     .w-fee {
+      min-width: 5ch;
       width: 5ch;
       text-align: right;
     }
 
     .w-rate {
-      width: 3ch;
-      /* -3ch from 6 */
+      min-width: 9ch;
+      width: 9ch;
+      /* fits "Conv Rate" */
       text-align: right;
     }
 
     .w-balance {
+
       width: 6ch;
       text-align: right;
     }
@@ -386,7 +404,7 @@
         style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; position:relative;">
         <div class="branding-row" style="margin-bottom:0; line-height:1.2;">
           <div><b>Kraken Withdrawals Report</b> <span
-              style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.39</span></div>
+              style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.40</span></div>
           <div style="font-size:0.65rem; color:#b0b0b0; font-weight:400;">(GBP equivalent for all XRP and USDT transfers
             in Date range)</div>
         </div>
@@ -594,12 +612,12 @@
     <button id="copy_trace_btn" onclick="copyTraceToClipboard()"
       style="width:100%; padding:8px; margin-top:6px; background:#16a085; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Copy
       Trace to Clipboard</button>
-    <div id="trace_log" onclick="toggleLog(false)">Trace: v2.39 Kraken Withdrawals Report initialized.</div>
+    <div id="trace_log" onclick="toggleLog(false)">Trace: v2.40 Kraken Withdrawals Report initialized.</div>
   </div>
 
   <script>
     const SHEET_ID = "1Vf0iqthwHv0kFqTRJkYShH_RBpbokLmiEDWGJN3Q0_E";
-    const VER = "Kraken Withdrawals Report (v2.39)";
+    const VER = "Kraken Withdrawals Report (v2.40)";
     const KRAKEN_API_URL = "https://api.kraken.com";
 
     // Default API credentials (enter your own in API Config)
@@ -627,7 +645,7 @@
       const now = new Date().toLocaleTimeString();
       const base = log.textContent && log.textContent.trim().length
         ? log.textContent
-        : "Trace: v2.39 Kraken Withdrawals Report initialized.";
+        : "Trace: v2.40 Kraken Withdrawals Report initialized.";
       log.textContent = base + "\n[" + now + "] " + msg;
       log.scrollTop = log.scrollHeight;
       console.log(msg);
