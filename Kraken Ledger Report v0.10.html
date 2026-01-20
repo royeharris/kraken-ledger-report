@@ -410,7 +410,7 @@
         style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; position:relative;">
         <div class="branding-row" style="margin-bottom:0; line-height:1.2;">
           <div><b>Kraken Withdrawals Report</b> <span
-              style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.44</span></div>
+              style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.45</span></div>
           <div style="font-size:0.65rem; color:#b0b0b0; font-weight:400;">(GBP equivalent for all XRP and USDT transfers
             in Date range)</div>
         </div>
@@ -622,12 +622,12 @@
     <button id="copy_trace_btn" onclick="copyTraceToClipboard()"
       style="width:100%; padding:8px; margin-top:6px; background:#16a085; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Copy
       Trace to Clipboard</button>
-    <div id="trace_log" onclick="toggleLog(false)">Trace: v2.44 Kraken Withdrawals Report initialized.</div>
+    <div id="trace_log" onclick="toggleLog(false)">Trace: v2.45 Kraken Withdrawals Report initialized.</div>
   </div>
 
   <script>
     const SHEET_ID = "1Vf0iqthwHv0kFqTRJkYShH_RBpbokLmiEDWGJN3Q0_E";
-    const VER = "Kraken Withdrawals Report (v2.44)";
+    const VER = "Kraken Withdrawals Report (v2.45)";
     const KRAKEN_API_URL = "https://api.kraken.com";
 
     // Default API credentials (enter your own in API Config)
@@ -655,7 +655,7 @@
       const now = new Date().toLocaleTimeString();
       const base = log.textContent && log.textContent.trim().length
         ? log.textContent
-        : "Trace: v2.44 Kraken Withdrawals Report initialized.";
+        : "Trace: v2.45 Kraken Withdrawals Report initialized.";
       log.textContent = base + "\n[" + now + "] " + msg;
       log.scrollTop = log.scrollHeight;
       console.log(msg);
@@ -1552,8 +1552,15 @@
       const btn = document.getElementById("api_btn");
       const section = document.getElementById("apiConfigSection");
       const isHidden = section.style.display === "none";
-      btn.style.display = isHidden ? "none" : "block";
-      section.style.display = isHidden ? "block" : "none";
+      // Keep button visible, just change label
+      if (isHidden) {
+        btn.innerHTML = "⚙️ API Config (click to close)";
+        section.style.display = "block";
+      } else {
+        btn.innerHTML = "⚙️ API Config";
+        section.style.display = "none";
+        return; // Don't reload credentials when closing
+      }
 
       // Load saved credentials when opening
       if (isHidden) {
@@ -2141,9 +2148,60 @@
       }
 
       updateStatus("Generating...", "sync");
-      logTrace("Generating report from " + cacheData.withdrawals.length + " withdrawals...");
+      logTrace("Generating report from " + cacheData.withdrawals.length + " entries...");
 
       stagingRecords = [];
+
+      // Sort ALL ledger entries by time (ascending) for trade matching
+      const sortedLedger = [...cacheData.withdrawals].sort((a, b) => a.time - b.time);
+
+      // Helper: Find immediately preceding trade that matches a withdrawal
+      function findMatchingTrade(withdrawalIndex, withdrawal) {
+        // Look for a trade immediately before this withdrawal (same asset, amount matches withdrawal + fee)
+        const targetAmount = Math.abs(withdrawal.amount) + Math.abs(withdrawal.fee);
+
+        for (let i = withdrawalIndex - 1; i >= 0 && i >= withdrawalIndex - 5; i--) {
+          const prev = sortedLedger[i];
+          if (prev.type !== "trade") continue;
+
+          // Check if same asset and amount matches
+          const prevAsset = (prev.asset || "").toUpperCase();
+          const withdrawalAsset = (withdrawal.asset || "").toUpperCase();
+          if (!prevAsset.includes("XRP") && !prevAsset.includes("USDT")) continue;
+          if (!withdrawalAsset.includes(prevAsset.replace("X", "")) &&
+            !prevAsset.includes(withdrawalAsset.replace("X", ""))) continue;
+
+          // Check if trade amount ≈ withdrawal amount + fee (within 0.01% tolerance)
+          const tradeAmount = Math.abs(prev.amount);
+          const tolerance = targetAmount * 0.0001;
+          if (Math.abs(tradeAmount - targetAmount) <= tolerance) {
+            // Found matching crypto trade! Now find the GBP/EUR counterpart
+            return { cryptoTrade: prev, index: i };
+          }
+        }
+        return null;
+      }
+
+      // Helper: Find GBP/EUR trade counterpart (should be very close in time to the crypto trade)
+      function findFiatCounterpart(tradeIndex, cryptoTrade) {
+        // Look within a few entries around the crypto trade for a GBP or EUR trade
+        for (let i = Math.max(0, tradeIndex - 3); i <= Math.min(sortedLedger.length - 1, tradeIndex + 3); i++) {
+          if (i === tradeIndex) continue;
+          const entry = sortedLedger[i];
+          if (entry.type !== "trade") continue;
+
+          const asset = (entry.asset || "").toUpperCase();
+          // Look for GBP or EUR (Kraken uses ZGBP, ZEUR, or just GBP, EUR)
+          if (asset.includes("GBP") || asset.includes("EUR") || asset === "ZGBP" || asset === "ZEUR") {
+            // Found fiat trade! Should be very close in time (within a few seconds)
+            const timeDiff = Math.abs(entry.time - cryptoTrade.time);
+            if (timeDiff <= 60) { // Within 60 seconds
+              return entry;
+            }
+          }
+        }
+        return null;
+      }
 
       // Step 1: Collect unique dates for batch rate lookup
       const uniqueDates = new Set();
@@ -2205,8 +2263,13 @@
       }
 
 
-      // Step 3: Build records
-      for (const w of cacheData.withdrawals) {
+      // Step 3: Build records (only for withdrawals, but use sortedLedger for trade matching)
+      for (let idx = 0; idx < sortedLedger.length; idx++) {
+        const w = sortedLedger[idx];
+
+        // Only process withdrawals (skip trades, deposits, etc.)
+        if (w.type !== "withdrawal") continue;
+
         const dateStr = new Date(w.time * 1000).toISOString().split("T")[0];
         const rates = cacheData.ratesCache[dateStr] || {};
 
@@ -2236,48 +2299,74 @@
         const sentTo = words.slice(2).join(" ").trim();
 
 
-        // Calculate GBP equivalent and track the rate used
+        // Calculate GBP equivalent - TRY TRADE MATCHING FIRST
         let gbpSent = "";
         let gbpFee = "";
         let conversionRate = "";
         let conversionCurrency = "";
+        let rateSource = "";
         const absAmount = Math.abs(w.amount);
         const absFee = Math.abs(w.fee);
         const netAmount = absAmount - absFee;  // Amount after fee deduction
 
-        if (w.asset.includes("USDT")) {
-          if (rates.USDTGBP) {
-            gbpSent = (netAmount * rates.USDTGBP).toFixed(2);
-            gbpFee = (absFee * rates.USDTGBP).toFixed(2);
-            conversionRate = rates.USDTGBP.toFixed(6);
-            conversionCurrency = "GBP";
-          } else if (rates.USDTEUR) {
-            gbpSent = (netAmount * rates.USDTEUR).toFixed(2);
-            gbpFee = (absFee * rates.USDTEUR).toFixed(2);
-            conversionRate = rates.USDTEUR.toFixed(6);
-            conversionCurrency = "EUR";
+        // STEP A: Try to match this withdrawal to its immediately preceding trade
+        const tradeMatch = findMatchingTrade(idx, w);
+        if (tradeMatch) {
+          const fiatTrade = findFiatCounterpart(tradeMatch.index, tradeMatch.cryptoTrade);
+          if (fiatTrade) {
+            // Calculate rate from matched trade pair
+            const cryptoAmount = Math.abs(tradeMatch.cryptoTrade.amount);
+            const fiatAmount = Math.abs(fiatTrade.amount);
+            const matchedRate = fiatAmount / cryptoAmount;
+            const fiatAsset = (fiatTrade.asset || "").toUpperCase();
+
+            conversionCurrency = fiatAsset.includes("GBP") || fiatAsset === "ZGBP" ? "GBP" :
+              fiatAsset.includes("EUR") || fiatAsset === "ZEUR" ? "EUR" : fiatAsset;
+            conversionRate = matchedRate.toFixed(6);
+            gbpSent = (netAmount * matchedRate).toFixed(2);
+            gbpFee = (absFee * matchedRate).toFixed(2);
+            rateSource = "Trade";
+
+            logTrace("Trade match for " + w.refid + ": " + cryptoAmount.toFixed(2) + " " + w.asset +
+              " = " + fiatAmount.toFixed(2) + " " + conversionCurrency +
+              " (rate: " + conversionRate + ")");
           }
-        } else if (w.asset.includes("XRP") || w.asset === "XXRP") {
-          if (rates.XRPGBP) {
-            gbpSent = (netAmount * rates.XRPGBP).toFixed(2);
-            gbpFee = (absFee * rates.XRPGBP).toFixed(2);
-            conversionRate = rates.XRPGBP.toFixed(6);
-            conversionCurrency = "GBP";
-          } else if (rates.XRPEUR) {
-            gbpSent = (netAmount * rates.XRPEUR).toFixed(2);
-            gbpFee = (absFee * rates.XRPEUR).toFixed(2);
-            conversionRate = rates.XRPEUR.toFixed(6);
-            conversionCurrency = "EUR";
+        }
+
+        // STEP B: Fall back to external rates if no trade match
+        if (!rateSource) {
+          if (w.asset.includes("USDT")) {
+            if (rates.USDTGBP) {
+              gbpSent = (netAmount * rates.USDTGBP).toFixed(2);
+              gbpFee = (absFee * rates.USDTGBP).toFixed(2);
+              conversionRate = rates.USDTGBP.toFixed(6);
+              conversionCurrency = "GBP";
+            } else if (rates.USDTEUR) {
+              gbpSent = (netAmount * rates.USDTEUR).toFixed(2);
+              gbpFee = (absFee * rates.USDTEUR).toFixed(2);
+              conversionRate = rates.USDTEUR.toFixed(6);
+              conversionCurrency = "EUR";
+            }
+            rateSource = rates.USDTSource || "Kraken";
+          } else if (w.asset.includes("XRP") || w.asset === "XXRP") {
+            if (rates.XRPGBP) {
+              gbpSent = (netAmount * rates.XRPGBP).toFixed(2);
+              gbpFee = (absFee * rates.XRPGBP).toFixed(2);
+              conversionRate = rates.XRPGBP.toFixed(6);
+              conversionCurrency = "GBP";
+            } else if (rates.XRPEUR) {
+              gbpSent = (netAmount * rates.XRPEUR).toFixed(2);
+              gbpFee = (absFee * rates.XRPEUR).toFixed(2);
+              conversionRate = rates.XRPEUR.toFixed(6);
+              conversionCurrency = "EUR";
+            }
+            rateSource = rates.XRPSource || "Kraken";
           }
         }
 
         // Normalize asset name (XXRP -> XRP, USDT stays USDT)
         const normalizedAsset = w.asset.includes("XRP") || w.asset === "XXRP" ? "XRP" :
           w.asset.includes("USDT") ? "USDT" : w.asset;
-
-        // Get the rate source for this date/asset
-        const rateSource = normalizedAsset === "USDT" ? (rates.USDTSource || "Kraken") :
-          normalizedAsset === "XRP" ? (rates.XRPSource || "Kraken") : "Kraken";
 
 
         const record = {
