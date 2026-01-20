@@ -235,11 +235,13 @@
 
     /* Column widths */
     .w-date {
-      width: 7ch;
+      width: 5ch;
+      /* -2ch from 7 */
     }
 
     .w-time {
-      width: 9ch;
+      width: 5ch;
+      /* -4ch from 9 */
       text-align: center;
     }
 
@@ -258,25 +260,23 @@
 
     .w-amount {
       width: 6ch;
-      /* -2ch */
       text-align: right;
     }
 
     .w-cur {
-      width: 12ch;
-      /* -7ch */
+      width: 6ch;
+      /* -6ch from 12 */
       text-align: center;
     }
 
     .w-gbp {
       width: 4ch;
-      /* -2ch */
       text-align: right;
     }
 
     .w-gbpfee {
-      width: 1ch;
-      /* -5ch */
+      width: 6ch;
+      /* Fixed: was 1ch (broken), now 6ch for "GBP Fee" header */
       text-align: right;
     }
 
@@ -286,17 +286,14 @@
 
     .w-wallet {
       width: 30ch;
-      /* -4ch */
     }
 
     .w-txid {
       width: 21ch;
-      /* -4ch */
     }
 
     .w-source {
       width: 9ch;
-      /* -7ch */
     }
 
     .w-fee {
@@ -305,17 +302,16 @@
     }
 
     .w-rate {
-
-      width: 6ch;
-      /* -4ch from 10 */
+      width: 3ch;
+      /* -3ch from 6 */
       text-align: right;
     }
 
     .w-balance {
       width: 6ch;
-      /* -4ch from 10 */
       text-align: right;
     }
+
 
 
 
@@ -390,7 +386,7 @@
         style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; position:relative;">
         <div class="branding-row" style="margin-bottom:0; line-height:1.2;">
           <div><b>Kraken Withdrawals Report</b> <span
-              style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.37</span></div>
+              style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.38</span></div>
           <div style="font-size:0.65rem; color:#b0b0b0; font-weight:400;">(GBP equivalent for all XRP and USDT transfers
             in Date range)</div>
         </div>
@@ -598,12 +594,12 @@
     <button id="copy_trace_btn" onclick="copyTraceToClipboard()"
       style="width:100%; padding:8px; margin-top:6px; background:#16a085; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Copy
       Trace to Clipboard</button>
-    <div id="trace_log" onclick="toggleLog(false)">Trace: v2.37 Kraken Withdrawals Report initialized.</div>
+    <div id="trace_log" onclick="toggleLog(false)">Trace: v2.38 Kraken Withdrawals Report initialized.</div>
   </div>
 
   <script>
     const SHEET_ID = "1Vf0iqthwHv0kFqTRJkYShH_RBpbokLmiEDWGJN3Q0_E";
-    const VER = "Kraken Withdrawals Report (v2.37)";
+    const VER = "Kraken Withdrawals Report (v2.38)";
     const KRAKEN_API_URL = "https://api.kraken.com";
 
     // Default API credentials (enter your own in API Config)
@@ -631,7 +627,7 @@
       const now = new Date().toLocaleTimeString();
       const base = log.textContent && log.textContent.trim().length
         ? log.textContent
-        : "Trace: v2.37 Kraken Withdrawals Report initialized.";
+        : "Trace: v2.38 Kraken Withdrawals Report initialized.";
       log.textContent = base + "\n[" + now + "] " + msg;
       log.scrollTop = log.scrollHeight;
       console.log(msg);
