@@ -240,6 +240,12 @@
       /* fits "Date" + padding */
     }
 
+    .w-type {
+      min-width: 10ch;
+      width: 10ch;
+      /* fits "withdrawal" = 10 chars */
+    }
+
     .w-time {
       min-width: 6ch;
       width: 6ch;
@@ -404,7 +410,7 @@
         style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; position:relative;">
         <div class="branding-row" style="margin-bottom:0; line-height:1.2;">
           <div><b>Kraken Withdrawals Report</b> <span
-              style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.41</span></div>
+              style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.42</span></div>
           <div style="font-size:0.65rem; color:#b0b0b0; font-weight:400;">(GBP equivalent for all XRP and USDT transfers
             in Date range)</div>
         </div>
@@ -612,12 +618,12 @@
     <button id="copy_trace_btn" onclick="copyTraceToClipboard()"
       style="width:100%; padding:8px; margin-top:6px; background:#16a085; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Copy
       Trace to Clipboard</button>
-    <div id="trace_log" onclick="toggleLog(false)">Trace: v2.41 Kraken Withdrawals Report initialized.</div>
+    <div id="trace_log" onclick="toggleLog(false)">Trace: v2.42 Kraken Withdrawals Report initialized.</div>
   </div>
 
   <script>
     const SHEET_ID = "1Vf0iqthwHv0kFqTRJkYShH_RBpbokLmiEDWGJN3Q0_E";
-    const VER = "Kraken Withdrawals Report (v2.41)";
+    const VER = "Kraken Withdrawals Report (v2.42)";
     const KRAKEN_API_URL = "https://api.kraken.com";
 
     // Default API credentials (enter your own in API Config)
@@ -645,7 +651,7 @@
       const now = new Date().toLocaleTimeString();
       const base = log.textContent && log.textContent.trim().length
         ? log.textContent
-        : "Trace: v2.41 Kraken Withdrawals Report initialized.";
+        : "Trace: v2.42 Kraken Withdrawals Report initialized.";
       log.textContent = base + "\n[" + now + "] " + msg;
       log.scrollTop = log.scrollHeight;
       console.log(msg);
@@ -775,13 +781,14 @@
       }
 
       // Build header row - match the report table order
-      const headers = ["Date", "Time (UTC)", "Recipient", "Sent to", "GBP Sent", "Amount", "Fee", "Asset", "GBP Fee", "Conv Rate", "Conv Currency", "Source", "Destination", "Dest Tag", "Transaction ID"];
+      const headers = ["Date", "Type", "Time (UTC)", "Recipient", "Sent to", "GBP Sent", "Amount", "Fee", "Asset", "GBP Fee", "Conv Rate", "Conv Currency", "Source", "Destination", "Dest Tag", "Transaction ID"];
 
       // Build data rows
       let text = headers.join("\t") + "\n";
       for (const r of stagingRecords) {
         const row = [
           r.dateSent,
+          r.type || '',
           r.timeSent || '',
           r.recipient,
           r.sentTo || '',
@@ -922,8 +929,8 @@
 
         updateStatus("Reading Ledger...", "sync");
 
-        // Paginate through ALL ledger records
-        const allWithdrawals = [];
+        // Paginate through ALL ledger records (all types)
+        const allLedgerEntries = [];
         let offset = 0;
         let hasMore = true;
         let totalCount = 0;
@@ -931,7 +938,7 @@
         while (hasMore) {
           logTrace("Calling Kraken Ledgers API (offset=" + offset + ")...");
           const ledgerResult = await callKrakenPrivateAPI("Ledgers", {
-            type: "withdrawal",
+            // No type filter - get all types: withdrawal, deposit, trade, etc.
             start: Math.floor(startTime),
             end: Math.floor(endTime),
             ofs: offset
@@ -956,10 +963,11 @@
           for (const [ledgerId, entry] of Object.entries(ledgerData)) {
             const asset = (entry.asset || "").toUpperCase();
             if (asset.includes("USDT") || asset.includes("XRP") || asset === "XXRP") {
-              allWithdrawals.push({
+              allLedgerEntries.push({
                 ledgerId,
                 refid: entry.refid,
                 time: entry.time,
+                type: entry.type || "unknown",  // withdrawal, deposit, trade, etc.
                 asset: asset,
                 amount: parseFloat(entry.amount || 0),
                 fee: parseFloat(entry.fee || 0),
@@ -981,12 +989,13 @@
           }
         }
 
-        cacheData.withdrawals = allWithdrawals;
+        cacheData.withdrawals = allLedgerEntries;  // Still use withdrawals key for compatibility
         updateStatusCounts();
         renderLedgerTable();
 
-        logTrace("SUCCESS: Fetched " + allWithdrawals.length + " USDT/XRP withdrawals (from " + offset + " total entries)");
-        updateStatus("Ledger: " + allWithdrawals.length, "active");
+        logTrace("SUCCESS: Fetched " + allLedgerEntries.length + " USDT/XRP entries (from " + offset + " total entries)");
+        updateStatus("Ledger: " + allLedgerEntries.length, "active");
+
 
       } catch (e) {
         updateStatus("Ledger Error", "error");
@@ -1164,6 +1173,7 @@
 
       let html = '<table><thead><tr>';
       html += '<th class="w-date">Date</th>';
+      html += '<th class="w-type">Type</th>';
       html += '<th class="w-time">Time (UTC)</th>';
       html += '<th class="w-recipient">Recipient</th>';
       html += '<th class="w-sentto">Sent to</th>';
@@ -1183,6 +1193,7 @@
       for (const r of stagingRecords) {
         html += '<tr>';
         html += '<td class="w-date">' + escHtml(r.dateSent) + '</td>';
+        html += '<td class="w-type">' + escHtml(r.type || '') + '</td>';
         html += '<td class="w-time">' + escHtml(r.timeSent || '') + '</td>';
         html += '<td class="w-recipient">' + escHtml(r.recipient) + '</td>';
         html += '<td class="w-sentto">' + escHtml(r.sentTo || '') + '</td>';
@@ -1367,12 +1378,13 @@
         try {
           // Prepare headers and values - must match Report table on screen exactly
           const headers = [
-            "Date", "Time (UTC)", "Recipient", "Sent to", "GBP Sent", "Amount", "Fee", "Asset",
+            "Date", "Type", "Time (UTC)", "Recipient", "Sent to", "GBP Sent", "Amount", "Fee", "Asset",
             "GBP Fee", "Conv Rate", "Conv Currency", "Source", "Destination", "Dest Tag", "Transaction ID"
           ];
 
           const vals = stagingRecords.map(r => [
             r.dateSent,
+            r.type || '',
             r.timeSent || '',
             r.recipient,
             r.sentTo || '',
@@ -1398,7 +1410,7 @@
           // Write headers in row 1
           await gapi.client.sheets.spreadsheets.values.update({
             spreadsheetId: SHEET_ID,
-            range: "'ReportStaging'!A1:O1",
+            range: "'ReportStaging'!A1:P1",
             valueInputOption: "USER_ENTERED",
             resource: { values: [headers] }
           });
@@ -1406,14 +1418,53 @@
           // Write data starting row 2
           await gapi.client.sheets.spreadsheets.values.update({
             spreadsheetId: SHEET_ID,
-            range: "'ReportStaging'!A2:O" + (1 + vals.length),
+            range: "'ReportStaging'!A2:P" + (1 + vals.length),
             valueInputOption: "USER_ENTERED",
             resource: { values: vals }
           });
 
+          // Also export raw ledger data to KrakenLedger worksheet
+          if (cacheData.withdrawals && cacheData.withdrawals.length > 0) {
+            const ledgerHeaders = ["Ledger ID", "Type", "Time", "Asset", "Amount", "Fee", "Balance", "Ref ID"];
+            const ledgerVals = cacheData.withdrawals.map(w => [
+              w.ledgerId || '',
+              w.type || '',
+              w.time ? new Date(w.time * 1000).toISOString() : '',
+              w.asset || '',
+              w.amount || 0,
+              w.fee || 0,
+              w.balance || 0,
+              w.refid || ''
+            ]);
+
+            // Clear KrakenLedger sheet
+            await gapi.client.sheets.spreadsheets.values.clear({
+              spreadsheetId: SHEET_ID,
+              range: "'KrakenLedger'!A:Z"
+            });
+
+            // Write headers
+            await gapi.client.sheets.spreadsheets.values.update({
+              spreadsheetId: SHEET_ID,
+              range: "'KrakenLedger'!A1:H1",
+              valueInputOption: "USER_ENTERED",
+              resource: { values: [ledgerHeaders] }
+            });
+
+            // Write data
+            await gapi.client.sheets.spreadsheets.values.update({
+              spreadsheetId: SHEET_ID,
+              range: "'KrakenLedger'!A2:H" + (1 + ledgerVals.length),
+              valueInputOption: "USER_ENTERED",
+              resource: { values: ledgerVals }
+            });
+
+            logTrace("Exported " + ledgerVals.length + " entries to KrakenLedger.");
+          }
+
           updateStatus("Token Active", "active");
           logTrace("Sync complete. " + vals.length + " records written to ReportStaging.");
-          alert("Sync completed. " + vals.length + " records written to ReportStaging (replaced).");
+          alert("Sync completed. " + vals.length + " records written to ReportStaging + KrakenLedger (replaced).");
 
         } catch (e) {
           updateStatus("Sync error", "error");
@@ -2213,6 +2264,7 @@
         const record = {
           dateSent: formatTimestamp(w.time),
           timeSent: formatTime(w.time),
+          type: w.type || "withdrawal",  // Type from ledger entry
           entryDate: "",
           recipient: recipientName,
           sentTo: sentTo,
