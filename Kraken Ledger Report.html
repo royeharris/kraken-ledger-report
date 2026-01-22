@@ -411,7 +411,7 @@
       <div
         style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; position:relative;">
         <div class="branding-row" style="margin-bottom:0; line-height:1.2;">
-          <div><b>Kraken Reports</b> <span style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.995</span></div>
+          <div><b>Kraken Reports</b> <span style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.996</span></div>
           <div style="font-size:0.65rem; color:#b0b0b0; font-weight:400;">GBP, EUR, USDT, XRP transactions in Date
             range</div>
         </div>
@@ -646,7 +646,7 @@
   <script>
 
     const SHEET_ID = "1Vf0iqthwHv0kFqTRJkYShH_RBpbokLmiEDWGJN3Q_E";
-    const VER = "Kraken Withdrawals Report (v2.995)";
+    const VER = "Kraken Withdrawals Report (v2.996)";
     const KRAKEN_API_URL = "https://api.kraken.com";
 
     // Default API credentials (enter your own in API Config)
@@ -2563,9 +2563,17 @@
           fullRecipient = (addrMatch.key || "").trim();
         } else {
           // Fallback 1: Loose match on address only (for crypto non-tag assets)
+          // Fallback 1: Loose match on address only (for crypto non-tag assets)
           const looseMatch = cacheData.krakenAddresses.find(a => a.address === walletAddr);
-          if (looseMatch && !((w.asset.includes("XRP") || w.asset === "XXRP") && (destTag || looseMatch.tag))) {
+          if (looseMatch) {
+            // If we found a match by address, use it.
+            // (We relax strict tag matching here because sometimes tags appear in "info" or are optional)
             fullRecipient = (looseMatch.key || "").trim();
+          } else {
+            // Fallback 2: Use the 'info' field from withdrawal history directly if no book match
+            if (historyMatch && historyMatch.info) {
+              fullRecipient = historyMatch.info;
+            }
           }
         }
 
@@ -2682,7 +2690,8 @@
           destTag: destTag,
           wallet: walletAddr,
           txId: w.refid,
-          rateSource: rateSource
+          rateSource: rateSource,
+          gbpSent: gbpSent || "0.00" // Ensure it exists
         };
 
 
