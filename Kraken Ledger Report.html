@@ -411,7 +411,7 @@
       <div
         style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; position:relative;">
         <div class="branding-row" style="margin-bottom:0; line-height:1.2;">
-          <div><b>Kraken Reports</b> <span style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.993</span></div>
+          <div><b>Kraken Reports</b> <span style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.994</span></div>
           <div style="font-size:0.65rem; color:#b0b0b0; font-weight:400;">GBP, EUR, USDT, XRP transactions in Date
             range</div>
         </div>
@@ -646,7 +646,7 @@
   <script>
 
     const SHEET_ID = "1Vf0iqthwHv0kFqTRJkYShH_RBpbokLmiEDWGJN3Q_E";
-    const VER = "Kraken Withdrawals Report (v2.993)";
+    const VER = "Kraken Withdrawals Report (v2.994)";
     const KRAKEN_API_URL = "https://api.kraken.com";
 
     // Default API credentials (enter your own in API Config)
@@ -1697,27 +1697,34 @@
           alert("Sync complete.\nReports exported to Google Sheets.");
 
         } catch (e) {
-          let errMsg = e.message || e;
-          if (typeof e === 'object' && e.result && e.result.error) {
-            errMsg = JSON.stringify(e.result.error);
-          } else if (typeof e === 'object') {
-            try {
-              // Handle Error objects which stringify to {}
-              errMsg = e.message ? e.message : JSON.stringify(e);
-              if (errMsg === "{}") errMsg = "Unknown Error (Network/Auth?)";
-            } catch (x) { errMsg = "Unknown Error"; }
-          }
-
-          if (errMsg.includes("404") || errMsg.includes("NOT_FOUND")) {
-            logTrace("Sync skipped: Sheet ID not found. Please set correct Sheet ID in API Config.");
-            updateStatus("Sync Failed: Check SheetID", "error");
-            alert("Sync Failed: Spreadsheet Not Found (404).\nPlease Open 'API Config' and paste your valid Google Sheet ID.");
+          let errMsg;
+          // v2.994: Manual Extraction for Auth/Network Errors
+          if (e.result && e.result.error) {
+            errMsg = `Code: ${e.result.error.code}, Message: ${e.result.error.message}`;
           } else {
-            updateStatus("Sync error", "error");
-            logTrace("Sync error: " + errMsg);
-            alert("Sync failed. " + errMsg);
+            // Fallback for non-JSON Error objects
+            errMsg = e.toString();
+            if (errMsg === "[object Object]") {
+              // Try to parse keys
+              try {
+                const keys = Object.keys(e);
+                if (keys.length > 0) errMsg = JSON.stringify(e);
+                else errMsg = "Network Error (Blocked by Browser/CORS) or Auth Token Invalid";
+              } catch (z) { errMsg = "Unknown Network Error"; }
+            }
           }
         }
+
+        if (errMsg.includes("404") || errMsg.includes("NOT_FOUND")) {
+          logTrace("Sync skipped: Sheet ID not found. Please set correct Sheet ID in API Config.");
+          updateStatus("Sync Failed: Check SheetID", "error");
+          alert("Sync Failed: Spreadsheet Not Found (404).\nPlease Open 'API Config' and paste your valid Google Sheet ID.");
+        } else {
+          updateStatus("Sync error", "error");
+          logTrace("Sync error: " + errMsg);
+          alert("Sync failed. " + errMsg);
+        }
+      }
       });
     }
 
