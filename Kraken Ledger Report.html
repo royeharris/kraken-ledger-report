@@ -411,7 +411,7 @@
       <div
         style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; position:relative;">
         <div class="branding-row" style="margin-bottom:0; line-height:1.2;">
-          <div><b>Kraken Reports</b> <span style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.85</span></div>
+          <div><b>Kraken Reports</b> <span style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.86</span></div>
           <div style="font-size:0.65rem; color:#b0b0b0; font-weight:400;">GBP, EUR, USDT, XRP transactions in Date
             range</div>
         </div>
@@ -646,7 +646,7 @@
   <script>
 
     const SHEET_ID = "1Vf0iqthwHv0kFqTRJkYShH_RBpbokLmiEDWGJN3Q_E";
-    const VER = "Kraken Withdrawals Report (v2.85)";
+    const VER = "Kraken Withdrawals Report (v2.86)";
     const KRAKEN_API_URL = "https://api.kraken.com";
 
     // Default API credentials (enter your own in API Config)
@@ -3113,7 +3113,7 @@
         if (seenIds.has(uniqueKey)) continue;
         seenIds.add(uniqueKey);
 
-        const assetKey = getAssetKey(e.asset);
+        assetKey = getAssetKey(e.asset);
         if (!assetKey) continue;
 
         amount = Math.abs(e.amount);
@@ -3158,7 +3158,7 @@
             // Crypto: Aggregated
             if (!cryptoTotals[recipient]) cryptoTotals[recipient] = { USDT: 0, XRP: 0 };
             cryptoTotals[recipient][assetKey] += amount;
-            
+
             // Calc GBP
             const gbpVal = calculateGbpValue(e, amount, assetKey);
             if (assetKey === "USDT") cryptoTotals[recipient].USDT_GBP += gbpVal;
@@ -3170,9 +3170,9 @@
             fMap[recipient][assetKey] += amount;
           }
         } else if (e.type === 'deposit') {
-            if (assetKey === 'GBP' || assetKey === 'EUR') {
-              depositTotals[assetKey] += amount;
-            }
+          if (assetKey === 'GBP' || assetKey === 'EUR') {
+            depositTotals[assetKey] += amount;
+          }
         }
       }
 
@@ -3241,56 +3241,57 @@
           html += '<tr>';
           html += `<td style="padding:5px; border:1px solid #ddd; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escHtml(r.recipient)}">${escHtml(r.re      t)}                  // USDT
           htm        d style="padding:5px; border:1px solid        ext-align:right;">${r.USDT > 0 ? r.USDT.toFixed(4) : "-"}</td>`;
-          html += `<td         adding:5           1px solid #ddd; text-align:right;             d;">${r.USDT_GBP >              SDT_GBP.toFixed(2) : "-"}</td>`;
-              RP             ml += `<td style="padding:5px; border:1px soli             align:righ              0 ?      .toFixed(4) : "-"}</td>`;
-          html += `<td style="padding:5px; border:1px solid #ddd; text-align:right; color:#7f8c8d;">${r.XRP_GBP > 0 ? "£" + r.XRP_GBP.toFixed(2) : "-"}</td>`;
-          html += '</tr>';
-        }
-        html += '</tbody></table></div>';
+          html += `<td         adding:5           1px solid #ddd; text-align:right;             d;">${r.USDT_GBP > SDT_GBP.toFixed(2) : "-"
+        }</td > `;
+              RP             ml += `< td style = "padding:5px; border:1px soli             align:righ              0 ?      .toFixed(4) : " - "}</td>`;
+        html += `<td style="padding:5px; border:1px solid #ddd; text-align:right; color:#7f8c8d;">${r.XRP_GBP > 0 ? "£" + r.XRP_GBP.toFixed(2) : "-"}</td>`;
+        html += '</tr>';
       }
+      html += '</tbody></table></div>';
+    }
 
-      // --- 2. FIAT TABLE ---
-      if (summaryRecords.fiat.length > 0) {
-        html += '<div style="background:#27ae60; color:#fff; padding:5px 10px; font-size:0.7rem; font-weight:bold; border-radius:4px 4px 0 0; margin-bottom:0;">Withdrawals to Haricom Bank Accounts (GBP EUR)</div>';
-        html += '<div style="overflow-x:auto;">';
-        html += '<table style="width:100%; border-collapse:collapse; margin-bottom:20px; border:1px solid #ddd; table-layout:fixed;">';
-        html += '<thead style="background:#f9f9f9;"><tr>';
-        html += '<th style="padding:6px; border:1px solid #ddd; text-align:left; width:50%;">Haricom Bank Account</th>';
-        html += '<th style="padding:6px; border:1px solid #ddd; text-align:right; width:25%;">GBP</th>';
-        html += '<th style="padding:6px; border:1px solid #ddd; text-align:right; width:25%;">EUR</th>';
-        html += '</tr></thead><tbody>';
+    // --- 2. FIAT TABLE ---
+    if (summaryRecords.fiat.length > 0) {
+      html += '<div style="background:#27ae60; color:#fff; padding:5px 10px; font-size:0.7rem; font-weight:bold; border-radius:4px 4px 0 0; margin-bottom:0;">Withdrawals to Haricom Bank Accounts (GBP EUR)</div>';
+      html += '<div style="overflow-x:auto;">';
+      html += '<table style="width:100%; border-collapse:collapse; margin-bottom:20px; border:1px solid #ddd; table-layout:fixed;">';
+      html += '<thead style="background:#f9f9f9;"><tr>';
+      html += '<th style="padding:6px; border:1px solid #ddd; text-align:left; width:50%;">Haricom Bank Account</th>';
+      html += '<th style="padding:6px; border:1px solid #ddd; text-align:right; width:25%;">GBP</th>';
+      html += '<th style="padding:6px; border:1px solid #ddd; text-align:right; width:25%;">EUR</th>';
+      html += '</tr></thead><tbody>';
 
-        for (const r of summaryRecords.fiat) {
-          html += '<tr>';
-          html += `<td style="padding:5px; border:1px solid #ddd; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escHtml(r.recipient)}">${escHtml(r.recipient)}</td>`;
-          html += `<td style="padding:5px; border:1px solid #ddd; text-align:right;">${r.GBP > 0 ? r.GBP.toFixed(2) : "-"}</td>`;
-          html += `<td style="padding:5px; border:1px solid #ddd; text-align:right;">${r.EUR > 0 ? r.EUR.toFixed(2) : "-"}</td>`;
-          html += '</tr>';
-        }
-        html += '</tbody></table></div>';
+      for (const r of summaryRecords.fiat) {
+        html += '<tr>';
+        html += `<td style="padding:5px; border:1px solid #ddd; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escHtml(r.recipient)}">${escHtml(r.recipient)}</td>`;
+        html += `<td style="padding:5px; border:1px solid #ddd; text-align:right;">${r.GBP > 0 ? r.GBP.toFixed(2) : "-"}</td>`;
+        html += `<td style="padding:5px; border:1px solid #ddd; text-align:right;">${r.EUR > 0 ? r.EUR.toFixed(2) : "-"}</td>`;
+        html += '</tr>';
       }
+      html += '</tbody></table></div>';
+    }
 
-      // --- 3. FIAT DEPOSITS ---
-      if (summaryRecords.deposits.length > 0) {
-        html += '<div style="background:#27ae60; color:#fff; padding:5px 10px; font-size:0.7rem; font-weight:bold; border-radius:4px 4px 0 0; margin-bottom:0;">Fiat Deposits - from Haricom Bank Account (GBP EUR)</div>';
-        html += '<table style="width:100%; border-collapse:collapse; margin-bottom:0; border:1px solid #ddd;">';
-        html += '<thead><tr style="background:#f2f2f2;">';
-        html += '<th style="padding:4px; border:1px solid #ddd; text-align:left;">Currency</th>';
-        html += '<th style="padding:4px; border:1px solid #ddd; text-align:right;">Total Amount</th>';
-        html += '</tr></thead><tbody>';
+    // --- 3. FIAT DEPOSITS ---
+    if (summaryRecords.deposits.length > 0) {
+      html += '<div style="background:#27ae60; color:#fff; padding:5px 10px; font-size:0.7rem; font-weight:bold; border-radius:4px 4px 0 0; margin-bottom:0;">Fiat Deposits - from Haricom Bank Account (GBP EUR)</div>';
+      html += '<table style="width:100%; border-collapse:collapse; margin-bottom:0; border:1px solid #ddd;">';
+      html += '<thead><tr style="background:#f2f2f2;">';
+      html += '<th style="padding:4px; border:1px solid #ddd; text-align:left;">Currency</th>';
+      html += '<th style="padding:4px; border:1px solid #ddd; text-align:right;">Total Amount</th>';
+      html += '</tr></thead><tbody>';
 
-        for (const r of summaryRecords.deposits) {
-          html += '<tr>';
-          html += `<td style="padding:4px; border:1px solid #ddd;">${r.asset}</td>`;
-          html += `<td style="padding:4px; border:1px solid #ddd; text-align:right; font-weight:bold;">${r.total.toFixed(2)}</td>`;
-          html += '</tr>';
-        }
-        html += '</tbody></table>';
+      for (const r of summaryRecords.deposits) {
+        html += '<tr>';
+        html += `<td style="padding:4px; border:1px solid #ddd;">${r.asset}</td>`;
+        html += `<td style="padding:4px; border:1px solid #ddd; text-align:right; font-weight:bold;">${r.total.toFixed(2)}</td>`;
+        html += '</tr>';
       }
+      html += '</tbody></table>';
+    }
 
-      html += '</div></div>'; // Close padding div, Close container div
-      div.innerHTML = html;
-      if (div.scrollIntoView) div.scrollIntoView({ behavior: "smooth" });
+    html += '</div></div>'; // Close padding div, Close container div
+    div.innerHTML = html;
+    if (div.scrollIntoView) div.scrollIntoView({ behavior: "smooth" });
     }
 
     function renderBankTable() {
