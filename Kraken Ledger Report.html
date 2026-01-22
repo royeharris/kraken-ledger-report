@@ -675,12 +675,6 @@
 
     <div class="preview-wrap" id="summaryReportArea" style="display:none; margin-top:10px;"></div>
 
-    <button id="btn_statement_summary" onclick="toggleSummaryReport()"
-      style="width:100%; padding:8px; margin-top:5px; background:#8e44ad; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer; display:none;">
-      Statement Summary</button>
-
-    <div class="preview-wrap" id="summaryReportArea" style="display:none; margin-top:10px;"></div>
-
     <button id="log_btn" onclick="toggleLog()"
       style="width:100%; padding:8px; margin-top:10px; background:#8e44ad; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Display
       Trace Log</button>
@@ -807,9 +801,14 @@
         // Also show Summary Button
         const sumBtn = document.getElementById("btn_statement_summary");
         if (sumBtn) sumBtn.style.display = "block";
+        const copyBtn = document.getElementById("btn_summ_copy");
+        if (copyBtn) copyBtn.style.display = "block";
       } else {
         btn.textContent = "Kraken Statement (Select Dates)";
-        document.getElementById("btn_statement_summary").style.display = "none";
+        const sumBtn = document.getElementById("btn_statement_summary");
+        if (sumBtn) sumBtn.style.display = "none";
+        const copyBtn = document.getElementById("btn_summ_copy");
+        if (copyBtn) copyBtn.style.display = "none";
       }
     }
 
@@ -1659,8 +1658,17 @@
 
         } catch (e) {
           updateStatus("Sync error", "error");
-          logTrace("Sync error: " + (e.message || e));
-          alert("Sync failed. Check trace log.");
+
+          // Enhanced Error Logging
+          let errMsg = e.message || e;
+          if (typeof e === 'object' && e.result && e.result.error) {
+            errMsg = JSON.stringify(e.result.error);
+          } else if (typeof e === 'object') {
+            try { errMsg = JSON.stringify(e); } catch (x) { }
+          }
+
+          logTrace("Sync error: " + errMsg);
+          alert("Sync failed. Check trace log for details.\n" + errMsg);
         }
       });
     }
@@ -2780,22 +2788,37 @@
           processEntry(e);
 
           if (e.type === 'withdrawal' || e.type === 'deposit') {
-            // Try to get recipient name from address book logic (reuse existing logic if possible, or simplified)
+            // Try to get recipient name from address book logic
             const normalizedAsset = (e.asset.includes("XRP") || e.asset === "XXRP") ? "XRP" : (e.asset.includes("USDT") ? "USDT" : e.asset);
-            // We can reuse the extensive logic from the other report by briefly finding the recipient
-            // For now, simpler fallback:
-            row.details = (e.type === 'withdrawal') ? `Withdrawal (${normalizedAsset})` : `Deposit (${normalizedAsset})`;
 
-            // Attempt to enrich details with Recipient Name from refined matching logic 
-            // (We can call the logic we just reviewed in renderPreview if we separate it, 
-            // but for now let's do a quick lookup in cacheData.krakenAddresses)
+            // Default Detail
+            let detail = (e.type === 'withdrawal') ? `Withdrawal` : `Deposit`;
+
+            // Enriched Logic: First 2 words of recipient
+            let recipient = null;
+
+            // 1. History Lookup
             const historyMatch = cacheData.withdrawalHistory.find(h => h.refid === e.refid);
             if (historyMatch) {
               const addr = historyMatch.info || historyMatch.address;
               const addrMatch = cacheData.krakenAddresses.find(a => a.address === addr);
-              if (addrMatch) row.details = `To: ${addrMatch.key}`;
-              else if (addr) row.details = `To: ${addr}`;
+              if (addrMatch) recipient = addrMatch.key;
+              else if (addr) recipient = addr;
             }
+
+            if (recipient) {
+              // Take first 2 words
+              const words = recipient.split(/\s+/).slice(0, 2).join(" ");
+              // Clean common suffixes if needed, or just trust words
+              detail = `${words}`;
+            }
+
+            // Append Asset (cleaned)
+            let cleanAsset = normalizedAsset.replace("ZEUR", "EUR").replace("ZGBP", "GBP").replace("ZUSD", "USD");
+            detail += ` (${cleanAsset})`;
+
+            row.details = detail;
+
           } else {
             row.details = `${e.type} (${e.asset})`;
           }
@@ -2840,7 +2863,25 @@
         // The button logic handles "Generate" on click if it's the primary action.
         // But here the button *is* the trigger.
         // Let's make the button always Generate & Show for simplicity as it's fast.
-        generateBankReport();
+        // Generate function with UI feedback
+        async function generateBankReport() {
+          const btn = document.getElementById("btn_bank_statement");
+          const originalText = btn.textContent;
+          btn.textContent = "Generating...";
+          btn.disabled = true;
+
+          // Wait a tick to allow UI to update
+          await new Promise(r => setTimeout(r, 50));
+
+          try {
+            await generateBankReportLogic();
+          } catch (e) {
+            alert("Error: " + e.message);
+          } finally {
+            btn.textContent = originalText;
+            btn.disabled = false;
+          }
+        }
       } else {
         div.style.display = "none";
       }
@@ -2950,7 +2991,12 @@
       const div = document.getElementById("summaryReportArea");
       div.style.display = "block";
 
-      let html = '<div style="background:#2c3e50; color:#fff; padding:5px 10px; font-size:0.7rem; font-weight:bold; border-radius:4px 4px 0 0;">Withdrawals Summary</div>';
+      // --- Withdrawals Section ---
+      let html = '<div style="position:relative; background:#2c3e50; color:#fff; padding:5px 10px; font-size:0.7rem; font-weight:bold; border-radius:4px 4px 0 0; display:flex; justify-content:space-between; align-items:center;">';
+      html += '<span>Withdrawals Summary</span>';
+      html += '<button onclick="copySummaryReport()" title="Copy Table" style="padding:2px 8px; background:#fff; color:#2c3e50; border:none; border-radius:3px; font-size:0.6rem; cursor:pointer;">📋 Copy</button>';
+      html += '</div>';
+
       html += '<table style="width:100%; border-collapse:collapse; margin-bottom:15px;">';
       html += '<thead><tr style="background:#f2f2f2;">';
       html += '<th style="padding:4px; border:1px solid #ddd; text-align:left;">Recipient</th>';
@@ -2997,28 +3043,34 @@
     function renderBankTable() {
       const div = document.getElementById("bankReportArea");
       // Don't force display:block here, just update content. 
-      // Let toggle/generate handle visibility to be consistent.
 
-      let html = '<table style="min-width:100%; width:auto;"><thead><tr>';
+      let html = '<table style="min-width:100%; width:auto; border-collapse:collapse;"><thead><tr>';
 
-      // Fixed Columns
-      html += '<th class="w-bank-datetime">Date</th>';
-      html += '<th class="w-bank-datetime">Time</th>';
-      html += '<th class="w-type">Type</th>';
-      html += '<th class="w-bank-details">Details</th>';
+      // Fixed Columns (Rowspan 2 for vertical centering)
+      const hStyle = "border:1px solid #ddd; padding:8px; vertical-align:middle; background:#f9f9f9;";
+      html += `<th rowspan="2" class="w-bank-datetime" style="${hStyle}">Date</th>`;
+      html += `<th rowspan="2" class="w-bank-datetime" style="${hStyle}">Time</th>`;
+      html += `<th rowspan="2" class="w-type" style="${hStyle}">Type</th>`;
+      html += `<th rowspan="2" class="w-bank-details" style="${hStyle}">Description</th>`;
 
       // Asset Columns (Dynamic)
       TRACKED_ASSETS.forEach(asset => {
-        html += `<th colspan="3" class="section-border-left" style="text-align:center;">${asset}</th>`;
+        let cleanAsset = asset.replace(/Z|X/g, "").replace("XXRP", "XRP");
+        if (cleanAsset === "USDT") cleanAsset = "USDT"; // Ensure clean
+        // If cleanAsset is same as asset (e.g. USDT), it's fine. 
+        // User requested stripping Z. 
+        if (asset === "ZEUR") cleanAsset = "EUR";
+        if (asset === "ZGBP") cleanAsset = "GBP";
+
+        html += `<th colspan="3" class="section-border-left" style="text-align:center; border-bottom:none; background:#f9f9f9;">${cleanAsset}</th>`;
       });
       html += '</tr><tr>';
 
       // Sub-headers (Amounts)
-      html += '<th colspan="4" style="background:#fff; border:none;"></th>';
       TRACKED_ASSETS.forEach(asset => {
-        html += `<th class="section-border-left" style="text-align:right; font-size:0.55rem;">Amount</th>`;
-        html += `<th style="text-align:right; font-size:0.55rem;">P/L Fee</th>`;
-        html += `<th style="text-align:right; font-size:0.55rem;">Balance</th>`;
+        html += `<th class="section-border-left" style="text-align:right; font-size:0.55rem; background:#f9f9f9;">Amount</th>`;
+        html += `<th style="text-align:right; font-size:0.55rem; background:#f9f9f9;">Fee</th>`;
+        html += `<th style="text-align:right; font-size:0.55rem; background:#f9f9f9;">Balance</th>`;
       });
       html += '</tr></thead><tbody>';
 
@@ -3029,11 +3081,15 @@
           const isBalRow = r.type.includes("Balance");
           const rowStyle = isBalRow ? "background:#f2f2f2; font-weight:bold;" : "";
 
+          // Apply Z-strip to description if it contains (ZEUR) etc.
+          let desc = escHtml(r.details);
+          desc = desc.replace("(ZEUR)", "(EUR)").replace("(ZGBP)", "(GBP)").replace("(ZUSD)", "(USD)");
+
           html += `<tr style="${rowStyle}">`;
-          html += `<td class="w-bank-datetime">${r.date}</td>`;
-          html += `<td class="w-bank-datetime">${r.time}</td>`;
-          html += `<td class="w-type">${r.type}</td>`;
-          html += `<td class="w-bank-details">${escHtml(r.details)}</td>`;
+          html += `<td class="w-bank-datetime" style="padding:4px; border-bottom:1px solid #eee;">${r.date}</td>`;
+          html += `<td class="w-bank-datetime" style="padding:4px; border-bottom:1px solid #eee;">${r.time}</td>`;
+          html += `<td class="w-type" style="padding:4px; border-bottom:1px solid #eee;">${r.type}</td>`;
+          html += `<td class="w-bank-details" style="padding:4px; border-bottom:1px solid #eee;">${desc}</td>`;
 
           TRACKED_ASSETS.forEach(asset => {
             const amt = r.amounts[asset];
@@ -3046,9 +3102,9 @@
             const showFee = (fee !== undefined && fee > 0) ? fee.toFixed(dec) : "";
             const showBal = (bal !== undefined) ? bal.toFixed(dec) : "0.00";
 
-            html += `<td class="w-bank-val section-border-left">${showAmt}</td>`;
-            html += `<td class="w-bank-val" style="color:#c0392b;">${showFee}</td>`;
-            html += `<td class="w-bank-bal">${showBal}</td>`;
+            html += `<td class="w-bank-val section-border-left" style="padding:4px; border-bottom:1px solid #eee;">${showAmt}</td>`;
+            html += `<td class="w-bank-val" style="padding:4px; border-bottom:1px solid #eee; color:#c0392b;">${showFee}</td>`;
+            html += `<td class="w-bank-bal" style="padding:4px; border-bottom:1px solid #eee;">${showBal}</td>`;
           });
           html += `</tr>`;
         }
@@ -3056,6 +3112,36 @@
 
       html += '</tbody></table>';
       div.innerHTML = html;
+    }
+
+    // Copy Functions
+    function copyBankReport() {
+      if (!bankRecords || bankRecords.length === 0) { alert("No data to copy."); return; }
+      const div = document.getElementById("bankReportArea");
+      copyNodeText(div);
+    }
+
+    function copySummaryReport() {
+      if (!summaryRecords.withdrawals || summaryRecords.withdrawals.length === 0) { alert("No data to copy."); return; }
+      const div = document.getElementById("summaryReportArea");
+      copyNodeText(div);
+    }
+
+    function copyNodeText(node) {
+      if (!node) return;
+      const selection = window.getSelection();
+      const range = document.createRange();
+      range.selectNodeContents(node);
+      selection.removeAllRanges();
+      selection.addRange(range);
+
+      try {
+        document.execCommand('copy');
+        alert("Table copied to clipboard!");
+      } catch (e) {
+        alert("Failed to copy.");
+      }
+      selection.removeAllRanges();
     }
 
     // ---------- Boot ----------
