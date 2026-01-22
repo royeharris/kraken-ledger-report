@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8" />
   <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport" />
-  <title>Kraken Ledger Report v2.62</title>
+  <title>Kraken Ledger Report v2.65</title>
   <script async defer src="https://accounts.google.com/gsi/client"></script>
   <script async defer src="https://apis.google.com/js/api.js"></script>
   <style>
@@ -411,7 +411,7 @@
       <div
         style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; position:relative;">
         <div class="branding-row" style="margin-bottom:0; line-height:1.2;">
-          <div><b>Kraken Reports</b> <span style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.62</span></div>
+          <div><b>Kraken Reports</b> <span style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.65</span></div>
           <div style="font-size:0.65rem; color:#b0b0b0; font-weight:400;">GBP, EUR, USDT, XRP transactions in Date
             range</div>
         </div>
@@ -624,7 +624,7 @@
     <div class="preview-wrap" id="bankReportArea" style="display:none; margin-top:10px;"></div>
 
     <button id="btn_statement_summary" onclick="toggleSummaryReport()"
-      style="width:100%; padding:8px; margin-top:5px; background:#8e44ad; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer; display:none;">
+      style="width:100%; padding:8px; margin-top:5px; background:#2980b9; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer; display:none;">
       Statement Summary</button>
 
     <div class="preview-wrap" id="summaryReportArea" style="display:none; margin-top:10px;"></div>
@@ -632,12 +632,12 @@
     <button id="log_btn" onclick="toggleLog()"
       style="width:100%; padding:8px; margin-top:10px; background:#8e44ad; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Display
       Trace Log</button>
-    <div id="trace_log" onclick="toggleLog()">Trace: v2.62 Kraken Withdrawals Report initialized.</div>
+    <div id="trace_log" onclick="toggleLog()">Trace: v2.65 Kraken Withdrawals Report initialized.</div>
   </div>
 
   <script>
     const SHEET_ID = "1Vf0iqthwHv0kFqTRJkYShH_RBpbokLmiEDWGJN3Q_E";
-    const VER = "Kraken Withdrawals Report (v2.62)";
+    const VER = "Kraken Withdrawals Report (v2.65)";
     const KRAKEN_API_URL = "https://api.kraken.com";
 
     // Default API credentials (enter your own in API Config)
@@ -1320,7 +1320,8 @@
       html += '<button onclick="event.stopPropagation(); copyReportToClipboard()" title="Copy Table" style="padding:2px 8px; background:#fff; color:#d35400; border:none; border-radius:3px; font-size:0.65rem; font-weight:600; cursor:pointer;">&#x2398; Copy Table</button>';
       html += '</div>';
 
-      html += '<table style="width:100%; border-collapse:collapse;"><thead><tr>';
+      html += '<div style="overflow-x:auto;">';
+      html += '<table style="width:100%; min-width:1200px; border-collapse:collapse;"><thead><tr>';
       html += '<th class="w-date">Date</th>';
       html += '<th class="w-type">Type</th>';
       html += '<th class="w-time">Time (UTC)</th>';
@@ -2871,7 +2872,7 @@
 
         try {
           // This function exists globally and populates cacheData.bankRecords then calls renderBankTable()
-          await generateBankReportLogic();
+          await generateBankReport();
         } catch (e) {
           alert("Error generating statement: " + e.message);
         } finally {
@@ -2957,6 +2958,12 @@
           // Clean Recipient Name (remove asset tags)
           recipient = recipient.replace(/\s*(XRP|USDT|TRC20|ERC20|BTC|ETH)\s*/gi, "").trim();
 
+          // STRICT RULE: First 2 words only
+          const words = recipient.split(/\s+/);
+          if (words.length > 2) {
+            recipient = words.slice(0, 2).join(" ");
+          }
+
           if (!recipTotals[recipient]) recipTotals[recipient] = { USDT: 0, XRP: 0, GBP: 0, EUR: 0 };
           recipTotals[recipient][assetKey] += amount;
 
@@ -2996,12 +3003,12 @@
       // We'll separate the header slightly or keep the "long bar" but ensure the button is distinct.
       // And ensure the whole bar toggles.
 
-      let html = '<div onclick="toggleSummaryReport()" style="cursor:pointer; background:#8e44ad; color:#fff; padding:6px 10px; font-size:0.75rem; font-weight:bold; border-radius:4px 4px 0 0; display:flex; justify-content:space-between; align-items:center;" title="Click to close report">';
+      let html = '<div onclick="toggleSummaryReport()" style="cursor:pointer; background:#2980b9; color:#fff; padding:6px 10px; font-size:0.75rem; font-weight:bold; border-radius:4px 4px 0 0; display:flex; justify-content:space-between; align-items:center;" title="Click to close report">';
       html += '<span>Statement Summary</span>';
 
       // Only show copy button if there is data
       if (!isEmpty) {
-        html += '<button onclick="event.stopPropagation(); copySummaryReport()" title="Copy Table" style="padding:2px 8px; background:#fff; color:#8e44ad; border:none; border-radius:3px; font-size:0.65rem; font-weight:600; cursor:pointer;">&#x2398; Copy Table</button>';
+        html += '<button onclick="event.stopPropagation(); copySummaryReport()" title="Copy Table" style="padding:2px 8px; background:#fff; color:#2980b9; border:none; border-radius:3px; font-size:0.65rem; font-weight:600; cursor:pointer;">&#x2398; Copy Table</button>';
       }
       html += '</div>';
 
@@ -3012,7 +3019,9 @@
         return;
       }
 
-      html += '<table style="width:100%; border-collapse:collapse; margin-bottom:15px; border:1px solid #ddd; border-top:none; table-layout:fixed;">';
+      // Allow horizontal scroll on small screens
+      html += '<div style="overflow-x:auto;">';
+      html += '<table style="width:100%; min-width:600px; border-collapse:collapse; margin-bottom:15px; border:1px solid #ddd; border-top:none; table-layout:fixed;">';
       html += '<thead><tr style="background:#f9f9f9;">';
       html += '<th style="padding:5px; border:1px solid #ddd; text-align:left; width:40%;">Recipient</th>';
       html += '<th style="padding:5px; border:1px solid #ddd; text-align:right; width:15%;">USDT</th>';
@@ -3036,7 +3045,7 @@
       }
       html += '</tbody></table>';
 
-      html += '<div style="background:#27ae60; color:#fff; padding:5px 10px; font-size:0.7rem; font-weight:bold; border-radius:4px 4px 0 0;">Fiat Deposits Summary</div>';
+      html += '<div style="background:#27ae60; color:#fff; padding:5px 10px; font-size:0.7rem; font-weight:bold; border-radius:4px 4px 0 0;">Fiat Deposits</div>';
       html += '<table style="width:100%; border-collapse:collapse;">';
       html += '<thead><tr style="background:#f2f2f2;">';
       html += '<th style="padding:4px; border:1px solid #ddd; text-align:left;">Asset</th>';
