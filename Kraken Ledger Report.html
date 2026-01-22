@@ -1533,139 +1533,143 @@
         try {
           // 1. ReportStaging (Existing)
           if (hasStaging) {
-            // ... headers ...
+            const headers = [
+              "Date", "Type", "Time (UTC)", "Recipient", "Sent to", "GBP Sent", "Amount", "Fee", "Asset",
+              "GBP Fee", "Conv Rate", "Conv Currency", "Source", "Destination", "Dest Tag", "Transaction ID"
+            ];
+
+            const vals = stagingRecords.map(r => [
+              r.dateSent, r.type || '', r.timeSent || '', r.recipient, r.sentTo || '', r.gbpSent || '',
+              r.amount, r.fee, r.asset, r.gbpFee || '', r.conversionRate || '', r.conversionCurrency || '',
+              r.rateSource || '', r.wallet, r.destTag, r.txId
+            ]);
+
+            await gapi.client.sheets.spreadsheets.values.clear({ spreadsheetId: SHEET_ID, range: "'ReportStaging'!A:Z" });
+            await gapi.client.sheets.spreadsheets.values.update({
+              spreadsheetId: SHEET_ID, range: "'ReportStaging'!A1:P1", valueInputOption: "USER_ENTERED", resource: { values: [headers] }
+            });
+            await gapi.client.sheets.spreadsheets.values.update({
+              spreadsheetId: SHEET_ID, range: "'ReportStaging'!A2:P" + (1 + vals.length), valueInputOption: "USER_ENTERED", resource: { values: vals }
+            });
+            logTrace("ReportStaging exported.");
           }
-          // (Simplified for brevity in this replace, ensuring we catch errors)
-          // Actually, I should just wrap the existing block or modify the catch.
-        } catch (err) {
-          // ...
-        }
-      });
-      // Let's just target the Catch block or the whole function if possible.
-      // Better: View the function first to be safe, then replace. I already viewed 1500-1550.
-      // The catch block is likely further down. I'll view 1600-1650.
-      await gapi.client.sheets.spreadsheets.values.update({
-        spreadsheetId: SHEET_ID, range: "'ReportStaging'!A2:P" + (1 + vals.length), valueInputOption: "USER_ENTERED", resource: { values: vals }
-      });
-      logTrace("ReportStaging exported.");
-    }
 
-    // 2. KrakenLedger (Existing - Raw Data)
-    if (cacheData.withdrawals && cacheData.withdrawals.length > 0) {
-      const ledgerHeaders = ["Date", "Type", "Time", "Amount", "Fee", "Asset", "Balance", "Ledger ID", "Ref ID"];
-      const ledgerVals = cacheData.withdrawals.map(w => [
-        w.time ? formatTimestamp(w.time) : '', w.type || '', w.time ? formatTime(w.time) : '', w.amount || 0, w.fee || 0,
-        w.asset || '', w.balance || 0, w.ledgerId || '', w.refid || ''
-      ]);
-      await gapi.client.sheets.spreadsheets.values.clear({ spreadsheetId: SHEET_ID, range: "'KrakenLedger'!A:Z" });
-      await gapi.client.sheets.spreadsheets.values.update({
-        spreadsheetId: SHEET_ID, range: "'KrakenLedger'!A1:I1", valueInputOption: "USER_ENTERED", resource: { values: [ledgerHeaders] }
-      });
-      await gapi.client.sheets.spreadsheets.values.update({
-        spreadsheetId: SHEET_ID, range: "'KrakenLedger'!A2:I" + (1 + ledgerVals.length), valueInputOption: "USER_ENTERED", resource: { values: ledgerVals }
-      });
-      logTrace("KrakenLedger exported.");
-    }
+          // 2. KrakenLedger (Existing - Raw Data)
+          if (cacheData.withdrawals && cacheData.withdrawals.length > 0) {
+            const ledgerHeaders = ["Date", "Type", "Time", "Amount", "Fee", "Asset", "Balance", "Ledger ID", "Ref ID"];
+            const ledgerVals = cacheData.withdrawals.map(w => [
+              w.time ? formatTimestamp(w.time) : '', w.type || '', w.time ? formatTime(w.time) : '', w.amount || 0, w.fee || 0,
+              w.asset || '', w.balance || 0, w.ledgerId || '', w.refid || ''
+            ]);
+            await gapi.client.sheets.spreadsheets.values.clear({ spreadsheetId: SHEET_ID, range: "'KrakenLedger'!A:Z" });
+            await gapi.client.sheets.spreadsheets.values.update({
+              spreadsheetId: SHEET_ID, range: "'KrakenLedger'!A1:I1", valueInputOption: "USER_ENTERED", resource: { values: [ledgerHeaders] }
+            });
+            await gapi.client.sheets.spreadsheets.values.update({
+              spreadsheetId: SHEET_ID, range: "'KrakenLedger'!A2:I" + (1 + ledgerVals.length), valueInputOption: "USER_ENTERED", resource: { values: ledgerVals }
+            });
+            logTrace("KrakenLedger exported.");
+          }
 
-    // 3. KrakenStatement (New)
-    if (hasBank) {
-      // Headers: Main + Asset Sub-headers
-      // Row 1: Date | Time | Type | Details | GBP | | | EUR | | | ...
-      // Row 2: | | | | Amount | P/L Fee | Balance | Amount | ...
+          // 3. KrakenStatement (New)
+          if (hasBank) {
+            // Headers: Main + Asset Sub-headers
+            // Row 1: Date | Time | Type | Details | GBP | | | EUR | | | ...
+            // Row 2: | | | | Amount | P/L Fee | Balance | Amount | ...
 
-      let header1 = ["Date", "Time", "Type", "Details"];
-      let header2 = ["", "", "", ""];
+            let header1 = ["Date", "Time", "Type", "Details"];
+            let header2 = ["", "", "", ""];
 
-      TRACKED_ASSETS.forEach(a => {
-        header1.push(a, "", "");
-        header2.push("Amount", "P/L Fee", "Balance");
-      });
+            TRACKED_ASSETS.forEach(a => {
+              header1.push(a, "", "");
+              header2.push("Amount", "P/L Fee", "Balance");
+            });
 
-      const bankVals = bankRecords.map(r => {
-        let row = [r.date, r.time, r.type, r.details];
-        TRACKED_ASSETS.forEach(asset => {
-          const amt = r.amounts[asset];
-          const fee = r.fees[asset];
-          const bal = r.balances[asset];
-          row.push(amt !== undefined ? amt : "");
-          row.push((fee !== undefined && fee > 0) ? fee : "");
-          row.push(bal !== undefined ? bal : "");
-        });
-        return row;
-      });
+            const bankVals = bankRecords.map(r => {
+              let row = [r.date, r.time, r.type, r.details];
+              TRACKED_ASSETS.forEach(asset => {
+                const amt = r.amounts[asset];
+                const fee = r.fees[asset];
+                const bal = r.balances[asset];
+                row.push(amt !== undefined ? amt : "");
+                row.push((fee !== undefined && fee > 0) ? fee : "");
+                row.push(bal !== undefined ? bal : "");
+              });
+              return row;
+            });
 
-      const rangeReq = "'KrakenStatement'!A:Z"; // Assume enough columns
-      await gapi.client.sheets.spreadsheets.values.clear({ spreadsheetId: SHEET_ID, range: rangeReq });
+            const rangeReq = "'KrakenStatement'!A:Z"; // Assume enough columns
+            await gapi.client.sheets.spreadsheets.values.clear({ spreadsheetId: SHEET_ID, range: rangeReq });
 
-      // Update Headers
-      await gapi.client.sheets.spreadsheets.values.update({
-        spreadsheetId: SHEET_ID, range: "'KrakenStatement'!A1", valueInputOption: "USER_ENTERED", resource: { values: [header1, header2] }
-      });
-      // Update Data
-      await gapi.client.sheets.spreadsheets.values.update({
-        spreadsheetId: SHEET_ID, range: "'KrakenStatement'!A3", valueInputOption: "USER_ENTERED", resource: { values: bankVals }
-      });
-      logTrace("KrakenStatement exported.");
-    }
+            // Update Headers
+            await gapi.client.sheets.spreadsheets.values.update({
+              spreadsheetId: SHEET_ID, range: "'KrakenStatement'!A1", valueInputOption: "USER_ENTERED", resource: { values: [header1, header2] }
+            });
+            // Update Data
+            await gapi.client.sheets.spreadsheets.values.update({
+              spreadsheetId: SHEET_ID, range: "'KrakenStatement'!A3", valueInputOption: "USER_ENTERED", resource: { values: bankVals }
+            });
+            logTrace("KrakenStatement exported.");
+          }
 
-    // 4. KrakenStatementSummary (New)
-    if (hasSummary) {
-      // Section 1: Withdrawals
-      let s1Headers = ["WITHDRAWALS SUMMARY", "", "", "", ""];
-      let s1ColHeaders = ["Recipient", "USDT", "XRP", "GBP", "EUR"];
+          // 4. KrakenStatementSummary (New)
+          if (hasSummary) {
+            // Section 1: Withdrawals
+            let s1Headers = ["WITHDRAWALS SUMMARY", "", "", "", ""];
+            let s1ColHeaders = ["Recipient", "USDT", "XRP", "GBP", "EUR"];
 
-      const s1Rows = summaryRecords.withdrawals.map(r => [
-        r.recipient, r.USDT || 0, r.XRP || 0, r.GBP || 0, r.EUR || 0
-      ]);
+            const s1Rows = summaryRecords.withdrawals.map(r => [
+              r.recipient, r.USDT || 0, r.XRP || 0, r.GBP || 0, r.EUR || 0
+            ]);
 
-      // Section 2: Deposits
-      let s2Headers = ["DEPOSITS SUMMARY", ""];
-      let s2ColHeaders = ["Asset", "Total Amount"];
+            // Section 2: Deposits
+            let s2Headers = ["DEPOSITS SUMMARY", ""];
+            let s2ColHeaders = ["Asset", "Total Amount"];
 
-      const s2Rows = summaryRecords.deposits.map(r => [r.asset, r.total]); // GBP, EUR rows
+            const s2Rows = summaryRecords.deposits.map(r => [r.asset, r.total]); // GBP, EUR rows
 
-      const rangeReq = "'KrakenStatementSummary'!A:Z";
-      await gapi.client.sheets.spreadsheets.values.clear({ spreadsheetId: SHEET_ID, range: rangeReq });
+            const rangeReq = "'KrakenStatementSummary'!A:Z";
+            await gapi.client.sheets.spreadsheets.values.clear({ spreadsheetId: SHEET_ID, range: rangeReq });
 
-      // Build one big array of values to write in one go? Or separate calls. Separate is easier logic.
-      // Write Withdrawals at top
-      await gapi.client.sheets.spreadsheets.values.update({
-        spreadsheetId: SHEET_ID, range: "'KrakenStatementSummary'!A1", valueInputOption: "USER_ENTERED",
-        resource: { values: [s1Headers, s1ColHeaders, ...s1Rows] }
-      });
+            // Build one big array of values to write in one go? Or separate calls. Separate is easier logic.
+            // Write Withdrawals at top
+            await gapi.client.sheets.spreadsheets.values.update({
+              spreadsheetId: SHEET_ID, range: "'KrakenStatementSummary'!A1", valueInputOption: "USER_ENTERED",
+              resource: { values: [s1Headers, s1ColHeaders, ...s1Rows] }
+            });
 
-      // Write Deposits below
-      const startRow = 1 + 2 + s1Rows.length + 2; // +2 for spacer
-      await gapi.client.sheets.spreadsheets.values.update({
-        spreadsheetId: SHEET_ID, range: `'KrakenStatementSummary'!A${startRow}`, valueInputOption: "USER_ENTERED",
-        resource: { values: [s2Headers, s2ColHeaders, ...s2Rows] }
-      });
-      logTrace("KrakenStatementSummary exported.");
-    }
+            // Write Deposits below
+            const startRow = 1 + 2 + s1Rows.length + 2; // +2 for spacer
+            await gapi.client.sheets.spreadsheets.values.update({
+              spreadsheetId: SHEET_ID, range: `'KrakenStatementSummary'!A${startRow}`, valueInputOption: "USER_ENTERED",
+              resource: { values: [s2Headers, s2ColHeaders, ...s2Rows] }
+            });
+            logTrace("KrakenStatementSummary exported.");
+          }
 
-    updateStatus("Synced All", "active");
-    alert("Sync complete.\nReports exported to Google Sheets.");
+          updateStatus("Synced All", "active");
+          alert("Sync complete.\nReports exported to Google Sheets.");
 
         } catch (e) {
-      // Enhanced Error Logging
-      let errMsg = e.message || e;
-      if (typeof e === 'object' && e.result && e.result.error) {
-        errMsg = JSON.stringify(e.result.error);
-      } else if (typeof e === 'object') {
-        try { errMsg = JSON.stringify(e); } catch (x) { }
-      }
+          // Enhanced Error Logging
+          let errMsg = e.message || e;
+          if (typeof e === 'object' && e.result && e.result.error) {
+            errMsg = JSON.stringify(e.result.error);
+          } else if (typeof e === 'object') {
+            try { errMsg = JSON.stringify(e); } catch (x) { }
+          }
 
-      // Check for 404 (Not Found) - usually means Sheet ID invalid or permission denied
-      if (errMsg.includes("404") || errMsg.includes("NOT_FOUND")) {
-        logTrace("Sync skipped: verified Sheet ID not found or not accessible. (This is normal if not configured)");
-        updateStatus("Sync Skipped", "idle");
-        // Do NOT alert the user for this common case
-      } else {
-        updateStatus("Sync error", "error");
-        logTrace("Sync error: " + errMsg);
-        alert("Sync failed. Check trace log for details.\n" + errMsg);
-      }
-    }
+          // Check for 404 (Not Found) - usually means Sheet ID invalid or permission denied
+          if (errMsg.includes("404") || errMsg.includes("NOT_FOUND")) {
+            logTrace("Sync skipped: verified Sheet ID not found or not accessible. (This is normal if not configured)");
+            updateStatus("Sync Skipped", "idle");
+            // Do NOT alert the user for this common case
+          } else {
+            updateStatus("Sync error", "error");
+            logTrace("Sync error: " + errMsg);
+            alert("Sync failed. Check trace log for details.\n" + errMsg);
+          }
+        }
       });
     }
 
