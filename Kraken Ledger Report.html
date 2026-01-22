@@ -411,7 +411,7 @@
       <div
         style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; position:relative;">
         <div class="branding-row" style="margin-bottom:0; line-height:1.2;">
-          <div><b>Kraken Reports</b> <span style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.87</span></div>
+          <div><b>Kraken Reports</b> <span style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.88</span></div>
           <div style="font-size:0.65rem; color:#b0b0b0; font-weight:400;">GBP, EUR, USDT, XRP transactions in Date
             range</div>
         </div>
@@ -646,7 +646,7 @@
   <script>
 
     const SHEET_ID = "1Vf0iqthwHv0kFqTRJkYShH_RBpbokLmiEDWGJN3Q_E";
-    const VER = "Kraken Withdrawals Report (v2.87)";
+    const VER = "Kraken Withdrawals Report (v2.88)";
     const KRAKEN_API_URL = "https://api.kraken.com";
 
     // Default API credentials (enter your own in API Config)
@@ -3193,7 +3193,9 @@
       div.style.display = "block";
 
       // Check if empty (using new structure keys)
-      const isEmpty = (summaryRecords.crypto.length === 0 && summaryRecords.fiat.length === 0 && summaryRecords.deposits.length === 0);
+      // For deposits, we must check if total > 0 because length is always 2 (presets)
+      const hasDeposits = summaryRecords.deposits.some(d => d.total > 0);
+      const isEmpty = (summaryRecords.crypto.length === 0 && summaryRecords.fiat.length === 0 && !hasDeposits);
 
       // --- Container (Centered) ---
       let html = '<div style="max-width:1000px; margin:0 auto; box-shadow:0 1px 4px rgba(0,0,0,0.1); background:#fff; border-radius:4px; overflow:hidden; border:1px solid #ddd;">';
@@ -3273,7 +3275,8 @@
       }
 
       // --- 3. FIAT DEPOSITS ---
-      if (summaryRecords.deposits.length > 0) {
+      // Fix: Only render if we have actual values
+      if (summaryRecords.deposits.some(d => d.total > 0)) {
         html += '<div style="background:#27ae60; color:#fff; padding:5px 10px; font-size:0.7rem; font-weight:bold; border-radius:4px 4px 0 0; margin-bottom:0;">Fiat Deposits - from Haricom Bank Account (GBP EUR)</div>';
         html += '<table style="width:100%; border-collapse:collapse; margin-bottom:0; border:1px solid #ddd;">';
         html += '<thead><tr style="background:#f2f2f2;">';
