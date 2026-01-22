@@ -411,7 +411,7 @@
       <div
         style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; position:relative;">
         <div class="branding-row" style="margin-bottom:0; line-height:1.2;">
-          <div><b>Kraken Reports</b> <span style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.99</span></div>
+          <div><b>Kraken Reports</b> <span style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.991</span></div>
           <div style="font-size:0.65rem; color:#b0b0b0; font-weight:400;">GBP, EUR, USDT, XRP transactions in Date
             range</div>
         </div>
@@ -646,7 +646,7 @@
   <script>
 
     const SHEET_ID = "1Vf0iqthwHv0kFqTRJkYShH_RBpbokLmiEDWGJN3Q_E";
-    const VER = "Kraken Withdrawals Report (v2.99)";
+    const VER = "Kraken Withdrawals Report (v2.991)";
     const KRAKEN_API_URL = "https://api.kraken.com";
 
     // Default API credentials (enter your own in API Config)
@@ -2994,10 +2994,10 @@
       }
     }
 
-    // v2.89: Table Filter Logic
+    // v2.99: Table Filter Logic
     function filterBankReport() {
-      const typeInput = document.getElementById("filterType");
-      const descInput = document.getElementById("filterDesc");
+      const typeInput = document.getElementById("typeFilterInput");
+      const descInput = document.getElementById("descFilterInput");
 
       const typeFilter = typeInput ? typeInput.value.toUpperCase() : "";
       const descFilter = descInput ? descInput.value.toUpperCase() : "";
