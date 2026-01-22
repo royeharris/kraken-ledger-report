@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8" />
   <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport" />
-  <title>Kraken Ledger Report v2.67</title>
+  <title>Kraken Ledger Report v2.68</title>
   <script async defer src="https://accounts.google.com/gsi/client"></script>
   <script async defer src="https://apis.google.com/js/api.js"></script>
   <style>
@@ -411,7 +411,7 @@
       <div
         style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; position:relative;">
         <div class="branding-row" style="margin-bottom:0; line-height:1.2;">
-          <div><b>Kraken Reports</b> <span style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.67</span></div>
+          <div><b>Kraken Reports</b> <span style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.68</span></div>
           <div style="font-size:0.65rem; color:#b0b0b0; font-weight:400;">GBP, EUR, USDT, XRP transactions in Date
             range</div>
         </div>
@@ -632,12 +632,12 @@
     <button id="log_btn" onclick="toggleLog()"
       style="width:100%; padding:8px; margin-top:10px; background:#8e44ad; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Display
       Trace Log</button>
-    <div id="trace_log" onclick="toggleLog()">Trace: v2.67 Kraken Withdrawals Report initialized.</div>
+    <div id="trace_log" onclick="toggleLog()">Trace: v2.68 Kraken Withdrawals Report initialized.</div>
   </div>
 
   <script>
     const SHEET_ID = "1Vf0iqthwHv0kFqTRJkYShH_RBpbokLmiEDWGJN3Q_E";
-    const VER = "Kraken Withdrawals Report (v2.67)";
+    const VER = "Kraken Withdrawals Report (v2.68)";
     const KRAKEN_API_URL = "https://api.kraken.com";
 
     // Default API credentials (enter your own in API Config)
@@ -2836,8 +2836,8 @@
       const closingBalRow = {
         date: formatTimestamp(endTs),
         time: "23:59:59",
-        type: "Closing Balance",
-        details: "---",
+        type: "Balance",
+        details: "Closing Balance",
         balances: { ...runningBal },
         amounts: {},
         fees: {}
