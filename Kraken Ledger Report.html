@@ -411,7 +411,7 @@
       <div
         style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; position:relative;">
         <div class="branding-row" style="margin-bottom:0; line-height:1.2;">
-          <div><b>Kraken Reports</b> <span style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.992</span></div>
+          <div><b>Kraken Reports</b> <span style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.993</span></div>
           <div style="font-size:0.65rem; color:#b0b0b0; font-weight:400;">GBP, EUR, USDT, XRP transactions in Date
             range</div>
         </div>
@@ -646,7 +646,7 @@
   <script>
 
     const SHEET_ID = "1Vf0iqthwHv0kFqTRJkYShH_RBpbokLmiEDWGJN3Q_E";
-    const VER = "Kraken Withdrawals Report (v2.992)";
+    const VER = "Kraken Withdrawals Report (v2.993)";
     const KRAKEN_API_URL = "https://api.kraken.com";
 
     // Default API credentials (enter your own in API Config)
@@ -3103,6 +3103,7 @@
 
       // Helper for GBP Calculation
       function calculateGbpValue(e, amount, assetKey) {
+        // 1. Try finding a Trade (Exact Ledger Match)
         if (cacheData && cacheData.withdrawals) {
           const trade = cacheData.withdrawals.find(t =>
             t.refid === e.refid &&
@@ -3113,7 +3114,16 @@
             return Math.abs(trade.amount);
           }
         }
-        return 0; // Default to 0 if no trade match found
+
+        // 2. Try finding in Withdrawal Cache (Calculated Rates)
+        // v2.993: This is critical for unmatched withdrawals ensuring they use the rate derived during "Read Ledger"
+        if (cacheData && cacheData.withdrawalCache) {
+          const cached = cacheData.withdrawalCache.find(w => w.refid === e.refid);
+          if (cached && cached.gbpSent) {
+            return parseFloat(cached.gbpSent);
+          }
+        }
+        return 0; // Default to 0 if no match found
       }
 
       // Determine Source Data
