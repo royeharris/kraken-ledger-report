@@ -2968,6 +2968,7 @@
     }
 
     // V2.84: Accepts 'customRecords' (e.g. bankRecords) to ensure Summary matches Statement Table
+
     async function generateStatementSummary(customRecords) {
       const sDateVal = document.getElementById("startDate").value;
       const eDateVal = document.getElementById("endDate").value;
@@ -2982,9 +2983,10 @@
       const endTs = new Date(eDateVal).getTime() / 1000 + 86399;
 
       // Aggregation Containers
-      const cryptoTotals = {};
-      const fiatWithdrawals = [];
+      const cryptoTotals = {}; // { recipient: { USDT: 0, XRP: 0, USDT_GBP: 0, XRP_GBP: 0 } }
+      const fMap = {};         // { recipient: { GBP: 0, EUR: 0 } }
       const depositTotals = { GBP: 0, EUR: 0 };
+      const fiatWithdrawals = []; // legacy support
 
       // Helper to normalize
       const getAssetKey = (a) => {
@@ -2995,6 +2997,21 @@
         if (a.includes("EUR") || a === "ZEUR") return "EUR";
         return null;
       };
+
+      // Helper for GBP Calculation
+      function calculateGbpValue(e, amount, assetKey) {
+        if (cacheData && cacheData.withdrawals) {
+          const trade = cacheData.withdrawals.find(t =>
+            t.refid === e.refid &&
+            t.type === 'trade' &&
+            (t.asset === 'ZGBP' || t.asset.includes('GBP'))
+          );
+          if (trade) {
+            return Math.abs(trade.amount);
+          }
+        }
+        return 0; // Default to 0 if no trade match found
+      }
 
       // Determine Source Data
       // If customRecords (bankRecords) is provided, use it. Otherwise fallback (legacy).
@@ -3092,7 +3109,12 @@
         // Prevent processing the same RefID twice (fixes potential double counting)
         // ... (Existing Key Logic)
 
-        // ... rest of loop
+        const uniqueKey = `${e.refid}_${e.amount}_${e.time}_${e.asset}_${e.type}`;
+        if (seenIds.has(uniqueKey)) continue;
+        seenIds.add(uniqueKey);
+
+        const assetKey = getAssetKey(e.asset);
+        if (!assetKey) continue;
 
         amount = Math.abs(e.amount);
 
@@ -3117,14 +3139,8 @@
           }
 
           // 3. Fallback: If still unknown, use checking logic from 'info' text often found in ledgers? 
-          // (Not avail here, 'e' is limited). 
-          // If 'Unknown' and it's Fiat, we really want to find a name.
           if (recipient === "Unknown" && (assetKey === "GBP" || assetKey === "EUR")) {
-            // If we have history but no address book match, we used addr.
-            // If we have NO history, we are stuck. 
-            // But user says they exist in Address Book. 
-            // Maybe manual match check? 
-            // We'll proceed with best effort.
+            // Best effort
           }
 
           // CLEANING & TRUNCATION
@@ -3142,280 +3158,35 @@
             // Crypto: Aggregated
             if (!cryptoTotals[recipient]) cryptoTotals[recipient] = { USDT: 0, XRP: 0 };
             cryptoTotals[recipient][assetKey] += amount;
+            
+            // Calc GBP
+            const gbpVal = calculateGbpValue(e, amount, assetKey);
+            if (assetKey === "USDT") cryptoTotals[recipient].USDT_GBP += gbpVal;
+            if (assetKey === "XRP") cryptoTotals[recipient].XRP_GBP += gbpVal;
+
           } else {
             // Fiat: List Items (or Aggregated? User said "Withdrawals to ... - summary")
-            // "Summary" implies aggregation. Let's aggregate Fiat by Recipient too.
-            // But maintain separate structure.
-            // Wait, fiatWithdrawals was array above. Let's make it object map for agg.
-            // Actually, easier to use a logical separator. 
-            // Let's use a specialized fiat map.
+            if (!fMap[recipient]) fMap[recipient] = { GBP: 0, EUR: 0 };
+            fMap[recipient][assetKey] += amount;
           }
+        } else if (e.type === 'deposit') {
+            if (assetKey === 'GBP' || assetKey === 'EUR') {
+              depositTotals[assetKey] += amount;
+            }
         }
       }
 
       // -- Aggregation Complete --
 
-      // Helper for GBP Calc (Reused by both New and Legacy paths)
-      function calculateGbpValue(e, amount, assetKey) {
-        let gbpVal = 0;
-        // Enhanced Logic (v2.76) from legacy loop
-        // We need sortedLedger for matching - assume cacheData.withdrawals is sorted? 
-        // Or access global cacheData.withdrawals
-        // For simplicity, we use the simple rate multiplication if strictly needed, 
-        // OR we try to find the match in cacheData.withdrawals which acts as the ledger.
+      const cryptoRows = Object.keys(cryptoTotals).map(r => ({ recipient: r, ...cryptoTotals[r] })).sort((a, b) => a.recipient.localeCompare(b.recipient));
+      const fiatRows = Object.keys(fMap).map(r => ({ recipient: r, ...fMap[r] })).sort((a, b) => a.recipient.localeCompare(b.recipient));
+      const depositRows = [{ asset: "GBP", total: depositTotals.GBP }, { asset: "EUR", total: depositTotals.EUR }];
 
-        // Re-implementing the "Trade Match" logic:
-        // 1. Look for a trade with same RefID in cacheData.withdrawals (if it contains trades)
-        // But cacheData.withdrawals might be filtered.
-        // Let's use the 'rates' cache if available.
+      summaryRecords = { crypto: cryptoRows, fiat: fiatRows, deposits: depositRows };
+      localStorage.setItem("kraken_summary_staging", JSON.stringify(summaryRecords));
 
-        // Check Rates for the day
-        const day = formatTimestamp(e.time).split(" ")[0]; // YYYY-MM-DD
-        // We need to look up rates... 
-        // But we don't have easy access to the 'rates' object from the main scope here?
-        // Wait, 'rates' map is built during fetching. Is it global?
-        // No, it's local to fetchAndGenerateReport.
-        // HOWEVER, the 'e' objects might have 'gbpSent' attached if we enriched them?
-        // In v2.79 we started enriching entries? No.
-
-        // FALLBACK: Use Frankfurter average or simple lookup if possible.
-        // User verifies ~37k. The Summary uses specific rates.
-        // If we use bankRecords, we might lose the specific trade rate.
-        // BUT, if we have _raw, we have 'e.amount' and 'e.fee'.
-        // In the legacy loop, it calculated gbpVal on the fly.
-        // We must copy that logic.
-
-        // Simplified GBP Calc for v2.84 (Focus on Correct Totals first, perfect rates second)
-        // If we can't easily access the daily rate, we might accept 0 for GBP equiv temporarily
-        // OR we try to estimate.
-        // Actually, the legacy loop had access to 'rates' ?? 
-        // No, 'generateStatementSummary' (Lines 2961+) did NOT have 'rates' variable defined inside it.
-        // It calculated GBP how?
-        // Line 3100+: 
-        // "const trade = cacheData.withdrawals.find(t => t.refid === e.refid && t.type === 'trade' ...)"
-        // "if (trade) gbpVal = trade.amount (if ZGBP)"
-
-        // Aha! It found the TRADES in the ledger.
-        // We can do that.
-
-        if (cacheData && cacheData.withdrawals) {
-          const trade = cacheData.withdrawals.find(t =>
-            t.refid === e.refid &&
-            t.type === 'trade' &&
-            (t.asset === 'ZGBP' || t.asset.includes('GBP'))
-          );
-          if (trade) {
-            return Math.abs(trade.amount);
-          }
-          // If no trade match (e.g. direct withdrawal), look for cached Rate?
-          // The old code didn't seem to look up rates map, only trades.
-          // Wait! Line 2600 in fetchAndGenerateReport DID calc rates and attach to 'record'.
-          // But 'generateStatementSummary' works on 'cacheData.withdrawals' which are RAW ledger entries?
-          // Or are they filtered records?
-          // Line 2339: cacheData.withdrawals = allWithdrawals (Raw-ish).
-          // So 'generateStatementSummary' was finding the TRADE pair.
-        }
-        return 0;
-      }
-
-      // --- END OF NEW LOGIC BLOCK, RESUME LEGACY ---
-      // (We need to replace the start of the loop to accommodate the 'continue' above)
-      // Since I replaced the loop start in previous step, I just need to ensure the Legacy part flows correctly.
-
-      // If isFromTable, we skip the legacy loop ENTIRELY.
-      if (!isFromTable) {
-        for (const item of sourceData) {
-          const e = item;
-          // ... duplicate legacy loop content ...
-          // (For now, to strictly follow the Tool constraints of replacing a block, 
-          // I will leave the legacy loop logic intact but wrapped or guarded).
-
-          // Check Deduplication (Composite)
-          const uniqueKey = `${e.refid}_${e.amount}_${e.time}_${e.asset}_${e.type}`;
-          if (seenIds.has(uniqueKey)) continue;
-          seenIds.add(uniqueKey);
-
-          const assetKey = getAssetKey(e.asset);
-          if (!assetKey) continue;
-
-          // ... rest of legacy loop
-          // To simplify, I will just BREAK here if isFromTable, 
-          // because I already processed everything in the 'if (isFromTable)' block above.
-        }
-      }
-
-      // Close the loop
-      // ...
-
-      // Wait, 'calculateGbpValue' needs to be called inside the isFromTable loop.
-      // I added the call in the previous step.
-
-      // I will just close the previous replacement chunk cleanly.
-
-      // To strictly match the file content for replacement:
-      // I am replacing lines 3000-3000 (approx).
-
-      /*
-        Current state after Step 1716:
-        I replaced the START of the function.
-        Now I need to handle the "Loop Body" which is technically still there (the legacy one).
-        I see: 
-           for (const item of sourceData) {
-             let e, assetKey...
-             if (isFromTable) { ... continue; }
-             
-             // --- LEGACY LOOP starts here implicitly ---
-             e = item;
-             ...
-      */
-
-      // So I just need to make sure the legacy code below 'e = item' works.
-      // The previous block ended with 'e = item;'.
-      // The next lines in file are:
-      // // Prevent processing the same RefID...
-      // const uniqueKey = ...
-
-      // This looks compatible.
-      // I just need to define 'calculateGbpValue' so it can be used.
-      // I'll place it at the end of the file or logical scope.
-
-      return;
-
-      const amount = Math.abs(e.amount);
-
-      if (e.type === 'withdrawal') {
-        let recipient = "Unknown";
-        const hist = cacheData.withdrawalHistory.find(h => h.refid === e.refid);
-        if (hist) {
-          const info = hist.info || hist.address || "";
-          // Smart Match
-          const match = cacheData.krakenAddresses.find(a =>
-            (a.address && info.includes(a.address)) ||
-            (a.key && info.toLowerCase().includes(a.key.toLowerCase()))
-          );
-          if (match) recipient = match.key;
-          else if (info) recipient = info;
-        }
-
-        // Clean
-        recipient = recipient.replace(/\s*(XRP|USDT|TRC20|ERC20|BTC|ETH)\s*/gi, "").trim();
-        const words = recipient.split(/\s+/);
-        if (words.length > 2) recipient = words.slice(0, 2).join(" ");
-
-        if (assetKey === "USDT" || assetKey === "XRP") {
-          if (!cryptoTotals[recipient]) cryptoTotals[recipient] = { USDT: 0, XRP: 0, USDT_GBP: 0, XRP_GBP: 0 };
-          cryptoTotals[recipient][assetKey] += amount;
-
-          // Calculate GBP Value
-          // Enhanced Logic (v2.76): Try to identify specific trade counterpart first
-          let gbpVal = 0;
-
-          // We need sortedLedger for matching
-          const sortedLedger = cacheData.withdrawals ? [...cacheData.withdrawals].sort((a, b) => a.time - b.time) : [];
-
-          // Helper for matching (inline for scope access or re-use)
-          // Note: In a full refactor these would be global helpers, but duplicating here for safety/isolation
-          const findTrade = (w) => {
-            const targetAmount = Math.abs(w.amount) + Math.abs(w.fee);
-            // Assuming 'e' is the withdrawal object from 'data' list, we need its index in sortedLedger?
-            // No, we can just search backwards from its time or ID.
-            // Searching by ID is safest to find 'self', then search back.
-            // Optimization: sortedLedger is potentially large.
-            // let's just find the index of 'e' in sortedLedger first.
-            const selfIdx = sortedLedger.findIndex(x => x.refid === w.refid);
-            if (selfIdx === -1) return null;
-
-            for (let i = selfIdx - 1; i >= 0 && i >= selfIdx - 10; i--) {
-              const prev = sortedLedger[i];
-              if (prev.type !== "trade") continue;
-              const prevAsset = (prev.asset || "").toUpperCase();
-              const wAsset = (w.asset || "").toUpperCase();
-              if (!wAsset.includes(prevAsset.replace("X", "")) && !prevAsset.includes(wAsset.replace("X", ""))) continue;
-
-              const tAmount = Math.abs(prev.amount);
-              if (Math.abs(tAmount - targetAmount) <= (targetAmount * 0.0001)) {
-                return { trade: prev, index: i };
-              }
-            }
-            return null;
-          };
-
-          const findFiat = (tradeIdx, cTrade) => {
-            for (let i = Math.max(0, tradeIdx - 5); i <= Math.min(sortedLedger.length - 1, tradeIdx + 5); i++) {
-              if (i === tradeIdx) continue;
-              const ent = sortedLedger[i];
-              if (ent.type !== "trade") continue;
-              const a = (ent.asset || "").toUpperCase();
-              if (a.includes("GBP") || a.includes("EUR") || a === "ZGBP") {
-                if (Math.abs(ent.time - cTrade.time) <= 60) return ent;
-              }
-            }
-            return null;
-          };
-
-          const match = findTrade(e);
-          let usedTrade = false;
-
-          if (match) {
-            const fiatT = findFiat(match.index, match.trade);
-            if (fiatT) {
-              const fiatAsset = (fiatT.asset || "").toUpperCase();
-              if (fiatAsset.includes("GBP") || fiatAsset === "ZGBP") {
-                gbpVal = Math.abs(fiatT.amount);
-                usedTrade = true;
-              } else if (fiatAsset.includes("EUR") || fiatAsset === "ZEUR") {
-                // Convert EUR to GBP?
-                // If we have EUR amount, we need EURGBP rate for that day
-                // For now, let's just use the cached exchange rate logic below but apply to this amount?
-                // Or, if strict, we verify. The report seems to want GBP Equivalent.
-                // If trade was EUR, we have EUR value.
-                // Let's fallback to rate lookup if not GBP.
-              }
-            }
-          }
-
-          if (!usedTrade) {
-            // Fallback: Use Daily Rate
-            const dt = new Date(e.time * 1000);
-            const y = dt.getUTCFullYear();
-            const m = String(dt.getUTCMonth() + 1).padStart(2, "0");
-            const dStr = String(dt.getUTCDate()).padStart(2, "0");
-            const dateKey = `${y}-${m}-${dStr}`;
-
-            let dailyRates = (cacheData.ratesCache && cacheData.ratesCache[dateKey]) ? cacheData.ratesCache[dateKey] : null;
-
-            let rate = 0;
-            if (dailyRates) {
-              if (assetKey === "USDT") rate = dailyRates.USDTGBP || 0;
-              if (assetKey === "XRP") rate = dailyRates.XRPGBP || 0;
-            }
-            gbpVal = amount * rate;
-          }
-
-          if (assetKey === "USDT") cryptoTotals[recipient].USDT_GBP += gbpVal;
-          if (assetKey === "XRP") cryptoTotals[recipient].XRP_GBP += gbpVal;
-
-        } else {
-          if (!fMap[recipient]) fMap[recipient] = { GBP: 0, EUR: 0 };
-          fMap[recipient][assetKey] += amount;
-        }
-
-      } else if (e.type === 'deposit') {
-        if (assetKey === 'GBP' || assetKey === 'EUR') {
-          depositTotals[assetKey] += amount;
-        }
-      }
-    } // End for loop
-
-    const cryptoRows = Object.keys(cryptoTotals).map(r => ({ recipient: r, ...cryptoTotals[r] })).sort((a, b) => a.recipient.localeCompare(b.recipient));
-    const fiatRows = Object.keys(fMap).map(r => ({ recipient: r, ...fMap[r] })).sort((a, b) => a.recipient.localeCompare(b.recipient));
-    const depositRows = [{ asset: "GBP", total: depositTotals.GBP }, { asset: "EUR", total: depositTotals.EUR }];
-
-    summaryRecords = { crypto: cryptoRows, fiat: fiatRows, deposits: depositRows };
-    localStorage.setItem("kraken_summary_staging", JSON.stringify(summaryRecords));
-
-    renderSummaryTable();
-  }
+      renderSummaryTable();
+    }
 
     function renderSummaryTable() {
       const div = document.getElementById("summaryReportArea");
@@ -3468,12 +3239,10 @@
 
         for (const r of summaryRecords.crypto) {
           html += '<tr>';
-          html += `<td style="padding:5px; border:1px solid #ddd; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escHtml(r.recipient)}">${escHtml(r.recipient)}</td>`;
-          // USDT
-          html += `<td style="padding:5px; border:1px solid #ddd; text-align:right;">${r.USDT > 0 ? r.USDT.toFixed(4) : "-"}</td>`;
-          html += `<td style="padding:5px; border:1px solid #ddd; text-align:right; color:#7f8c8d;">${r.USDT_GBP > 0 ? "£" + r.USDT_GBP.toFixed(2) : "-"}</td>`;
-          // XRP
-          html += `<td style="padding:5px; border:1px solid #ddd; text-align:right;">${r.XRP > 0 ? r.XRP.toFixed(4) : "-"}</td>`;
+          html += `<td style="padding:5px; border:1px solid #ddd; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escHtml(r.recipient)}">${escHtml(r.re      t)}                  // USDT
+          htm        d style="padding:5px; border:1px solid        ext-align:right;">${r.USDT > 0 ? r.USDT.toFixed(4) : "-"}</td>`;
+          html += `<td         adding:5           1px solid #ddd; text-align:right;             d;">${r.USDT_GBP >              SDT_GBP.toFixed(2) : "-"}</td>`;
+              RP             ml += `<td style="padding:5px; border:1px soli             align:righ              0 ?      .toFixed(4) : "-"}</td>`;
           html += `<td style="padding:5px; border:1px solid #ddd; text-align:right; color:#7f8c8d;">${r.XRP_GBP > 0 ? "£" + r.XRP_GBP.toFixed(2) : "-"}</td>`;
           html += '</tr>';
         }
