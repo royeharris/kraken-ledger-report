@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8" />
   <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport" />
-  <title>Kraken Ledger Report v2.82</title>
+  <title>Kraken Ledger Report v2.83</title>
   <script async defer src="https://accounts.google.com/gsi/client"></script>
   <script async defer src="https://apis.google.com/js/api.js"></script>
   <style>
@@ -411,7 +411,7 @@
       <div
         style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; position:relative;">
         <div class="branding-row" style="margin-bottom:0; line-height:1.2;">
-          <div><b>Kraken Reports</b> <span style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.82</span></div>
+          <div><b>Kraken Reports</b> <span style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.83</span></div>
           <div style="font-size:0.65rem; color:#b0b0b0; font-weight:400;">GBP, EUR, USDT, XRP transactions in Date
             range</div>
         </div>
@@ -632,12 +632,12 @@
     <button id="log_btn" onclick="toggleLog()"
       style="width:100%; padding:8px; margin-top:10px; background:#8e44ad; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Display
       Trace Log</button>
-    <div id="trace_log" onclick="toggleLog()">Trace: v2.82 Kraken Withdrawals Report initialized.</div>
+    <div id="trace_log" onclick="toggleLog()">Trace: v2.83 Kraken Withdrawals Report initialized.</div>
   </div>
 
   <script>
     const SHEET_ID = "1Vf0iqthwHv0kFqTRJkYShH_RBpbokLmiEDWGJN3Q_E";
-    const VER = "Kraken Withdrawals Report (v2.82)";
+    const VER = "Kraken Withdrawals Report (v2.83)";
     const KRAKEN_API_URL = "https://api.kraken.com";
 
     // Default API credentials (enter your own in API Config)
@@ -3322,7 +3322,12 @@
       html += `<th rowspan="2" class="w-bank-datetime" style="${hStyle}">Date</th>`;
       html += `<th rowspan="2" class="w-bank-datetime" style="${hStyle}">Time</th>`;
       html += `<th rowspan="2" class="w-type" style="${hStyle}">Type</th>`;
-      html += `<th rowspan="2" class="w-bank-details" style="${hStyle}">Description</th>`;
+      html += `<th rowspan="2" class="w-bank-details" style="${hStyle}">
+        Description<br/>
+        <input type="text" id="descFilterInput" placeholder="Filter..." 
+        style="width:90%; font-size:0.6rem; padding:2px; margin-top:2px;" 
+        onkeyup="filterDetails(this.value)" onclick="event.stopPropagation()">
+      </th>`;
 
       // Asset Columns (Dynamic)
       // Asset Columns (Dynamic)
@@ -3417,6 +3422,32 @@
 
       const div = document.getElementById("summaryReportArea");
       copyNodeText(div);
+    }
+
+    function filterDetails(query) {
+      const filter = query.toUpperCase();
+      const area = document.getElementById("bankReportArea");
+      if (!area) return;
+
+      const rows = area.getElementsByTagName("tr");
+      // Skip headers (first 2 rows usually, checking th vs td)
+      for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        const cells = row.getElementsByTagName("td");
+        if (cells.length > 3) {
+          // Description is usually index 3 (Date, Time, Type, Desc...)
+          // Using class 'w-bank-details' is safer? row.querySelector(".w-bank-details")
+          const descCell = row.querySelector(".w-bank-details");
+          if (descCell) {
+            const txt = descCell.textContent || descCell.innerText;
+            if (txt.toUpperCase().indexOf(filter) > -1) {
+              row.style.display = "";
+            } else {
+              row.style.display = "none";
+            }
+          }
+        }
+      }
     }
 
     function copyNodeText(node) {
