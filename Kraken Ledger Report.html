@@ -411,7 +411,7 @@
       <div
         style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; position:relative;">
         <div class="branding-row" style="margin-bottom:0; line-height:1.2;">
-          <div><b>Kraken Reports</b> <span style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.994</span></div>
+          <div><b>Kraken Reports</b> <span style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.995</span></div>
           <div style="font-size:0.65rem; color:#b0b0b0; font-weight:400;">GBP, EUR, USDT, XRP transactions in Date
             range</div>
         </div>
@@ -646,7 +646,7 @@
   <script>
 
     const SHEET_ID = "1Vf0iqthwHv0kFqTRJkYShH_RBpbokLmiEDWGJN3Q_E";
-    const VER = "Kraken Withdrawals Report (v2.994)";
+    const VER = "Kraken Withdrawals Report (v2.995)";
     const KRAKEN_API_URL = "https://api.kraken.com";
 
     // Default API credentials (enter your own in API Config)
@@ -2302,6 +2302,21 @@
       // Step 0: Validate date range
       const startDate = document.getElementById("startDate").value;
       const endDate = document.getElementById("endDate").value;
+
+      window.handleDateChange = function (id) {
+        const val = document.getElementById(id).value;
+        if (val) {
+          // Validation check if needed
+          const s = document.getElementById("startDate").value;
+          const e = document.getElementById("endDate").value;
+          if (s && e && s > e) {
+            alert("End Date cannot be before Start Date");
+            document.getElementById(id).value = "";
+            return;
+          }
+          updateStatus("Date Changed. Click 'Read Ledger' to refresh.", "active");
+        }
+      };
 
       if (!startDate || !endDate) {
         alert("Please select Start Date and End Date first.");
