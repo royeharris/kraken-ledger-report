@@ -411,7 +411,7 @@
       <div
         style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; position:relative;">
         <div class="branding-row" style="margin-bottom:0; line-height:1.2;">
-          <div><b>Kraken Reports</b> <span style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.88</span></div>
+          <div><b>Kraken Reports</b> <span style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.89</span></div>
           <div style="font-size:0.65rem; color:#b0b0b0; font-weight:400;">GBP, EUR, USDT, XRP transactions in Date
             range</div>
         </div>
@@ -646,7 +646,7 @@
   <script>
 
     const SHEET_ID = "1Vf0iqthwHv0kFqTRJkYShH_RBpbokLmiEDWGJN3Q_E";
-    const VER = "Kraken Withdrawals Report (v2.88)";
+    const VER = "Kraken Withdrawals Report (v2.89)";
     const KRAKEN_API_URL = "https://api.kraken.com";
 
     // Default API credentials (enter your own in API Config)
@@ -2949,6 +2949,55 @@
       } else {
         // Hide
         div.style.display = "none";
+      }
+    }
+
+    // v2.89: Table Filter Logic
+    function filterBankReport() {
+      const typeInput = document.getElementById("filterType");
+      const descInput = document.getElementById("filterDesc");
+
+      const typeFilter = typeInput ? typeInput.value.toUpperCase() : "";
+      const descFilter = descInput ? descInput.value.toUpperCase() : "";
+
+      const table = document.getElementById("bankStmtTable");
+      if (!table) return;
+
+      const trs = table.getElementsByTagName("tr");
+      // Start from 1 to skip header? Actually header has ID row maybe? 
+      // The header row containing inputs is row 0. Data starts at row 1.
+      // Wait, the new header structure puts inputs in the header. 
+      // Let's assume data rows are in <tbody>.
+      const tbody = table.getElementsByTagName("tbody")[0];
+      if (!tbody) return;
+
+      const rows = tbody.getElementsByTagName("tr");
+
+      for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        // Columns: 0=Date, 1=Time, 2=Type, 3=Balance(old?), 4=Desc... 
+        // Need to match Render Logic.
+        // Render Logic (Line 2850+):
+        // td0: Date
+        // td1: Time
+        // td2: Type
+        // td3: Balance (Debit/Credit logic?) - Wait, let's check render order.
+
+        // Let's grab text content by index, safer.
+        const cells = row.getElementsByTagName("td");
+        if (cells.length < 5) continue;
+
+        const typeTxt = cells[2].textContent || "";
+        const descTxt = cells[5].textContent || ""; // Description is usually col 5 ("Details")
+
+        const typeMatch = typeTxt.toUpperCase().indexOf(typeFilter) > -1;
+        const descMatch = descTxt.toUpperCase().indexOf(descFilter) > -1;
+
+        if (typeMatch && descMatch) {
+          row.style.display = "";
+        } else {
+          row.style.display = "none";
+        }
       }
     }
 
