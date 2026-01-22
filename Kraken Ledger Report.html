@@ -3237,13 +3237,13 @@
         html += '<th style="padding:4px; border:1px solid #ddd; text-align:right; font-size:0.65rem;">GBP Equivalent</th>';
         html += '</tr></thead><tbody>';
 
-        for (const r of summaryRecords.crypto) {
-          html += '<tr>';
-          html += `<td style="padding:5px; border:1px solid #ddd; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escHtml(r.recipient)}">${escHtml(r.re      t)}                  // USDT
-          htm        d style="padding:5px; border:1px solid        ext-align:right;">${r.USDT > 0 ? r.USDT.toFixed(4) : "-"}</td>`;
-          html += `<td         adding:5           1px solid #ddd; text-align:right;             d;">${r.USDT_GBP > SDT_GBP.toFixed(2) : "-"
-        }</td > `;
-              RP             ml += `< td style = "padding:5px; border:1px soli             align:righ              0 ?      .toFixed(4) : " - "}</td>`;
+        html += '<tr>';
+        html += `<td style="padding:5px; border:1px solid #ddd; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escHtml(r.recipient)}">${escHtml(r.recipient)}</td>`;
+        // USDT
+        html += `<td style="padding:5px; border:1px solid #ddd; text-align:right;">${r.USDT > 0 ? r.USDT.toFixed(4) : "-"}</td>`;
+        html += `<td style="padding:5px; border:1px solid #ddd; text-align:right; color:#7f8c8d;">${r.USDT_GBP > 0 ? "£" + r.USDT_GBP.toFixed(2) : "-"}</td>`;
+        // XRP
+        html += `<td style="padding:5px; border:1px solid #ddd; text-align:right;">${r.XRP > 0 ? r.XRP.toFixed(4) : "-"}</td>`;
         html += `<td style="padding:5px; border:1px solid #ddd; text-align:right; color:#7f8c8d;">${r.XRP_GBP > 0 ? "£" + r.XRP_GBP.toFixed(2) : "-"}</td>`;
         html += '</tr>';
       }
