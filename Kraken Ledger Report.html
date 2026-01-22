@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8" />
   <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport" />
-  <title>Kraken Ledger Report v2.73</title>
+  <title>Kraken Ledger Report v2.75</title>
   <script async defer src="https://accounts.google.com/gsi/client"></script>
   <script async defer src="https://apis.google.com/js/api.js"></script>
   <style>
@@ -411,7 +411,7 @@
       <div
         style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; position:relative;">
         <div class="branding-row" style="margin-bottom:0; line-height:1.2;">
-          <div><b>Kraken Reports</b> <span style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.73</span></div>
+          <div><b>Kraken Reports</b> <span style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.75</span></div>
           <div style="font-size:0.65rem; color:#b0b0b0; font-weight:400;">GBP, EUR, USDT, XRP transactions in Date
             range</div>
         </div>
@@ -632,12 +632,12 @@
     <button id="log_btn" onclick="toggleLog()"
       style="width:100%; padding:8px; margin-top:10px; background:#8e44ad; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Display
       Trace Log</button>
-    <div id="trace_log" onclick="toggleLog()">Trace: v2.73 Kraken Withdrawals Report initialized.</div>
+    <div id="trace_log" onclick="toggleLog()">Trace: v2.75 Kraken Withdrawals Report initialized.</div>
   </div>
 
   <script>
     const SHEET_ID = "1Vf0iqthwHv0kFqTRJkYShH_RBpbokLmiEDWGJN3Q_E";
-    const VER = "Kraken Withdrawals Report (v2.73)";
+    const VER = "Kraken Withdrawals Report (v2.75)";
     const KRAKEN_API_URL = "https://api.kraken.com";
 
     // Default API credentials (enter your own in API Config)
@@ -3080,7 +3080,7 @@
         }
       }
 
-      const cryptoRows = Object.keys(cMap).map(r => ({ recipient: r, ...cMap[r] })).sort((a, b) => a.recipient.localeCompare(b.recipient));
+      const cryptoRows = Object.keys(cryptoTotals).map(r => ({ recipient: r, ...cryptoTotals[r] })).sort((a, b) => a.recipient.localeCompare(b.recipient));
       const fiatRows = Object.keys(fMap).map(r => ({ recipient: r, ...fMap[r] })).sort((a, b) => a.recipient.localeCompare(b.recipient));
       const depositRows = [{ asset: "GBP", total: depositTotals.GBP }, { asset: "EUR", total: depositTotals.EUR }];
 
@@ -3120,7 +3120,7 @@
 
       // --- 1. CRYPTO TABLE (2-Line Header) ---
       if (summaryRecords.crypto.length > 0) {
-        html += '<div style="background:#8e44ad; color:#fff; padding:5px 10px; font-size:0.7rem; font-weight:bold; border-radius:4px 4px 0 0; margin-bottom:0;">Transfers to Recipient - Summary (crypto)</div>';
+        html += '<div style="background:#8e44ad; color:#fff; padding:5px 10px; font-size:0.7rem; font-weight:bold; border-radius:4px 4px 0 0; margin-bottom:0;">Withdrawals to Recipients (USDT, XRP)</div>';
         html += '<div style="overflow-x:auto;">';
         html += '<table style="width:100%; border-collapse:collapse; margin-bottom:20px; border:1px solid #ddd; table-layout:fixed;">';
 
@@ -3155,7 +3155,7 @@
 
       // --- 2. FIAT TABLE ---
       if (summaryRecords.fiat.length > 0) {
-        html += '<div style="background:#27ae60; color:#fff; padding:5px 10px; font-size:0.7rem; font-weight:bold; border-radius:4px 4px 0 0; margin-bottom:0;">Withdrawals to Haricom Bank Account - summary(GBP, EUR)</div>';
+        html += '<div style="background:#27ae60; color:#fff; padding:5px 10px; font-size:0.7rem; font-weight:bold; border-radius:4px 4px 0 0; margin-bottom:0;">Withdrawals to Haricom Bank Accounts (GBP, EUR)</div>';
         html += '<div style="overflow-x:auto;">';
         html += '<table style="width:100%; border-collapse:collapse; margin-bottom:20px; border:1px solid #ddd; table-layout:fixed;">';
         html += '<thead style="background:#f9f9f9;"><tr>';
@@ -3176,7 +3176,7 @@
 
       // --- 3. FIAT DEPOSITS ---
       if (summaryRecords.deposits.length > 0) {
-        html += '<div style="background:#27ae60; color:#fff; padding:5px 10px; font-size:0.7rem; font-weight:bold; border-radius:4px 4px 0 0; margin-bottom:0;">Fiat Deposits</div>';
+        html += '<div style="background:#27ae60; color:#fff; padding:5px 10px; font-size:0.7rem; font-weight:bold; border-radius:4px 4px 0 0; margin-bottom:0;">Fiat Deposits - from Haricom Bank Account (GBP, EUR)</div>';
         html += '<table style="width:100%; border-collapse:collapse; margin-bottom:0; border:1px solid #ddd;">';
         html += '<thead><tr style="background:#f2f2f2;">';
         html += '<th style="padding:4px; border:1px solid #ddd; text-align:left;">Asset</th>';
