@@ -411,7 +411,7 @@
       <div
         style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; position:relative;">
         <div class="branding-row" style="margin-bottom:0; line-height:1.2;">
-          <div><b>Kraken Reports</b> <span style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.94</span></div>
+          <div><b>Kraken Reports</b> <span style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.95</span></div>
           <div style="font-size:0.65rem; color:#b0b0b0; font-weight:400;">GBP, EUR, USDT, XRP transactions in Date
             range</div>
         </div>
@@ -646,7 +646,7 @@
   <script>
 
     const SHEET_ID = "1Vf0iqthwHv0kFqTRJkYShH_RBpbokLmiEDWGJN3Q_E";
-    const VER = "Kraken Withdrawals Report (v2.94)";
+    const VER = "Kraken Withdrawals Report (v2.95)";
     const KRAKEN_API_URL = "https://api.kraken.com";
 
     // Default API credentials (enter your own in API Config)
@@ -2848,6 +2848,39 @@
           if (e.type === 'withdrawal' || e.type === 'deposit') {
             // Try to get recipient name from address book logic
             const normalizedAsset = (e.asset.includes("XRP") || e.asset === "XXRP") ? "XRP" : (e.asset.includes("USDT") ? "USDT" : e.asset);
+
+            // v2.95: Try to find calculated GBP value from Withdrawal Cache (Re-applying v2.90 fix + Fallback)
+            let foundGbp = 0;
+            if (cacheData.withdrawalCache) {
+              // Try exact RefID match
+              let match = cacheData.withdrawalCache.find(w => w.refid === e.refid);
+              // Fallback Match
+              if (!match) {
+                match = cacheData.withdrawalCache.find(w =>
+                  Math.abs(w.time - e.time) < 5 &&
+                  Math.abs(w.amount - e.amount) < 0.0001 &&
+                  w.asset === normalizedAsset
+                );
+              }
+              if (match && match.gbpSent) foundGbp = parseFloat(match.gbpSent);
+            }
+
+            // Fallback: Calculate from Rates if still missing
+            if (!foundGbp && Math.abs(e.amount) > 0) {
+              const dObj = new Date(e.time * 1000);
+              const dStr = dObj.toISOString().split('T')[0];
+              const dayRates = cacheData.ratesCache[dStr];
+              if (dayRates) {
+                let rate = 0;
+                if (normalizedAsset === "USDT") rate = dayRates.USDTGBP || 0;
+                else if (normalizedAsset === "XRP") rate = dayRates.XRPGBP || 0;
+                if (rate > 0) foundGbp = (Math.abs(e.amount) * rate).toFixed(2);
+              }
+            }
+
+            // Store queryable GBP in row
+            if (!row.gbpValues) row.gbpValues = {};
+            if (foundGbp) row.gbpValues[normalizedAsset] = parseFloat(foundGbp);
 
             // Default Detail
             detail = (e.type === 'withdrawal') ? `Withdrawal` : `Deposit`;
