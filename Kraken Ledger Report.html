@@ -207,11 +207,11 @@
     }
 
     table {
-      min-width: 1800px;
-      width: 1800px;
+      width: 100%;
       border-collapse: collapse;
       font-size: 0.58rem;
-      table-layout: fixed;
+      table-layout: auto;
+      /* Allow columns to adapt */
       font-family: inherit;
     }
 
@@ -247,107 +247,66 @@
       box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
     }
 
-    /* Column widths - use min-width to prevent shrinking with fixed table layout */
+    /* Column widths - optimized for screen fit */
     .w-date {
-      min-width: 6ch;
-      width: 6ch;
-      /* fits "Date" + padding */
+      width: 50px;
     }
 
     .w-type {
-      min-width: 10ch;
-      width: 10ch;
-      /* fits "withdrawal" = 10 chars */
+      width: 70px;
     }
 
     .w-time {
-      min-width: 6ch;
-      width: 6ch;
-      /* fits "Time (UTC)" abbreviated */
+      width: 45px;
       text-align: center;
     }
 
     .w-recipient {
-      min-width: 8ch;
-      width: 8ch;
-      /* -5ch as requested */
+      width: 80px;
     }
 
     .w-sentto {
-      min-width: 14ch;
-      width: 14ch;
+      width: 90px;
     }
 
     .w-asset {
-      min-width: 3ch;
-      width: 3ch;
-      /* -2ch as requested */
+      width: 30px;
       text-align: center;
     }
 
-    .w-amount {
-      min-width: 6ch;
-
-      .w-balance {
-        width: 6ch;
-        text-align: right;
-      }
-
-      .w-cur {
-        min-width: 9ch;
-        width: 9ch;
-        /* fits "Conv Currency" */
-        text-align: center;
-      }
-
-      .w-gbp {
-        min-width: 4ch;
-        width: 4ch;
-        text-align: right;
-      }
-
-      .w-gbpfee {
-        min-width: 6ch;
-        width: 6ch;
-        /* fits "GBP Fee" header */
-        text-align: right;
-      }
-
-      .w-desttag {
-        min-width: 10ch;
-        width: 10ch;
-      }
-
-      .w-wallet {
-        min-width: 30ch;
-        width: 30ch;
-      }
-
-      .w-txid {
-        min-width: 21ch;
-        width: 21ch;
-      }
-
-      .w-source {
-        min-width: 9ch;
-        width: 9ch;
-      }
-
-      .w-fee {
-        min-width: 5ch;
-        width: 5ch;
-        text-align: right;
-      }
-
-      .w-rate {
-        min-width: 9ch;
-        width: 9ch;
-        /* fits "Conv Rate" */
-        text-align: right;
-      }
-
-      width: 6ch;
+    .w-amount,
+    .w-balance,
+    .w-fee,
+    .w-gbp,
+    .w-gbpfee {
       text-align: right;
+      white-space: nowrap;
+    }
+
+    .w-rate {
+      width: 60px;
+      text-align: right;
+    }
+
+    .w-cur {
+      width: 50px;
+      text-align: center;
+    }
+
+    .w-desttag {
+      width: 60px;
+    }
+
+    .w-txid {
+      width: 80px;
+    }
+
+    .w-source {
+      width: 60px;
+    }
+
+    .w-wallet {
+      width: 120px;
     }
 
     /* Bank Report specific columns */
@@ -673,12 +632,12 @@
     <button id="log_btn" onclick="toggleLog()"
       style="width:100%; padding:8px; margin-top:10px; background:#8e44ad; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Display
       Trace Log</button>
-    <div id="trace_log" onclick="toggleLog()">Trace: v2.57 Kraken Withdrawals Report initialized.</div>
+    <div id="trace_log" onclick="toggleLog()">Trace: v2.58 Kraken Withdrawals Report initialized.</div>
   </div>
 
   <script>
     const SHEET_ID = "1Vf0iqthwHv0kFqTRJkYShH_RBpbokLmiEDWGJN3Q_E";
-    const VER = "Kraken Withdrawals Report (v2.57)";
+    const VER = "Kraken Withdrawals Report (v2.58)";
     const KRAKEN_API_URL = "https://api.kraken.com";
 
     // Default API credentials (enter your own in API Config)
