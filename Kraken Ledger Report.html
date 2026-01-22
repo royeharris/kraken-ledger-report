@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8" />
   <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport" />
-  <title>Kraken Ledger Report v2.77</title>
+  <title>Kraken Ledger Report v2.79</title>
   <script async defer src="https://accounts.google.com/gsi/client"></script>
   <script async defer src="https://apis.google.com/js/api.js"></script>
   <style>
@@ -411,7 +411,7 @@
       <div
         style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; position:relative;">
         <div class="branding-row" style="margin-bottom:0; line-height:1.2;">
-          <div><b>Kraken Reports</b> <span style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.77</span></div>
+          <div><b>Kraken Reports</b> <span style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.79</span></div>
           <div style="font-size:0.65rem; color:#b0b0b0; font-weight:400;">GBP, EUR, USDT, XRP transactions in Date
             range</div>
         </div>
@@ -632,12 +632,12 @@
     <button id="log_btn" onclick="toggleLog()"
       style="width:100%; padding:8px; margin-top:10px; background:#8e44ad; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Display
       Trace Log</button>
-    <div id="trace_log" onclick="toggleLog()">Trace: v2.77 Kraken Withdrawals Report initialized.</div>
+    <div id="trace_log" onclick="toggleLog()">Trace: v2.79 Kraken Withdrawals Report initialized.</div>
   </div>
 
   <script>
     const SHEET_ID = "1Vf0iqthwHv0kFqTRJkYShH_RBpbokLmiEDWGJN3Q_E";
-    const VER = "Kraken Withdrawals Report (v2.77)";
+    const VER = "Kraken Withdrawals Report (v2.79)";
     const KRAKEN_API_URL = "https://api.kraken.com";
 
     // Default API credentials (enter your own in API Config)
@@ -1614,38 +1614,60 @@
             logTrace("KrakenStatement exported.");
           }
 
-          // 4. KrakenStatementSummary (New)
+          // 4. KrakenStatementSummary (v2.79 Fixed)
           if (hasSummary) {
-            // Section 1: Withdrawals
-            let s1Headers = ["WITHDRAWALS SUMMARY", "", "", "", ""];
-            let s1ColHeaders = ["Recipient", "USDT", "XRP", "GBP", "EUR"];
+            // Section 1: CRYPTO Withdrawals
+            // Headers: Recipient | USDT | GBP Equiv | XRP | GBP Equiv
+            let s1Headers = ["WITHDRAWALS (CRYPTO)", "", "", "", ""];
+            let s1ColHeaders = ["Recipient", "USDT Amount", "GBP Equivalent", "XRP Amount", "GBP Equivalent"];
 
-            const s1Rows = summaryRecords.withdrawals.map(r => [
-              r.recipient, r.USDT || 0, r.XRP || 0, r.GBP || 0, r.EUR || 0
+            const s1Rows = (summaryRecords.crypto || []).map(r => [
+              r.recipient,
+              r.USDT || 0, r.USDT_GBP || 0,
+              r.XRP || 0, r.XRP_GBP || 0
             ]);
 
-            // Section 2: Deposits
-            let s2Headers = ["DEPOSITS SUMMARY", ""];
-            let s2ColHeaders = ["Asset", "Total Amount"];
+            // Section 2: FIAT Withdrawals
+            // Headers: Recipient | GBP | EUR
+            let s2Headers = ["WITHDRAWALS (FIAT)", "", ""];
+            let s2ColHeaders = ["Recipient", "GBP Amount", "EUR Amount"];
 
-            const s2Rows = summaryRecords.deposits.map(r => [r.asset, r.total]); // GBP, EUR rows
+            const s2Rows = (summaryRecords.fiat || []).map(r => [
+              r.recipient, r.GBP || 0, r.EUR || 0
+            ]);
+
+            // Section 3: Deposits
+            // Headers: Asset | Total Amount
+            let s3Headers = ["DEPOSITS (FIAT)", ""];
+            let s3ColHeaders = ["Asset", "Total Amount"];
+
+            const s3Rows = (summaryRecords.deposits || []).map(r => [
+              r.asset, r.total
+            ]);
 
             const rangeReq = "'KrakenStatementSummary'!A:Z";
             await gapi.client.sheets.spreadsheets.values.clear({ spreadsheetId: SHEET_ID, range: rangeReq });
 
-            // Build one big array of values to write in one go? Or separate calls. Separate is easier logic.
-            // Write Withdrawals at top
+            // 1. Write Crypto
             await gapi.client.sheets.spreadsheets.values.update({
               spreadsheetId: SHEET_ID, range: "'KrakenStatementSummary'!A1", valueInputOption: "USER_ENTERED",
               resource: { values: [s1Headers, s1ColHeaders, ...s1Rows] }
             });
 
-            // Write Deposits below
-            const startRow = 1 + 2 + s1Rows.length + 2; // +2 for spacer
+            // 2. Write Fiat (below Crypto)
+            let currentRow = 1 + 2 + s1Rows.length + 2;
             await gapi.client.sheets.spreadsheets.values.update({
-              spreadsheetId: SHEET_ID, range: `'KrakenStatementSummary'!A${startRow}`, valueInputOption: "USER_ENTERED",
+              spreadsheetId: SHEET_ID, range: `'KrakenStatementSummary'!A${currentRow}`, valueInputOption: "USER_ENTERED",
               resource: { values: [s2Headers, s2ColHeaders, ...s2Rows] }
             });
+
+            // 3. Write Deposits (below Fiat)
+            currentRow = currentRow + 2 + s2Rows.length + 2;
+            await gapi.client.sheets.spreadsheets.values.update({
+              spreadsheetId: SHEET_ID, range: `'KrakenStatementSummary'!A${currentRow}`, valueInputOption: "USER_ENTERED",
+              resource: { values: [s3Headers, s3ColHeaders, ...s3Rows] }
+            });
+
             logTrace("KrakenStatementSummary exported.");
           }
 
@@ -3286,20 +3308,21 @@
         if (asset === "ZGBP") cleanAsset = "GBP";
         if (asset === "XXRP") cleanAsset = "XRP";
 
-        html += `<th colspan="3" class="section-border-left" style="text-align:center; border-bottom:none; background:#f9f9f9;">${cleanAsset}</th>`;
+        html += `<th colspan="4" class="section-border-left" style="text-align:center; border-bottom:none; background:#f9f9f9;">${cleanAsset}</th>`;
       });
       html += '</tr><tr>';
 
       // Sub-headers (Amounts)
       TRACKED_ASSETS.forEach(asset => {
-        html += `<th class="section-border-left" style="text-align:right; font-size:0.55rem; background:#f9f9f9;">Net Amount</th>`;
+        html += `<th class="section-border-left" style="text-align:right; font-size:0.55rem; background:#f9f9f9;">Debit</th>`;
+        html += `<th style="text-align:right; font-size:0.55rem; background:#f9f9f9;">Credit</th>`;
         html += `<th style="text-align:right; font-size:0.55rem; background:#f9f9f9;">Fee</th>`;
         html += `<th style="text-align:right; font-size:0.55rem; background:#f9f9f9;">Balance</th>`;
       });
       html += '</tr></thead><tbody>';
 
       if (bankRecords.length === 0) {
-        html += `<tr><td colspan="${4 + (TRACKED_ASSETS.length * 3)}" style="text-align:center; padding:10px;">No bank statement generated. Select dates and click the button.</td></tr>`;
+        html += `<tr><td colspan="${4 + (TRACKED_ASSETS.length * 4)}" style="text-align:center; padding:10px;">No bank statement generated. Select dates and click the button.</td></tr>`;
       } else {
         for (const r of bankRecords) {
           // Rule: Only bold the Closing Balance (or Opening?) - User said "remove bold from balances"
@@ -3332,13 +3355,19 @@
 
             const dec = (asset === "USDT" || asset === "XRP") ? 4 : 2;
 
-            const showAmt = (amt !== undefined) ? amt.toFixed(dec) : "";
+            // Split Debit/Credit
+            // Debit: Negative amount (withdrawals/sends/trades out). Show as Positive.
+            // Credit: Positive amount (deposits/trades in). Show as Positive.
+            const showDeb = (amt !== undefined && amt < 0) ? Math.abs(amt).toFixed(dec) : "";
+            const showCred = (amt !== undefined && amt > 0) ? Math.abs(amt).toFixed(dec) : "";
+
             const showFee = (fee !== undefined && fee > 0) ? fee.toFixed(dec) : "";
             const showBal = (bal !== undefined) ? bal.toFixed(dec) : "0.00";
 
             // Ensure individual cells aren't bold unless row is
-            html += `<td class="w-bank-val section-border-left" style="padding:4px; border-bottom:1px solid #eee;">${showAmt}</td>`;
-            html += `<td class="w-bank-val" style="padding:4px; border-bottom:1px solid #eee; color:#c0392b;">${showFee}</td>`;
+            html += `<td class="w-bank-val section-border-left" style="padding:4px; border-bottom:1px solid #eee; color:#c0392b;">${showDeb}</td>`;
+            html += `<td class="w-bank-val" style="padding:4px; border-bottom:1px solid #eee; color:#27ae60;">${showCred}</td>`;
+            html += `<td class="w-bank-val" style="padding:4px; border-bottom:1px solid #eee; color:#7f8c8d;">${showFee}</td>`;
             html += `<td class="w-bank-bal" style="padding:4px; border-bottom:1px solid #eee;">${showBal}</td>`;
           });
           html += `</tr>`;
