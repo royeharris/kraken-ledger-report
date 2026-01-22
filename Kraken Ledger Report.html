@@ -651,11 +651,7 @@
         style="flex:1; padding:8px 4px; background:#8e44ad; color:#fff; border:none; border-radius:4px; font-size:0.65rem; font-weight:600; cursor:pointer;">Load<br />Local</button>
     </div>
 
-    <div style="display:flex; gap:6px; margin-top:10px;">
-      <button onclick="copyReportToClipboard()"
-        style="flex:1; padding:8px 4px; background:#16a085; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">📋
-        Copy Report to Clipboard</button>
-    </div>
+    <!-- Copy Button moved inside Report -->
 
     <button id="report_btn" onclick="toggleReportViewer()"
       style="width:100%; padding:8px; margin-top:10px; background:#e67e22; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Display
@@ -1316,6 +1312,23 @@
       });
     }
 
+    function copyReportToClipboard() {
+      if (!stagingRecords || stagingRecords.length === 0) {
+        alert("No report data to copy.");
+        return;
+      }
+
+      let text = "Date\tType\tTime\tRecipient\tSentTo\tGBPSent\tAmount\tFee\tAsset\tGBPFee\tRate\tCurrency\tSource\tDest\tTag\tTxID\n";
+
+      for (const r of stagingRecords) {
+        text += `${r.dateSent}\t${r.type}\t${r.timeSent}\t${r.recipient}\t${r.sentTo}\t${r.gbpSent}\t${r.amount}\t${r.fee}\t${r.asset}\t${r.gbpFee}\t${r.conversionRate}\t${r.conversionCurrency}\t${r.rateSource}\t${r.wallet}\t${r.destTag}\t${r.txId}\n`;
+      }
+
+      navigator.clipboard.writeText(text).then(() => {
+        alert("Report copied to clipboard (CSV/Tab-delimited)!");
+      });
+    }
+
     function copyLedgerToClipboard() {
       if (cacheData.withdrawals.length === 0) {
         alert("No ledger data to copy.");
@@ -1342,7 +1355,12 @@
       }
       if (hint) hint.textContent = stagingRecords.length + " Report record(s)";
 
-      let html = '<table><thead><tr>';
+      let html = '<div style="position:relative; background:#e67e22; color:#fff; padding:5px 10px; font-size:0.7rem; font-weight:bold; border-radius:4px 4px 0 0; display:flex; justify-content:space-between; align-items:center;">';
+      html += '<span>Trade/Withdrawal Report</span>';
+      html += '<button onclick="copyReportToClipboard()" title="Copy Table" style="padding:2px 8px; background:#fff; color:#d35400; border:none; border-radius:3px; font-size:0.6rem; cursor:pointer;">📋 Copy CSV</button>';
+      html += '</div>';
+
+      html += '<table style="width:100%; border-collapse:collapse;"><thead><tr>';
       html += '<th class="w-date">Date</th>';
       html += '<th class="w-type">Type</th>';
       html += '<th class="w-time">Time (UTC)</th>';
