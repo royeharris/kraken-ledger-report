@@ -1207,6 +1207,25 @@
 
       logTrace("=== GENERATE REPORT ===");
 
+      // Auto-Clear other reports to prevent stale data
+      bankRecords = [];
+      summaryRecords = { withdrawals: [], deposits: [] };
+      localStorage.removeItem("kraken_bank_staging");
+      localStorage.removeItem("kraken_summary_staging");
+
+      const bankArea = document.getElementById("bankReportArea");
+      if (bankArea) bankArea.style.display = "none";
+      const summArea = document.getElementById("summaryReportArea");
+      if (summArea) summArea.style.display = "none";
+
+      const sBtn = document.getElementById("btn_bank_statement");
+      if (sBtn) {
+        // Reset button text in case it was stuck
+        if (sBtn.textContent === "Generating...") sBtn.textContent = "Kraken Statement (Select Dates)";
+        // Update label with dates if possible, or just reset to default
+        // We'll let the user click "Kraken Statement" again to refresh the label/data
+      }
+
       // Check prerequisites
       if (cacheData.withdrawals.length === 0) {
         alert("No ledger data loaded. Please click 'Read Ledger' first.");
