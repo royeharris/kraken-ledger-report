@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8" />
   <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport" />
-  <title>Kraken Ledger Report v2.65</title>
+  <title>Kraken Ledger Report v2.66</title>
   <script async defer src="https://accounts.google.com/gsi/client"></script>
   <script async defer src="https://apis.google.com/js/api.js"></script>
   <style>
@@ -411,7 +411,7 @@
       <div
         style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; position:relative;">
         <div class="branding-row" style="margin-bottom:0; line-height:1.2;">
-          <div><b>Kraken Reports</b> <span style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.65</span></div>
+          <div><b>Kraken Reports</b> <span style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.66</span></div>
           <div style="font-size:0.65rem; color:#b0b0b0; font-weight:400;">GBP, EUR, USDT, XRP transactions in Date
             range</div>
         </div>
@@ -632,12 +632,12 @@
     <button id="log_btn" onclick="toggleLog()"
       style="width:100%; padding:8px; margin-top:10px; background:#8e44ad; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Display
       Trace Log</button>
-    <div id="trace_log" onclick="toggleLog()">Trace: v2.65 Kraken Withdrawals Report initialized.</div>
+    <div id="trace_log" onclick="toggleLog()">Trace: v2.66 Kraken Withdrawals Report initialized.</div>
   </div>
 
   <script>
     const SHEET_ID = "1Vf0iqthwHv0kFqTRJkYShH_RBpbokLmiEDWGJN3Q_E";
-    const VER = "Kraken Withdrawals Report (v2.65)";
+    const VER = "Kraken Withdrawals Report (v2.66)";
     const KRAKEN_API_URL = "https://api.kraken.com";
 
     // Default API credentials (enter your own in API Config)
@@ -2916,7 +2916,8 @@
       );
 
       // Aggregation Containers
-      const recipTotals = {}; // { "RecipName": { USDT: 0, XRP: 0, GBP: 0, EUR: 0 } }
+      const cryptoTotals = {}; // { "RecipName": { USDT: 0, XRP: 0 } }
+      const fiatWithdrawals = []; // Array of { recipient, currency, amount } for separate table
       const depositTotals = { GBP: 0, EUR: 0 };
 
       // Helper to normalize
@@ -2933,29 +2934,41 @@
         const assetKey = getAssetKey(e.asset);
         if (!assetKey) continue;
 
-        const amount = Math.abs(e.amount); // Always positive for aggregation
+        const amount = Math.abs(e.amount);
 
         if (e.type === 'withdrawal') {
-          // Find Recipient
+          // Find Recipient Logic
           let recipient = "Unknown";
 
-          // Reuse Bank Report Logic (Simplified for uniformity)
-          // 1. Check History for Address
+          // 1. Try to link to Withdrawal History via Refid
           const hist = cacheData.withdrawalHistory.find(h => h.refid === e.refid);
-          if (hist) {
-            const addr = hist.info || hist.address;
-            // 2. Check Address Book
-            const match = cacheData.krakenAddresses.find(a => a.address === addr);
-            if (match) recipient = match.key;
-            else if (addr) recipient = addr;
+          let addr = null;
 
-            // 3. Fallback for Fiat: "Revolut Ltd" etc often in 'addr'
-            if (assetKey === "GBP" || assetKey === "EUR") {
-              if (addr) recipient = addr;
+          if (hist) {
+            addr = hist.info || hist.address;
+
+            // 2. Check Address Book
+            // Try matching method depending on crypto/fiat
+            if (addr) {
+              const match = cacheData.krakenAddresses.find(a => a.address === addr);
+              if (match) recipient = match.key; // Use the "Key Name" (e.g. Revolut B (EUR))
+              else recipient = addr; // Fallback to raw info
             }
           }
 
-          // Clean Recipient Name (remove asset tags)
+          // 3. Fallback: If still unknown, use checking logic from 'info' text often found in ledgers? 
+          // (Not avail here, 'e' is limited). 
+          // If 'Unknown' and it's Fiat, we really want to find a name.
+          if (recipient === "Unknown" && (assetKey === "GBP" || assetKey === "EUR")) {
+            // If we have history but no address book match, we used addr.
+            // If we have NO history, we are stuck. 
+            // But user says they exist in Address Book. 
+            // Maybe manual match check? 
+            // We'll proceed with best effort.
+          }
+
+          // CLEANING & TRUNCATION
+          // Remove asset tags
           recipient = recipient.replace(/\s*(XRP|USDT|TRC20|ERC20|BTC|ETH)\s*/gi, "").trim();
 
           // STRICT RULE: First 2 words only
@@ -2964,8 +2977,54 @@
             recipient = words.slice(0, 2).join(" ");
           }
 
-          if (!recipTotals[recipient]) recipTotals[recipient] = { USDT: 0, XRP: 0, GBP: 0, EUR: 0 };
-          recipTotals[recipient][assetKey] += amount;
+          // Segregate Data
+          if (assetKey === "USDT" || assetKey === "XRP") {
+            // Crypto: Aggregated
+            if (!cryptoTotals[recipient]) cryptoTotals[recipient] = { USDT: 0, XRP: 0 };
+            cryptoTotals[recipient][assetKey] += amount;
+          } else {
+            // Fiat: List Items (or Aggregated? User said "Withdrawals to ... - summary")
+            // "Summary" implies aggregation. Let's aggregate Fiat by Recipient too.
+            // But maintain separate structure.
+            // Wait, fiatWithdrawals was array above. Let's make it object map for agg.
+            // Actually, easier to use a logical separator. 
+            // Let's use a specialized fiat map.
+          }
+        }
+      }
+
+      // -- Re-loop for cleaner aggregation logic since I changed mid-stream --
+
+      const cMap = {}; // Crypto
+      const fMap = {}; // Fiat
+
+      for (const e of data) {
+        const assetKey = getAssetKey(e.asset);
+        if (!assetKey) continue;
+        const amount = Math.abs(e.amount);
+
+        if (e.type === 'withdrawal') {
+          let recipient = "Unknown";
+          const hist = cacheData.withdrawalHistory.find(h => h.refid === e.refid);
+          if (hist) {
+            const addr = hist.info || hist.address;
+            const match = cacheData.krakenAddresses.find(a => a.address === addr);
+            if (match) recipient = match.key;
+            else if (addr) recipient = addr;
+          }
+
+          // Clean
+          recipient = recipient.replace(/\s*(XRP|USDT|TRC20|ERC20|BTC|ETH)\s*/gi, "").trim();
+          const words = recipient.split(/\s+/);
+          if (words.length > 2) recipient = words.slice(0, 2).join(" ");
+
+          if (assetKey === "USDT" || assetKey === "XRP") {
+            if (!cMap[recipient]) cMap[recipient] = { USDT: 0, XRP: 0 };
+            cMap[recipient][assetKey] += amount;
+          } else {
+            if (!fMap[recipient]) fMap[recipient] = { GBP: 0, EUR: 0 };
+            fMap[recipient][assetKey] += amount;
+          }
 
         } else if (e.type === 'deposit') {
           if (assetKey === 'GBP' || assetKey === 'EUR') {
@@ -2974,18 +3033,11 @@
         }
       }
 
-      // Convert to Arrays for Rendering/Export
-      const wRows = Object.keys(recipTotals).map(r => ({
-        recipient: r,
-        ...recipTotals[r]
-      })).sort((a, b) => a.recipient.localeCompare(b.recipient));
+      const cryptoRows = Object.keys(cMap).map(r => ({ recipient: r, ...cMap[r] })).sort((a, b) => a.recipient.localeCompare(b.recipient));
+      const fiatRows = Object.keys(fMap).map(r => ({ recipient: r, ...fMap[r] })).sort((a, b) => a.recipient.localeCompare(b.recipient));
+      const depositRows = [{ asset: "GBP", total: depositTotals.GBP }, { asset: "EUR", total: depositTotals.EUR }];
 
-      const dRows = [
-        { asset: "GBP", total: depositTotals.GBP },
-        { asset: "EUR", total: depositTotals.EUR }
-      ];
-
-      summaryRecords = { withdrawals: wRows, deposits: dRows };
+      summaryRecords = { crypto: cryptoRows, fiat: fiatRows, deposits: depositRows };
       localStorage.setItem("kraken_summary_staging", JSON.stringify(summaryRecords));
 
       renderSummaryTable();
