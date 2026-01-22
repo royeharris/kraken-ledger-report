@@ -411,7 +411,7 @@
       <div
         style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; position:relative;">
         <div class="branding-row" style="margin-bottom:0; line-height:1.2;">
-          <div><b>Kraken Reports</b> <span style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.92</span></div>
+          <div><b>Kraken Reports</b> <span style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.93</span></div>
           <div style="font-size:0.65rem; color:#b0b0b0; font-weight:400;">GBP, EUR, USDT, XRP transactions in Date
             range</div>
         </div>
@@ -646,7 +646,7 @@
   <script>
 
     const SHEET_ID = "1Vf0iqthwHv0kFqTRJkYShH_RBpbokLmiEDWGJN3Q_E";
-    const VER = "Kraken Withdrawals Report (v2.92)";
+    const VER = "Kraken Withdrawals Report (v2.93)";
     const KRAKEN_API_URL = "https://api.kraken.com";
 
     // Default API credentials (enter your own in API Config)
@@ -2987,11 +2987,19 @@
         // td3: Balance (Debit/Credit logic?) - Wait, let's check render order.
 
         // Let's grab text content by index, safer.
+        // Columns: 0=Date, 1=Time, 2=Type(dep/wd/trade), 3=Desc(Details), 4=GBP(Debit), 5=GBP(Credit)...
+        // Correct Render Mapping (renderBankTable):
+        // td0: Date
+        // td1: Time
+        // td2: Type (class 'type-col')
+        // td3: Description (class 'desc-col') <-- This is index 3!
+
         const cells = row.getElementsByTagName("td");
-        if (cells.length < 5) continue;
+        if (cells.length < 4) continue;
 
         const typeTxt = cells[2].textContent || "";
-        const descTxt = cells[5].textContent || ""; // Description is usually col 5 ("Details")
+        // v2.93 Fix: Description is at index 3, not 5
+        const descTxt = cells[3].textContent || "";
 
         const typeMatch = typeTxt.toUpperCase().indexOf(typeFilter) > -1;
         const descMatch = descTxt.toUpperCase().indexOf(descFilter) > -1;
