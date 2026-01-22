@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8" />
   <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport" />
-  <title>Kraken Ledger Report v2.79</title>
+  <title>Kraken Ledger Report v2.81</title>
   <script async defer src="https://accounts.google.com/gsi/client"></script>
   <script async defer src="https://apis.google.com/js/api.js"></script>
   <style>
@@ -411,7 +411,7 @@
       <div
         style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; position:relative;">
         <div class="branding-row" style="margin-bottom:0; line-height:1.2;">
-          <div><b>Kraken Reports</b> <span style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.79</span></div>
+          <div><b>Kraken Reports</b> <span style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.81</span></div>
           <div style="font-size:0.65rem; color:#b0b0b0; font-weight:400;">GBP, EUR, USDT, XRP transactions in Date
             range</div>
         </div>
@@ -632,12 +632,12 @@
     <button id="log_btn" onclick="toggleLog()"
       style="width:100%; padding:8px; margin-top:10px; background:#8e44ad; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Display
       Trace Log</button>
-    <div id="trace_log" onclick="toggleLog()">Trace: v2.79 Kraken Withdrawals Report initialized.</div>
+    <div id="trace_log" onclick="toggleLog()">Trace: v2.81 Kraken Withdrawals Report initialized.</div>
   </div>
 
   <script>
     const SHEET_ID = "1Vf0iqthwHv0kFqTRJkYShH_RBpbokLmiEDWGJN3Q_E";
-    const VER = "Kraken Withdrawals Report (v2.79)";
+    const VER = "Kraken Withdrawals Report (v2.81)";
     const KRAKEN_API_URL = "https://api.kraken.com";
 
     // Default API credentials (enter your own in API Config)
@@ -884,27 +884,42 @@
     // ---------- Status Display ----------
     function updateStatusCounts() {
       // Calculate categorized counts
-      let wCrypto = 0, wFiat = 0, dFiat = 0, trades = 0;
+      let wCrypto = 0, wFiat = 0, dFiat = 0;
+      let tradesFiatToCrypto = 0, tradesCryptoToFiat = 0;
 
       for (const w of cacheData.withdrawals) {
         const type = (w.type || "").toLowerCase();
         const asset = (w.asset || "").toUpperCase();
-        const isFiat = asset.includes("GBP") || asset.includes("EUR") || asset.includes("USD") || asset === "ZGBP" || asset === "ZEUR" || asset === "ZUSD";
+
+        // Fix v2.80: Strict Fiat Check (Exclude USDT)
+        // USDT contains "USD", so we must explicitly check.
+        // Known Fiat: GBP, EUR, USD, ZGBP, ZEUR, ZUSD.
+        // Known Crypto: USDT, XRP, XXRP, ETH, BTC, etc.
+        const isUSDT = asset.includes("USDT");
+        const isFiat = !isUSDT && (asset.includes("GBP") || asset.includes("EUR") || asset.includes("USD") || asset === "ZGBP" || asset === "ZEUR" || asset === "ZUSD");
 
         if (type === "withdrawal") {
           if (isFiat) wFiat++; else wCrypto++;
         } else if (type === "deposit") {
           if (isFiat) dFiat++;
         } else if (type === "trade") {
-          trades++;
+          // Count based on SPEND side (amount < 0) to avoid double counting pairs
+          // Fiat -> Crypto (Buy): Spend Fiat (Amount < 0, Asset Fiat)
+          // Crypto -> Fiat (Sell): Spend Crypto (Amount < 0, Asset Crypto)
+          if (w.amount < 0) {
+            if (isFiat) tradesFiatToCrypto++;
+            else tradesCryptoToFiat++;
+          }
         }
       }
 
+      const totalTrades = tradesFiatToCrypto + tradesCryptoToFiat;
+
       const summaryHtml = `
+        <div class="status-item"><span style="color:#d35400;">Addresses:</span> <b id="addressCount">${cacheData.krakenAddresses.length}</b></div>
         <div class="status-item"><span style="color:#27ae60;">Withdrawals:</span> <b>${wCrypto}</b> (Crypto) / <b>${wFiat}</b> (Fiat)</div>
         <div class="status-item"><span style="color:#2980b9;">Deposits:</span> <b>${dFiat}</b> (Fiat)</div>
-        <div class="status-item"><span style="color:#8e44ad;">Trades:</span> <b>${trades}</b></div>
-        <div class="status-item"><span style="color:#d35400;">Addr:</span> <b id="addressCount">${cacheData.krakenAddresses.length}</b></div>
+        <div class="status-item"><span style="color:#8e44ad;">Trades:</span> <b>${tradesFiatToCrypto}</b> (fiat&gt;crypto) / <b>${tradesCryptoToFiat}</b> (crypto&gt;fiat)</div>
       `;
 
       const el = document.getElementById("statusSummary");
@@ -1619,7 +1634,7 @@
             // Section 1: CRYPTO Withdrawals
             // Headers: Recipient | USDT | GBP Equiv | XRP | GBP Equiv
             let s1Headers = ["WITHDRAWALS (CRYPTO)", "", "", "", ""];
-            let s1ColHeaders = ["Recipient", "USDT Amount", "GBP Equivalent", "XRP Amount", "GBP Equivalent"];
+            let s1ColHeaders = ["Recipient", "USDT", "GBP Equivalent", "XRP Amount", "GBP Equivalent"];
 
             const s1Rows = (summaryRecords.crypto || []).map(r => [
               r.recipient,
@@ -1628,18 +1643,18 @@
             ]);
 
             // Section 2: FIAT Withdrawals
-            // Headers: Recipient | GBP | EUR
+            // Headers: Haricom Bank Account | GBP | EUR
             let s2Headers = ["WITHDRAWALS (FIAT)", "", ""];
-            let s2ColHeaders = ["Recipient", "GBP Amount", "EUR Amount"];
+            let s2ColHeaders = ["Haricom Bank Account", "GBP Amount", "EUR Amount"];
 
             const s2Rows = (summaryRecords.fiat || []).map(r => [
               r.recipient, r.GBP || 0, r.EUR || 0
             ]);
 
             // Section 3: Deposits
-            // Headers: Asset | Total Amount
+            // Headers: Currency | Total Amount
             let s3Headers = ["DEPOSITS (FIAT)", ""];
-            let s3ColHeaders = ["Asset", "Total Amount"];
+            let s3ColHeaders = ["Currency", "Total Amount"];
 
             const s3Rows = (summaryRecords.deposits || []).map(r => [
               r.asset, r.total
@@ -2973,9 +2988,18 @@
         return null;
       };
 
+      // Deduplication Set
+      const seenIds = new Set();
+
       for (const e of data) {
+        // Prevent processing the same RefID twice (fixes potential double counting)
+        if (seenIds.has(e.refid)) continue;
+        seenIds.add(e.refid);
+
         const assetKey = getAssetKey(e.asset);
         if (!assetKey) continue;
+
+        // ... rest of loop
 
         const amount = Math.abs(e.amount);
 
@@ -3223,7 +3247,7 @@
 
         // Header Row 2
         html += '<tr>';
-        html += '<th style="padding:4px; border:1px solid #ddd; text-align:right; font-size:0.65rem;">USDT Amount</th>';
+        html += '<th style="padding:4px; border:1px solid #ddd; text-align:right; font-size:0.65rem;">USDT</th>';
         html += '<th style="padding:4px; border:1px solid #ddd; text-align:right; font-size:0.65rem;">GBP Equivalent</th>';
         html += '<th style="padding:4px; border:1px solid #ddd; text-align:right; font-size:0.65rem;">XRP Amount</th>';
         html += '<th style="padding:4px; border:1px solid #ddd; text-align:right; font-size:0.65rem;">GBP Equivalent</th>';
@@ -3249,7 +3273,7 @@
         html += '<div style="overflow-x:auto;">';
         html += '<table style="width:100%; border-collapse:collapse; margin-bottom:20px; border:1px solid #ddd; table-layout:fixed;">';
         html += '<thead style="background:#f9f9f9;"><tr>';
-        html += '<th style="padding:6px; border:1px solid #ddd; text-align:left; width:50%;">Recipient</th>';
+        html += '<th style="padding:6px; border:1px solid #ddd; text-align:left; width:50%;">Haricom Bank Account</th>';
         html += '<th style="padding:6px; border:1px solid #ddd; text-align:right; width:25%;">GBP</th>';
         html += '<th style="padding:6px; border:1px solid #ddd; text-align:right; width:25%;">EUR</th>';
         html += '</tr></thead><tbody>';
@@ -3269,7 +3293,7 @@
         html += '<div style="background:#27ae60; color:#fff; padding:5px 10px; font-size:0.7rem; font-weight:bold; border-radius:4px 4px 0 0; margin-bottom:0;">Fiat Deposits - from Haricom Bank Account (GBP, EUR)</div>';
         html += '<table style="width:100%; border-collapse:collapse; margin-bottom:0; border:1px solid #ddd;">';
         html += '<thead><tr style="background:#f2f2f2;">';
-        html += '<th style="padding:4px; border:1px solid #ddd; text-align:left;">Asset</th>';
+        html += '<th style="padding:4px; border:1px solid #ddd; text-align:left;">Currency</th>';
         html += '<th style="padding:4px; border:1px solid #ddd; text-align:right;">Total Amount</th>';
         html += '</tr></thead><tbody>';
 
