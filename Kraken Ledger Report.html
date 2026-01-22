@@ -632,12 +632,12 @@
     <button id="log_btn" onclick="toggleLog()"
       style="width:100%; padding:8px; margin-top:10px; background:#8e44ad; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Display
       Trace Log</button>
-    <div id="trace_log" onclick="toggleLog()">Trace: v2.58 Kraken Withdrawals Report initialized.</div>
+    <div id="trace_log" onclick="toggleLog()">Trace: v2.59 Kraken Withdrawals Report initialized.</div>
   </div>
 
   <script>
     const SHEET_ID = "1Vf0iqthwHv0kFqTRJkYShH_RBpbokLmiEDWGJN3Q_E";
-    const VER = "Kraken Withdrawals Report (v2.58)";
+    const VER = "Kraken Withdrawals Report (v2.59)";
     const KRAKEN_API_URL = "https://api.kraken.com";
 
     // Default API credentials (enter your own in API Config)
@@ -1316,7 +1316,7 @@
 
       let html = '<div style="position:relative; background:#e67e22; color:#fff; padding:5px 10px; font-size:0.7rem; font-weight:bold; border-radius:4px 4px 0 0; display:flex; justify-content:space-between; align-items:center;">';
       html += '<span>Trade/Withdrawal Report</span>';
-      html += '<button onclick="copyReportToClipboard()" title="Copy Table" style="padding:2px 8px; background:#fff; color:#d35400; border:none; border-radius:3px; font-size:0.6rem; cursor:pointer;">📋 Copy CSV</button>';
+      html += '<button onclick="copyReportToClipboard()" title="Copy Table" style="padding:2px 8px; background:#fff; color:#d35400; border:none; border-radius:3px; font-size:0.6rem; cursor:pointer;">&#x2398; Copy Table</button>';
       html += '</div>';
 
       html += '<table style="width:100%; border-collapse:collapse;"><thead><tr>';
