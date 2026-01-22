@@ -411,7 +411,7 @@
       <div
         style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; position:relative;">
         <div class="branding-row" style="margin-bottom:0; line-height:1.2;">
-          <div><b>Kraken Reports</b> <span style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.89</span></div>
+          <div><b>Kraken Reports</b> <span style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.90</span></div>
           <div style="font-size:0.65rem; color:#b0b0b0; font-weight:400;">GBP, EUR, USDT, XRP transactions in Date
             range</div>
         </div>
@@ -646,7 +646,7 @@
   <script>
 
     const SHEET_ID = "1Vf0iqthwHv0kFqTRJkYShH_RBpbokLmiEDWGJN3Q_E";
-    const VER = "Kraken Withdrawals Report (v2.89)";
+    const VER = "Kraken Withdrawals Report (v2.90)";
     const KRAKEN_API_URL = "https://api.kraken.com";
 
     // Default API credentials (enter your own in API Config)
@@ -658,7 +658,8 @@
       withdrawals: [],        // from Kraken Ledgers API (withdrawals only)
       withdrawalHistory: [],  // from Kraken WithdrawStatus API
       krakenAddresses: [],    // from Kraken WithdrawAddresses API
-      ratesCache: {}          // { "2024-11-02": { USDTGBP: 0.79, USDTEUR: 0.92, ... } }
+      ratesCache: {},         // { "2024-11-02": { USDTGBP: 0.79, USDTEUR: 0.92, ... } }
+      withdrawalCache: []     // v2.90: Store calculated withdrawal rows (with GBP) for reuse
     };
 
     let stagingRecords = [];
@@ -2638,6 +2639,7 @@
         const record = {
           dateSent: formatTimestamp(w.time),
           timeSent: formatTime(w.time),
+          refid: w.refid, // v2.90: needed for linking
           type: w.type || "withdrawal",  // Type from ledger entry
           entryDate: "",
           recipient: recipientName,
@@ -3115,17 +3117,20 @@
                 if (!cryptoTotals[recipient]) cryptoTotals[recipient] = { USDT: 0, XRP: 0, USDT_GBP: 0, XRP_GBP: 0 };
                 cryptoTotals[recipient][asset] += amount;
 
-                // Calculate GBP (Recalculate or try to find in table?)
-                // Table doesn't have GBP value for crypto w/d.
-                // Use _raw if available
-                if (item._raw) {
-                  // Use existing logic to calc GBP
-                  // We'll do it below, reusing the helper
-                  // Need to mock 'e' or extract logic
-                  const gbpVal = calculateGbpValue(item._raw, amount, asset);
-                  if (asset === "USDT") cryptoTotals[recipient].USDT_GBP += gbpVal;
-                  if (asset === "XRP") cryptoTotals[recipient].XRP_GBP += gbpVal;
+                cryptoTotals[recipient][asset] += amount;
+
+                // Calculate GBP
+                // v2.90: Use enriched values from Table Generation if available
+                let gbpVal = 0;
+                if (item.gbpValues && item.gbpValues[asset]) {
+                  gbpVal = item.gbpValues[asset];
+                } else if (item._raw) {
+                  // Fallback to recalculation (less accurate without trade match context)
+                  gbpVal = calculateGbpValue(item._raw, amount, asset);
                 }
+
+                if (asset === "USDT") cryptoTotals[recipient].USDT_GBP += gbpVal;
+                if (asset === "XRP") cryptoTotals[recipient].XRP_GBP += gbpVal;
               }
             } else if (asset === "GBP" || asset === "EUR") {
               // Fiat
