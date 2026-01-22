@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8" />
   <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport" />
-  <title>Kraken Ledger Report v2.68</title>
+  <title>Kraken Ledger Report v2.70</title>
   <script async defer src="https://accounts.google.com/gsi/client"></script>
   <script async defer src="https://apis.google.com/js/api.js"></script>
   <style>
@@ -330,7 +330,7 @@
       min-width: 11ch;
       width: 11ch;
       text-align: right;
-      font-weight: 700;
+      /* font-weight: 700; removed per user request */
       background: #f8f9fa;
     }
 
@@ -411,7 +411,7 @@
       <div
         style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; position:relative;">
         <div class="branding-row" style="margin-bottom:0; line-height:1.2;">
-          <div><b>Kraken Reports</b> <span style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.68</span></div>
+          <div><b>Kraken Reports</b> <span style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.70</span></div>
           <div style="font-size:0.65rem; color:#b0b0b0; font-weight:400;">GBP, EUR, USDT, XRP transactions in Date
             range</div>
         </div>
@@ -632,12 +632,12 @@
     <button id="log_btn" onclick="toggleLog()"
       style="width:100%; padding:8px; margin-top:10px; background:#8e44ad; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Display
       Trace Log</button>
-    <div id="trace_log" onclick="toggleLog()">Trace: v2.68 Kraken Withdrawals Report initialized.</div>
+    <div id="trace_log" onclick="toggleLog()">Trace: v2.70 Kraken Withdrawals Report initialized.</div>
   </div>
 
   <script>
     const SHEET_ID = "1Vf0iqthwHv0kFqTRJkYShH_RBpbokLmiEDWGJN3Q_E";
-    const VER = "Kraken Withdrawals Report (v2.68)";
+    const VER = "Kraken Withdrawals Report (v2.70)";
     const KRAKEN_API_URL = "https://api.kraken.com";
 
     // Default API credentials (enter your own in API Config)
@@ -2789,12 +2789,14 @@
           // Single Entry (Deposit, Withdrawal, or Unmatched Trade)
           processEntry(e);
 
+          let detail = ""; // Initialize default
+
           if (e.type === 'withdrawal' || e.type === 'deposit') {
             // Try to get recipient name from address book logic
             const normalizedAsset = (e.asset.includes("XRP") || e.asset === "XXRP") ? "XRP" : (e.asset.includes("USDT") ? "USDT" : e.asset);
 
             // Default Detail
-            let detail = (e.type === 'withdrawal') ? `Withdrawal` : `Deposit`;
+            detail = (e.type === 'withdrawal') ? `Withdrawal` : `Deposit`;
 
             // Enriched Logic: First 2 words of recipient
             let recipient = null;
@@ -2822,7 +2824,12 @@
             row.details = detail;
 
           } else {
-            row.details = `${e.type} (${e.asset})`;
+            // Use e.type or fallback. If type is missing, use "Transfer"
+            const typeLabel = e.type || "Transfer";
+            row.details = `${typeLabel} (${e.asset})`;
+
+            // Fix: Ensure Balance rows have correct labels if somehow falling here
+            if (e.type === 'balance') row.details = "Balance Adjustment";
           }
           i += 1;
         }
@@ -3075,73 +3082,107 @@
       const div = document.getElementById("summaryReportArea");
       div.style.display = "block";
 
-      // Check if empty
-      const isEmpty = (summaryRecords.withdrawals.length === 0 && summaryRecords.deposits.length === 0);
+      // Check if empty (using new structure keys)
+      const isEmpty = (summaryRecords.crypto.length === 0 && summaryRecords.fiat.length === 0 && summaryRecords.deposits.length === 0);
 
-      // --- Header (Toggle) ---
-      // User requested "Copy Table" not to look like a long button. 
-      // We'll separate the header slightly or keep the "long bar" but ensure the button is distinct.
-      // And ensure the whole bar toggles.
+      // --- Container (Centered) ---
+      let html = '<div style="max-width:1000px; margin:0 auto; box-shadow:0 1px 4px rgba(0,0,0,0.1); background:#fff; border-radius:4px; overflow:hidden; border:1px solid #ddd;">';
 
-      let html = '<div onclick="toggleSummaryReport()" style="cursor:pointer; background:#2980b9; color:#fff; padding:6px 10px; font-size:0.75rem; font-weight:bold; border-radius:4px 4px 0 0; display:flex; justify-content:space-between; align-items:center;" title="Click to close report">';
+      // Main Title Bar (Blue)
+      html += '<div onclick="toggleSummaryReport()" style="cursor:pointer; background:#2980b9; color:#fff; padding:8px 15px; font-size:0.8rem; font-weight:bold; display:flex; justify-content:space-between; align-items:center;" title="Click to close report">';
       html += '<span>Statement Summary</span>';
-
-      // Only show copy button if there is data
       if (!isEmpty) {
-        html += '<button onclick="event.stopPropagation(); copySummaryReport()" title="Copy Table" style="padding:2px 8px; background:#fff; color:#2980b9; border:none; border-radius:3px; font-size:0.65rem; font-weight:600; cursor:pointer;">&#x2398; Copy Table</button>';
+        html += '<button onclick="event.stopPropagation(); copySummaryReport()" title="Copy Table" style="padding:2px 8px; background:#fff; color:#2980b9; border:none; border-radius:3px; font-size:0.65rem; font-weight:600; cursor:pointer;">&#x2398; Copy Tables</button>';
       }
       html += '</div>';
 
-      // --- Body ---
       if (isEmpty) {
-        html += '<div style="padding:15px; text-align:center; color:#7f8c8d; border:1px solid #ddd; border-top:none; background:#fdfdfd; font-size:0.75rem;">No summary data generated.</div>';
+        html += '<div style="padding:20px; text-align:center; color:#7f8c8d; font-size:0.75rem;">No summary data generated.</div>';
+        html += '</div>'; // Close container
         div.innerHTML = html;
+        if (div.scrollIntoView) div.scrollIntoView({ behavior: "smooth" });
         return;
       }
 
-      // Allow horizontal scroll on small screens
-      html += '<div style="overflow-x:auto;">';
-      html += '<table style="width:100%; min-width:600px; border-collapse:collapse; margin-bottom:15px; border:1px solid #ddd; border-top:none; table-layout:fixed;">';
-      html += '<thead><tr style="background:#f9f9f9;">';
-      html += '<th style="padding:5px; border:1px solid #ddd; text-align:left; width:40%;">Recipient</th>';
-      html += '<th style="padding:5px; border:1px solid #ddd; text-align:right; width:15%;">USDT</th>';
-      html += '<th style="padding:5px; border:1px solid #ddd; text-align:right; width:15%;">XRP</th>';
-      html += '<th style="padding:5px; border:1px solid #ddd; text-align:right; width:15%;">GBP</th>';
-      html += '<th style="padding:5px; border:1px solid #ddd; text-align:right; width:15%;">EUR</th>';
-      html += '</tr></thead><tbody>';
+      html += '<div style="padding:15px;">'; // Padding for content
 
-      if (summaryRecords.withdrawals.length === 0) {
-        html += '<tr><td colspan="5" style="text-align:center; padding:10px;">No withdrawals in period.</td></tr>';
-      } else {
-        for (const r of summaryRecords.withdrawals) {
+      // --- 1. CRYPTO TABLE (2-Line Header) ---
+      if (summaryRecords.crypto.length > 0) {
+        html += '<div style="background:#8e44ad; color:#fff; padding:5px 10px; font-size:0.7rem; font-weight:bold; border-radius:4px 4px 0 0; margin-bottom:0;">Transfers to Recipient - Summary (crypto)</div>';
+        html += '<div style="overflow-x:auto;">';
+        html += '<table style="width:100%; border-collapse:collapse; margin-bottom:20px; border:1px solid #ddd; table-layout:fixed;">';
+
+        // Header Row 1
+        html += '<thead style="background:#f9f9f9;"><tr>';
+        html += '<th rowspan="2" style="padding:4px; border:1px solid #ddd; text-align:left; vertical-align:middle; width:20%;">Recipient</th>';
+        html += '<th colspan="2" style="padding:4px; border:1px solid #ddd; text-align:center;">USDT Withdrawal</th>';
+        html += '<th colspan="2" style="padding:4px; border:1px solid #ddd; text-align:center;">XRP Withdrawal</th>';
+        html += '</tr>';
+
+        // Header Row 2
+        html += '<tr>';
+        html += '<th style="padding:4px; border:1px solid #ddd; text-align:right; font-size:0.65rem;">USDT Amount</th>';
+        html += '<th style="padding:4px; border:1px solid #ddd; text-align:right; font-size:0.65rem;">GBP Equivalent</th>';
+        html += '<th style="padding:4px; border:1px solid #ddd; text-align:right; font-size:0.65rem;">XRP Amount</th>';
+        html += '<th style="padding:4px; border:1px solid #ddd; text-align:right; font-size:0.65rem;">GBP Equivalent</th>';
+        html += '</tr></thead><tbody>';
+
+        for (const r of summaryRecords.crypto) {
           html += '<tr>';
-          html += `<td style="padding:4px; border:1px solid #ddd; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escHtml(r.recipient)}">${escHtml(r.recipient)}</td>`;
-          html += `<td style="padding:4px; border:1px solid #ddd; text-align:right;">${r.USDT > 0 ? r.USDT.toFixed(4) : "-"}</td>`;
-          html += `<td style="padding:4px; border:1px solid #ddd; text-align:right;">${r.XRP > 0 ? r.XRP.toFixed(4) : "-"}</td>`;
-          html += `<td style="padding:4px; border:1px solid #ddd; text-align:right;">${r.GBP > 0 ? r.GBP.toFixed(2) : "-"}</td>`;
-          html += `<td style="padding:4px; border:1px solid #ddd; text-align:right;">${r.EUR > 0 ? r.EUR.toFixed(2) : "-"}</td>`;
+          html += `<td style="padding:5px; border:1px solid #ddd; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escHtml(r.recipient)}">${escHtml(r.recipient)}</td>`;
+          // USDT
+          html += `<td style="padding:5px; border:1px solid #ddd; text-align:right;">${r.USDT > 0 ? r.USDT.toFixed(4) : "-"}</td>`;
+          html += `<td style="padding:5px; border:1px solid #ddd; text-align:right; color:#7f8c8d;">${r.USDT_GBP > 0 ? "£" + r.USDT_GBP.toFixed(2) : "-"}</td>`;
+          // XRP
+          html += `<td style="padding:5px; border:1px solid #ddd; text-align:right;">${r.XRP > 0 ? r.XRP.toFixed(4) : "-"}</td>`;
+          html += `<td style="padding:5px; border:1px solid #ddd; text-align:right; color:#7f8c8d;">${r.XRP_GBP > 0 ? "£" + r.XRP_GBP.toFixed(2) : "-"}</td>`;
           html += '</tr>';
         }
+        html += '</tbody></table></div>';
       }
-      html += '</tbody></table>';
 
-      html += '<div style="background:#27ae60; color:#fff; padding:5px 10px; font-size:0.7rem; font-weight:bold; border-radius:4px 4px 0 0;">Fiat Deposits</div>';
-      html += '<table style="width:100%; border-collapse:collapse;">';
-      html += '<thead><tr style="background:#f2f2f2;">';
-      html += '<th style="padding:4px; border:1px solid #ddd; text-align:left;">Asset</th>';
-      html += '<th style="padding:4px; border:1px solid #ddd; text-align:right;">Total Amount</th>';
-      html += '</tr></thead><tbody>';
+      // --- 2. FIAT TABLE ---
+      if (summaryRecords.fiat.length > 0) {
+        html += '<div style="background:#27ae60; color:#fff; padding:5px 10px; font-size:0.7rem; font-weight:bold; border-radius:4px 4px 0 0; margin-bottom:0;">Withdrawals to Haricom Bank Account - summary(GBP, EUR)</div>';
+        html += '<div style="overflow-x:auto;">';
+        html += '<table style="width:100%; border-collapse:collapse; margin-bottom:20px; border:1px solid #ddd; table-layout:fixed;">';
+        html += '<thead style="background:#f9f9f9;"><tr>';
+        html += '<th style="padding:6px; border:1px solid #ddd; text-align:left; width:50%;">Recipient</th>';
+        html += '<th style="padding:6px; border:1px solid #ddd; text-align:right; width:25%;">GBP</th>';
+        html += '<th style="padding:6px; border:1px solid #ddd; text-align:right; width:25%;">EUR</th>';
+        html += '</tr></thead><tbody>';
 
-      for (const r of summaryRecords.deposits) {
-        html += '<tr>';
-        html += `<td style="padding:4px; border:1px solid #ddd;">${r.asset}</td>`;
-        html += `<td style="padding:4px; border:1px solid #ddd; text-align:right; font-weight:bold;">${r.total.toFixed(2)}</td>`;
-        html += '</tr>';
+        for (const r of summaryRecords.fiat) {
+          html += '<tr>';
+          html += `<td style="padding:5px; border:1px solid #ddd; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escHtml(r.recipient)}">${escHtml(r.recipient)}</td>`;
+          html += `<td style="padding:5px; border:1px solid #ddd; text-align:right;">${r.GBP > 0 ? r.GBP.toFixed(2) : "-"}</td>`;
+          html += `<td style="padding:5px; border:1px solid #ddd; text-align:right;">${r.EUR > 0 ? r.EUR.toFixed(2) : "-"}</td>`;
+          html += '</tr>';
+        }
+        html += '</tbody></table></div>';
       }
-      html += '</tbody></table>';
 
+      // --- 3. FIAT DEPOSITS ---
+      if (summaryRecords.deposits.length > 0) {
+        html += '<div style="background:#27ae60; color:#fff; padding:5px 10px; font-size:0.7rem; font-weight:bold; border-radius:4px 4px 0 0; margin-bottom:0;">Fiat Deposits</div>';
+        html += '<table style="width:100%; border-collapse:collapse; margin-bottom:0; border:1px solid #ddd;">';
+        html += '<thead><tr style="background:#f2f2f2;">';
+        html += '<th style="padding:4px; border:1px solid #ddd; text-align:left;">Asset</th>';
+        html += '<th style="padding:4px; border:1px solid #ddd; text-align:right;">Total Amount</th>';
+        html += '</tr></thead><tbody>';
+
+        for (const r of summaryRecords.deposits) {
+          html += '<tr>';
+          html += `<td style="padding:4px; border:1px solid #ddd;">${r.asset}</td>`;
+          html += `<td style="padding:4px; border:1px solid #ddd; text-align:right; font-weight:bold;">${r.total.toFixed(2)}</td>`;
+          html += '</tr>';
+        }
+        html += '</tbody></table>';
+      }
+
+      html += '</div></div>'; // Close padding div, Close container div
       div.innerHTML = html;
-      div.scrollIntoView({ behavior: "smooth" });
+      if (div.scrollIntoView) div.scrollIntoView({ behavior: "smooth" });
     }
 
     function renderBankTable() {
