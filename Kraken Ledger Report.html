@@ -411,7 +411,7 @@
       <div
         style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; position:relative;">
         <div class="branding-row" style="margin-bottom:0; line-height:1.2;">
-          <div><b>Kraken Reports</b> <span style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.98</span></div>
+          <div><b>Kraken Reports</b> <span style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.99</span></div>
           <div style="font-size:0.65rem; color:#b0b0b0; font-weight:400;">GBP, EUR, USDT, XRP transactions in Date
             range</div>
         </div>
@@ -646,7 +646,7 @@
   <script>
 
     const SHEET_ID = "1Vf0iqthwHv0kFqTRJkYShH_RBpbokLmiEDWGJN3Q_E";
-    const VER = "Kraken Withdrawals Report (v2.98)";
+    const VER = "Kraken Withdrawals Report (v2.99)";
     const KRAKEN_API_URL = "https://api.kraken.com";
 
     // Default API credentials (enter your own in API Config)
@@ -3345,10 +3345,10 @@
           html += `<td style="padding:5px; border:1px solid #ddd; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escHtml(r.recipient)}">${escHtml(r.recipient)}</td>`;
           // USDT
           html += `<td style="padding:5px; border:1px solid #ddd; text-align:right;">${r.USDT > 0 ? r.USDT.toFixed(4) : "-"}</td>`;
-          html += `<td style="padding:5px; border:1px solid #ddd; text-align:right; color:#7f8c8d;">${r.USDT_GBP > 0 ? r.USDT_GBP.toFixed(2) : "-"}</td>`;
+          html += `<td style="padding:5px; border:1px solid #ddd; text-align:right; color:#2980b9;">${r.USDT_GBP > 0 ? r.USDT_GBP.toFixed(2) : "-"}</td>`;
           // XRP
           html += `<td style="padding:5px; border:1px solid #ddd; text-align:right;">${r.XRP > 0 ? r.XRP.toFixed(4) : "-"}</td>`;
-          html += `<td style="padding:5px; border:1px solid #ddd; text-align:right; color:#7f8c8d;">${r.XRP_GBP > 0 ? r.XRP_GBP.toFixed(2) : "-"}</td>`;
+          html += `<td style="padding:5px; border:1px solid #ddd; text-align:right; color:#2980b9;">${r.XRP_GBP > 0 ? r.XRP_GBP.toFixed(2) : "-"}</td>`;
           html += '</tr>';
         }
         html += '</tbody></table></div>';
@@ -3378,7 +3378,7 @@
       // --- 3. FIAT DEPOSITS ---
       // Fix: Only render if we have actual values
       if (summaryRecords.deposits.some(d => d.total > 0)) {
-        html += '<div style="background:#27ae60; color:#fff; padding:5px 10px; font-size:0.7rem; font-weight:bold; border-radius:4px 4px 0 0; margin-bottom:0;">Fiat Deposits - from Haricom Bank Account (GBP EUR)</div>';
+        html += '<div style="background:#27ae60; color:#fff; padding:5px 10px; font-size:0.7rem; font-weight:bold; border-radius:4px 4px 0 0; margin-bottom:0;">Deposits from Haricom Bank Accounts (GBP EUR)</div>';
         html += '<table style="width:100%; border-collapse:collapse; margin-bottom:0; border:1px solid #ddd;">';
         html += '<thead><tr style="background:#f2f2f2;">';
         html += '<th style="padding:4px; border:1px solid #ddd; text-align:left;">Currency</th>';
