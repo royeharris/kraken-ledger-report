@@ -673,12 +673,12 @@
     <button id="log_btn" onclick="toggleLog()"
       style="width:100%; padding:8px; margin-top:10px; background:#8e44ad; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Display
       Trace Log</button>
-    <div id="trace_log" onclick="toggleLog()">Trace: v2.56 Kraken Withdrawals Report initialized.</div>
+    <div id="trace_log" onclick="toggleLog()">Trace: v2.57 Kraken Withdrawals Report initialized.</div>
   </div>
 
   <script>
     const SHEET_ID = "1Vf0iqthwHv0kFqTRJkYShH_RBpbokLmiEDWGJN3Q_E";
-    const VER = "Kraken Withdrawals Report (v2.56)";
+    const VER = "Kraken Withdrawals Report (v2.57)";
     const KRAKEN_API_URL = "https://api.kraken.com";
 
     // Default API credentials (enter your own in API Config)
@@ -1213,10 +1213,11 @@
 
       const sBtn = document.getElementById("btn_bank_statement");
       if (sBtn) {
-        // Reset button text in case it was stuck
+        // Reset button text checks and force update based on current dates
         if (sBtn.textContent === "Generating...") sBtn.textContent = "Kraken Statement (Select Dates)";
-        // Update label with dates if possible, or just reset to default
-        // We'll let the user click "Kraken Statement" again to refresh the label/data
+
+        // Force update of label and Summary button visibility based on dates
+        updateBankButtonLabel();
       }
 
       // Check prerequisites
@@ -3237,6 +3238,9 @@
       const savedProxy = localStorage.getItem("kraken_cors_proxy");
       const savedWithdrawKey = localStorage.getItem("kraken_withdraw_api_key");
       const savedWithdrawPrivate = localStorage.getItem("kraken_withdraw_private_key");
+
+      // Force update of date-dependent buttons on boot (in case of browser autofill)
+      setTimeout(() => updateBankButtonLabel(), 500);
       if (savedKey) document.getElementById("krakenApiKey").value = savedKey;
       if (savedPrivate) document.getElementById("krakenPrivateKey").value = savedPrivate;
       if (savedProxyType) {
