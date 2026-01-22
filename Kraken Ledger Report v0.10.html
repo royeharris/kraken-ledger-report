@@ -287,67 +287,96 @@
 
     .w-amount {
       min-width: 6ch;
+
+      .w-balance {
+        width: 6ch;
+        text-align: right;
+      }
+
+      .w-cur {
+        min-width: 9ch;
+        width: 9ch;
+        /* fits "Conv Currency" */
+        text-align: center;
+      }
+
+      .w-gbp {
+        min-width: 4ch;
+        width: 4ch;
+        text-align: right;
+      }
+
+      .w-gbpfee {
+        min-width: 6ch;
+        width: 6ch;
+        /* fits "GBP Fee" header */
+        text-align: right;
+      }
+
+      .w-desttag {
+        min-width: 10ch;
+        width: 10ch;
+      }
+
+      .w-wallet {
+        min-width: 30ch;
+        width: 30ch;
+      }
+
+      .w-txid {
+        min-width: 21ch;
+        width: 21ch;
+      }
+
+      .w-source {
+        min-width: 9ch;
+        width: 9ch;
+      }
+
+      .w-fee {
+        min-width: 5ch;
+        width: 5ch;
+        text-align: right;
+      }
+
+      .w-rate {
+        min-width: 9ch;
+        width: 9ch;
+        /* fits "Conv Rate" */
+        text-align: right;
+      }
+
       width: 6ch;
       text-align: right;
     }
 
-    .w-cur {
-      min-width: 9ch;
-      width: 9ch;
-      /* fits "Conv Currency" */
-      text-align: center;
+    /* Bank Report specific columns */
+    .w-bank-datetime {
+      min-width: 14ch;
+      width: 14ch;
     }
 
-    .w-gbp {
-      min-width: 4ch;
-      width: 4ch;
+    .w-bank-details {
+      min-width: 25ch;
+      width: 25ch;
+    }
+
+    .w-bank-val {
+      min-width: 11ch;
+      width: 11ch;
       text-align: right;
     }
 
-    .w-gbpfee {
-      min-width: 6ch;
-      width: 6ch;
-      /* fits "GBP Fee" header */
+    .w-bank-bal {
+      min-width: 11ch;
+      width: 11ch;
       text-align: right;
+      font-weight: 700;
+      background: #f8f9fa;
     }
 
-    .w-desttag {
-      min-width: 10ch;
-      width: 10ch;
-    }
-
-    .w-wallet {
-      min-width: 30ch;
-      width: 30ch;
-    }
-
-    .w-txid {
-      min-width: 21ch;
-      width: 21ch;
-    }
-
-    .w-source {
-      min-width: 9ch;
-      width: 9ch;
-    }
-
-    .w-fee {
-      min-width: 5ch;
-      width: 5ch;
-      text-align: right;
-    }
-
-    .w-rate {
-      min-width: 9ch;
-      width: 9ch;
-      /* fits "Conv Rate" */
-      text-align: right;
-    }
-
-    .w-balance {
-
-      width: 6ch;
-      text-align: right;
+    .section-border-left {
+      border-left: 2px solid #bdc3c7 !important;
     }
 
 
@@ -630,9 +659,27 @@
 
     <button id="report_btn" onclick="toggleReportViewer()"
       style="width:100%; padding:8px; margin-top:10px; background:#e67e22; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Display
-      Report</button>
+      Trade/Withdrawal Report</button>
 
     <div class="preview-wrap" id="previewArea" style="display:none;"></div>
+
+    <button id="btn_bank_statement" onclick="toggleBankReport()"
+      style="width:100%; padding:8px; margin-top:10px; background:#2980b9; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">
+      Kraken Statement (Select Dates)</button>
+
+    <div class="preview-wrap" id="bankReportArea" style="display:none; margin-top:10px;"></div>
+
+    <button id="btn_statement_summary" onclick="toggleSummaryReport()"
+      style="width:100%; padding:8px; margin-top:5px; background:#8e44ad; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer; display:none;">
+      Statement Summary</button>
+
+    <div class="preview-wrap" id="summaryReportArea" style="display:none; margin-top:10px;"></div>
+
+    <button id="btn_statement_summary" onclick="toggleSummaryReport()"
+      style="width:100%; padding:8px; margin-top:5px; background:#8e44ad; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer; display:none;">
+      Statement Summary</button>
+
+    <div class="preview-wrap" id="summaryReportArea" style="display:none; margin-top:10px;"></div>
 
     <button id="log_btn" onclick="toggleLog()"
       style="width:100%; padding:8px; margin-top:10px; background:#8e44ad; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Display
@@ -641,8 +688,8 @@
   </div>
 
   <script>
-    const SHEET_ID = "1Vf0iqthwHv0kFqTRJkYShH_RBpbokLmiEDWGJN3Q0_E";
-    const VER = "Kraken Withdrawals Report (v2.48)";
+    const SHEET_ID = "1Vf0iqthwHv0kFqTRJkYShH_RBpbokLmiEDWGJN3Q_E";
+    const VER = "Kraken Withdrawals Report (v2.50)";
     const KRAKEN_API_URL = "https://api.kraken.com";
 
     // Default API credentials (enter your own in API Config)
@@ -686,7 +733,8 @@
     function toggleLog() {
       const btn = document.getElementById("log_btn");
       const log = document.getElementById("trace_log");
-      const isHidden = log.style.display === "none";
+      // Fix double-click issue: initially style.display is "" but CSS is "none"
+      const isHidden = (log.style.display === "none" || log.style.display === "");
       // Keep button visible, just change label
       if (isHidden) {
         btn.textContent = "Display Trace Log (click to close)";
@@ -736,6 +784,33 @@
       const day = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][dt.getDay()];
       const mon = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][dt.getMonth()];
       dispEl.innerText = day + " " + dt.getDate() + " " + mon + " '" + String(dt.getFullYear()).slice(-2);
+
+      // Update Bank Report Button Label
+      updateBankButtonLabel();
+    }
+
+    function updateBankButtonLabel() {
+      const s = document.getElementById("startDate").value;
+      const e = document.getElementById("endDate").value;
+      const btn = document.getElementById("btn_bank_statement");
+
+      if (s && e) {
+        // Format dates nicely e.g. 01 Nov 2024
+        const fmt = (dStr) => {
+          const [y, m, d] = dStr.split("-");
+          if (!m) return dStr;
+          const mon = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][parseInt(m) - 1];
+          return `${d} ${mon} ${y}`;
+        };
+        btn.textContent = `Kraken Statement ${fmt(s)} to ${fmt(e)}`;
+
+        // Also show Summary Button
+        const sumBtn = document.getElementById("btn_statement_summary");
+        if (sumBtn) sumBtn.style.display = "block";
+      } else {
+        btn.textContent = "Kraken Statement (Select Dates)";
+        document.getElementById("btn_statement_summary").style.display = "none";
+      }
     }
 
     // ---------- Reset / Wipe ----------
@@ -1446,107 +1521,141 @@
     }
 
     async function handleSync() {
-      if (!stagingRecords.length) {
-        alert("No staging records to send.");
+      // We allow sync if ANY of the staging datasets are present, not just the Report staging
+      // But typically user generates reports first.
+
+      const hasStaging = stagingRecords.length > 0;
+      const hasBank = (typeof bankRecords !== "undefined" && bankRecords.length > 0);
+      const hasSummary = (typeof summaryRecords !== "undefined" && summaryRecords.withdrawals.length > 0);
+
+      if (!hasStaging && !hasBank && !hasSummary) {
+        alert("No reports generated to sync. Please generate a report first.");
         return;
       }
 
       updateStatus("Syncing...", "sync");
-      logTrace("Sync started. Rows=" + stagingRecords.length);
+      logTrace(`Sync started. Staging=${stagingRecords.length}, Bank=${hasBank ? bankRecords.length : 0}, Summary=${hasSummary ? "yes" : "no"}`);
 
       ensureTokenThen(async () => {
         try {
-          // Prepare headers and values - must match Report table on screen exactly
-          const headers = [
-            "Date", "Type", "Time (UTC)", "Recipient", "Sent to", "GBP Sent", "Amount", "Fee", "Asset",
-            "GBP Fee", "Conv Rate", "Conv Currency", "Source", "Destination", "Dest Tag", "Transaction ID"
-          ];
+          // 1. ReportStaging (Existing)
+          if (hasStaging) {
+            const headers = [
+              "Date", "Type", "Time (UTC)", "Recipient", "Sent to", "GBP Sent", "Amount", "Fee", "Asset",
+              "GBP Fee", "Conv Rate", "Conv Currency", "Source", "Destination", "Dest Tag", "Transaction ID"
+            ];
 
-          const vals = stagingRecords.map(r => [
-            r.dateSent,
-            r.type || '',
-            r.timeSent || '',
-            r.recipient,
-            r.sentTo || '',
-            r.gbpSent || '',
-            r.amount,
-            r.fee,
-            r.asset,
-            r.gbpFee || '',
-            r.conversionRate || '',
-            r.conversionCurrency || '',
-            r.rateSource || '',
-            r.wallet,
-            r.destTag,
-            r.txId
-          ]);
-
-          // Clear sheet first, then write headers + data from row 1
-          await gapi.client.sheets.spreadsheets.values.clear({
-            spreadsheetId: SHEET_ID,
-            range: "'ReportStaging'!A:Z"
-          });
-
-          // Write headers in row 1
-          await gapi.client.sheets.spreadsheets.values.update({
-            spreadsheetId: SHEET_ID,
-            range: "'ReportStaging'!A1:P1",
-            valueInputOption: "USER_ENTERED",
-            resource: { values: [headers] }
-          });
-
-          // Write data starting row 2
-          await gapi.client.sheets.spreadsheets.values.update({
-            spreadsheetId: SHEET_ID,
-            range: "'ReportStaging'!A2:P" + (1 + vals.length),
-            valueInputOption: "USER_ENTERED",
-            resource: { values: vals }
-          });
-
-          // Also export raw ledger data to KrakenLedger worksheet
-          if (cacheData.withdrawals && cacheData.withdrawals.length > 0) {
-            // Must match raw ledger display: Date, Type, Time, Amount, Fee, Asset, Balance, Ledger ID, Ref ID
-            const ledgerHeaders = ["Date", "Type", "Time", "Amount", "Fee", "Asset", "Balance", "Ledger ID", "Ref ID"];
-            const ledgerVals = cacheData.withdrawals.map(w => [
-              w.time ? formatTimestamp(w.time) : '',
-              w.type || '',
-              w.time ? formatTime(w.time) : '',
-              w.amount || 0,
-              w.fee || 0,
-              w.asset || '',
-              w.balance || 0,
-              w.ledgerId || '',
-              w.refid || ''
+            const vals = stagingRecords.map(r => [
+              r.dateSent, r.type || '', r.timeSent || '', r.recipient, r.sentTo || '', r.gbpSent || '',
+              r.amount, r.fee, r.asset, r.gbpFee || '', r.conversionRate || '', r.conversionCurrency || '',
+              r.rateSource || '', r.wallet, r.destTag, r.txId
             ]);
 
-            // Clear KrakenLedger sheet
-            await gapi.client.sheets.spreadsheets.values.clear({
-              spreadsheetId: SHEET_ID,
-              range: "'KrakenLedger'!A:Z"
-            });
-
-            // Write headers
+            await gapi.client.sheets.spreadsheets.values.clear({ spreadsheetId: SHEET_ID, range: "'ReportStaging'!A:Z" });
             await gapi.client.sheets.spreadsheets.values.update({
-              spreadsheetId: SHEET_ID,
-              range: "'KrakenLedger'!A1:I1",
-              valueInputOption: "USER_ENTERED",
-              resource: { values: [ledgerHeaders] }
+              spreadsheetId: SHEET_ID, range: "'ReportStaging'!A1:P1", valueInputOption: "USER_ENTERED", resource: { values: [headers] }
             });
-
-            // Write data
             await gapi.client.sheets.spreadsheets.values.update({
-              spreadsheetId: SHEET_ID,
-              range: "'KrakenLedger'!A2:I" + (1 + ledgerVals.length),
-              valueInputOption: "USER_ENTERED",
-              resource: { values: ledgerVals }
+              spreadsheetId: SHEET_ID, range: "'ReportStaging'!A2:P" + (1 + vals.length), valueInputOption: "USER_ENTERED", resource: { values: vals }
             });
-
-            logTrace("Exported " + ledgerVals.length + " entries to KrakenLedger.");
+            logTrace("ReportStaging exported.");
           }
 
-          updateStatus("Token Active", "active");
-          logTrace("Sync complete. " + vals.length + " records written to ReportStaging.");
-          alert("Sync completed. " + vals.length + " records written to ReportStaging + KrakenLedger (replaced).");
+          // 2. KrakenLedger (Existing - Raw Data)
+          if (cacheData.withdrawals && cacheData.withdrawals.length > 0) {
+            const ledgerHeaders = ["Date", "Type", "Time", "Amount", "Fee", "Asset", "Balance", "Ledger ID", "Ref ID"];
+            const ledgerVals = cacheData.withdrawals.map(w => [
+              w.time ? formatTimestamp(w.time) : '', w.type || '', w.time ? formatTime(w.time) : '', w.amount || 0, w.fee || 0,
+              w.asset || '', w.balance || 0, w.ledgerId || '', w.refid || ''
+            ]);
+            await gapi.client.sheets.spreadsheets.values.clear({ spreadsheetId: SHEET_ID, range: "'KrakenLedger'!A:Z" });
+            await gapi.client.sheets.spreadsheets.values.update({
+              spreadsheetId: SHEET_ID, range: "'KrakenLedger'!A1:I1", valueInputOption: "USER_ENTERED", resource: { values: [ledgerHeaders] }
+            });
+            await gapi.client.sheets.spreadsheets.values.update({
+              spreadsheetId: SHEET_ID, range: "'KrakenLedger'!A2:I" + (1 + ledgerVals.length), valueInputOption: "USER_ENTERED", resource: { values: ledgerVals }
+            });
+            logTrace("KrakenLedger exported.");
+          }
+
+          // 3. KrakenStatement (New)
+          if (hasBank) {
+            // Headers: Main + Asset Sub-headers
+            // Row 1: Date | Time | Type | Details | GBP | | | EUR | | | ...
+            // Row 2: | | | | Amount | P/L Fee | Balance | Amount | ...
+
+            let header1 = ["Date", "Time", "Type", "Details"];
+            let header2 = ["", "", "", ""];
+
+            TRACKED_ASSETS.forEach(a => {
+              header1.push(a, "", "");
+              header2.push("Amount", "P/L Fee", "Balance");
+            });
+
+            const bankVals = bankRecords.map(r => {
+              let row = [r.date, r.time, r.type, r.details];
+              TRACKED_ASSETS.forEach(asset => {
+                const amt = r.amounts[asset];
+                const fee = r.fees[asset];
+                const bal = r.balances[asset];
+                row.push(amt !== undefined ? amt : "");
+                row.push((fee !== undefined && fee > 0) ? fee : "");
+                row.push(bal !== undefined ? bal : "");
+              });
+              return row;
+            });
+
+            const rangeReq = "'KrakenStatement'!A:Z"; // Assume enough columns
+            await gapi.client.sheets.spreadsheets.values.clear({ spreadsheetId: SHEET_ID, range: rangeReq });
+
+            // Update Headers
+            await gapi.client.sheets.spreadsheets.values.update({
+              spreadsheetId: SHEET_ID, range: "'KrakenStatement'!A1", valueInputOption: "USER_ENTERED", resource: { values: [header1, header2] }
+            });
+            // Update Data
+            await gapi.client.sheets.spreadsheets.values.update({
+              spreadsheetId: SHEET_ID, range: "'KrakenStatement'!A3", valueInputOption: "USER_ENTERED", resource: { values: bankVals }
+            });
+            logTrace("KrakenStatement exported.");
+          }
+
+          // 4. KrakenStatementSummary (New)
+          if (hasSummary) {
+            // Section 1: Withdrawals
+            let s1Headers = ["WITHDRAWALS SUMMARY", "", "", "", ""];
+            let s1ColHeaders = ["Recipient", "USDT", "XRP", "GBP", "EUR"];
+
+            const s1Rows = summaryRecords.withdrawals.map(r => [
+              r.recipient, r.USDT || 0, r.XRP || 0, r.GBP || 0, r.EUR || 0
+            ]);
+
+            // Section 2: Deposits
+            let s2Headers = ["DEPOSITS SUMMARY", ""];
+            let s2ColHeaders = ["Asset", "Total Amount"];
+
+            const s2Rows = summaryRecords.deposits.map(r => [r.asset, r.total]); // GBP, EUR rows
+
+            const rangeReq = "'KrakenStatementSummary'!A:Z";
+            await gapi.client.sheets.spreadsheets.values.clear({ spreadsheetId: SHEET_ID, range: rangeReq });
+
+            // Build one big array of values to write in one go? Or separate calls. Separate is easier logic.
+            // Write Withdrawals at top
+            await gapi.client.sheets.spreadsheets.values.update({
+              spreadsheetId: SHEET_ID, range: "'KrakenStatementSummary'!A1", valueInputOption: "USER_ENTERED",
+              resource: { values: [s1Headers, s1ColHeaders, ...s1Rows] }
+            });
+
+            // Write Deposits below
+            const startRow = 1 + 2 + s1Rows.length + 2; // +2 for spacer
+            await gapi.client.sheets.spreadsheets.values.update({
+              spreadsheetId: SHEET_ID, range: `'KrakenStatementSummary'!A${startRow}`, valueInputOption: "USER_ENTERED",
+              resource: { values: [s2Headers, s2ColHeaders, ...s2Rows] }
+            });
+            logTrace("KrakenStatementSummary exported.");
+          }
+
+          updateStatus("Synced All", "active");
+          alert("Sync complete.\nReports exported to Google Sheets.");
 
         } catch (e) {
           updateStatus("Sync error", "error");
@@ -2532,6 +2641,423 @@
       return h + ":" + m + ":" + s;
     }
 
+    // ===========================================
+    // KRAKEN BANK STATEMENT REPORT (New v2.49)
+    // ===========================================
+    let bankRecords = [];
+    const TRACKED_ASSETS = ["GBP", "EUR", "USDT", "XRP"];
+
+    async function generateBankReport() {
+      const btn = document.getElementById("btn_bank_statement");
+      const sDateVal = document.getElementById("startDate").value;
+      const eDateVal = document.getElementById("endDate").value;
+
+      if (!sDateVal || !eDateVal) { alert("Please select a date range."); return; }
+
+      // Parse dates (start of day / end of day)
+      const startTs = new Date(sDateVal).getTime() / 1000;
+      const endTs = new Date(eDateVal).getTime() / 1000 + 86399;
+
+      if (cacheData.withdrawals.length === 0) {
+        alert("No ledger data loaded. Please 'Read Ledger' first.");
+        return;
+      }
+
+      btn.innerText = "Generating...";
+
+      // 1. Filter and Sort Data
+      // Use allLedgerEntries (cached in withdrawals)
+      const entries = cacheData.withdrawals
+        .filter(e => e.time >= startTs && e.time <= endTs)
+        .sort((a, b) => a.time - b.time); // Oldest first
+
+      if (entries.length === 0) {
+        alert("No transactions found in this date range.");
+        btn.innerText = `Kraken Statement ${formatTimestamp(startTs)} to ${formatTimestamp(endTs)}`;
+        return;
+      }
+
+      // 2. Calculate Opening Balances (Back-Calculation)
+      // We need a starting balance for each tracked asset.
+      // Strategy: Find the FIRST occurrence of each asset in the filtered list.
+      // Opening = FirstEntry.balance - FirstEntry.amount (reverse the transaction)
+      let runningBal = {};
+
+      // Initialize with null to detect missing history
+      TRACKED_ASSETS.forEach(a => runningBal[a] = null);
+
+      // Scan for first occurrences to set opening balances
+      for (const asset of TRACKED_ASSETS) {
+        // Find first entry involving this asset
+        const first = entries.find(e => {
+          const a = (e.asset || "").toUpperCase();
+          return a.includes(asset) || (asset === "XRP" && a === "XXRP") || (asset === "GBP" && a === "ZGBP") || (asset === "EUR" && a === "ZEUR");
+        });
+
+        if (first) {
+          // Found a transaction. Opening balance is Balance BEFORE this transaction.
+          // Note: amount is positive for deposits, negative for withdrawals/trades-out.
+          // Balance = Prev + Amount  =>  Prev = Balance - Amount
+          runningBal[asset] = first.balance - first.amount;
+        } else {
+          runningBal[asset] = 0; // Asset not seen in period, assume 0
+        }
+      }
+
+      const openingBalRow = {
+        date: formatTimestamp(startTs),
+        time: "00:00:00",
+        type: "Opening Balance",
+        details: "---",
+        balances: { ...runningBal }, // Snapshot
+        amounts: {},
+        fees: {}
+      };
+
+      // 3. Process Transactions (Merge Trades & Update Balances)
+      bankRecords = [];
+      bankRecords.push(openingBalRow);
+
+      let i = 0;
+      while (i < entries.length) {
+        const e = entries[i];
+        const next = (i + 1 < entries.length) ? entries[i + 1] : null;
+
+        // Check for Mergeable Trade
+        // Same refid, same time, both are trades
+        let isTradeMerge = false;
+
+        if (e.type === 'trade' && next && next.type === 'trade' && e.refid === next.refid) {
+          isTradeMerge = true;
+        }
+
+        const row = {
+          date: formatTimestamp(e.time),
+          time: formatTime(e.time),
+          type: isTradeMerge ? "Trade" : (e.type || "Transaction"),
+          details: "",
+          balances: {},
+          amounts: {},
+          fees: {}
+        };
+
+        // Helper to process one entry into the row
+        const processEntry = (entry) => {
+          let asset = (entry.asset || "").toUpperCase();
+          // Normalize
+          if (asset.includes("XRP") || asset === "XXRP") asset = "XRP";
+          else if (asset.includes("USDT")) asset = "USDT";
+          else if (asset.includes("GBP") || asset === "ZGBP") asset = "GBP";
+          else if (asset.includes("EUR") || asset === "ZEUR") asset = "EUR";
+          else return; // Ignore non-tracked assets if any
+
+          // Update Running Balance from Authoritative Ledger Data
+          runningBal[asset] = entry.balance;
+
+          // Fill Row Data
+          row.amounts[asset] = entry.amount;
+          row.fees[asset] = Math.abs(entry.fee);
+        };
+
+        if (isTradeMerge) {
+          // Process Both
+          processEntry(e);
+          processEntry(next);
+
+          // Determine Description e.g. "Buy USDT / Sell GBP"
+          const bought = (e.amount > 0 ? e : next);
+          const sold = (e.amount < 0 ? e : next);
+
+          let bAsset = (bought.asset || "").replace(/Z|X/g, "").replace("XXRP", "XRP");
+          if (bAsset.includes("USDT")) bAsset = "USDT";
+          let sAsset = (sold.asset || "").replace(/Z|X/g, "").replace("XXRP", "XRP");
+          if (sAsset.includes("USDT")) sAsset = "USDT";
+
+          row.details = `Buy ${bAsset} / Sell ${sAsset}`;
+          i += 2; // Skip next
+        } else {
+          // Single Entry (Deposit, Withdrawal, or Unmatched Trade)
+          processEntry(e);
+
+          if (e.type === 'withdrawal' || e.type === 'deposit') {
+            // Try to get recipient name from address book logic (reuse existing logic if possible, or simplified)
+            const normalizedAsset = (e.asset.includes("XRP") || e.asset === "XXRP") ? "XRP" : (e.asset.includes("USDT") ? "USDT" : e.asset);
+            // We can reuse the extensive logic from the other report by briefly finding the recipient
+            // For now, simpler fallback:
+            row.details = (e.type === 'withdrawal') ? `Withdrawal (${normalizedAsset})` : `Deposit (${normalizedAsset})`;
+
+            // Attempt to enrich details with Recipient Name from refined matching logic 
+            // (We can call the logic we just reviewed in renderPreview if we separate it, 
+            // but for now let's do a quick lookup in cacheData.krakenAddresses)
+            const historyMatch = cacheData.withdrawalHistory.find(h => h.refid === e.refid);
+            if (historyMatch) {
+              const addr = historyMatch.info || historyMatch.address;
+              const addrMatch = cacheData.krakenAddresses.find(a => a.address === addr);
+              if (addrMatch) row.details = `To: ${addrMatch.key}`;
+              else if (addr) row.details = `To: ${addr}`;
+            }
+          } else {
+            row.details = `${e.type} (${e.asset})`;
+          }
+          i += 1;
+        }
+
+        // Copy current state of running balances to row
+        row.balances = { ...runningBal };
+        bankRecords.push(row);
+      }
+
+      // 4. Closing Balance Row
+      const closingBalRow = {
+        date: formatTimestamp(endTs),
+        time: "23:59:59",
+        type: "Closing Balance",
+        details: "---",
+        balances: { ...runningBal },
+        amounts: {},
+        fees: {}
+      };
+      bankRecords.push(closingBalRow);
+
+      // 5. Render
+      // Save to Persistence (Same approach as existing report)
+      localStorage.setItem("kraken_bank_staging", JSON.stringify(bankRecords));
+
+      renderBankTable();
+
+      // Update button state (Toggle behavior)
+      const div = document.getElementById("bankReportArea");
+      div.style.display = "block"; // Auto-show after generate
+    }
+
+    // Toggle function (Same approach as toggleReportViewer)
+    function toggleBankReport() {
+      const div = document.getElementById("bankReportArea");
+      const isHidden = (div.style.display === "none");
+
+      if (isHidden) {
+        // If we have data, show it. If not, maybe generate? 
+        // The button logic handles "Generate" on click if it's the primary action.
+        // But here the button *is* the trigger.
+        // Let's make the button always Generate & Show for simplicity as it's fast.
+        generateBankReport();
+      } else {
+        div.style.display = "none";
+      }
+    }
+
+    // ===========================================
+    // STATEMENT SUMMARY REPORT (v2.50)
+    // ===========================================
+    let summaryRecords = { withdrawals: [], deposits: [] };
+
+    function toggleSummaryReport() {
+      const div = document.getElementById("summaryReportArea");
+      const isHidden = (div.style.display === "none");
+      if (isHidden) {
+        generateStatementSummary();
+      } else {
+        div.style.display = "none";
+      }
+    }
+
+    async function generateStatementSummary() {
+      const sDateVal = document.getElementById("startDate").value;
+      const eDateVal = document.getElementById("endDate").value;
+      if (!sDateVal || !eDateVal) { alert("Please select a date range."); return; }
+
+      // Use same timeframe as Bank Report
+      const startTs = new Date(sDateVal).getTime() / 1000;
+      const endTs = new Date(eDateVal).getTime() / 1000 + 86399;
+
+      // Filter Data (Withdrawals & Deposits only)
+      const data = cacheData.withdrawals.filter(e =>
+        e.time >= startTs && e.time <= endTs &&
+        (e.type === 'withdrawal' || e.type === 'deposit')
+      );
+
+      // Aggregation Containers
+      const recipTotals = {}; // { "RecipName": { USDT: 0, XRP: 0, GBP: 0, EUR: 0 } }
+      const depositTotals = { GBP: 0, EUR: 0 };
+
+      // Helper to normalize
+      const getAssetKey = (a) => {
+        a = (a || "").toUpperCase();
+        if (a.includes("XRP") || a === "XXRP") return "XRP";
+        if (a.includes("USDT")) return "USDT";
+        if (a.includes("GBP") || a === "ZGBP") return "GBP";
+        if (a.includes("EUR") || a === "ZEUR") return "EUR";
+        return null;
+      };
+
+      for (const e of data) {
+        const assetKey = getAssetKey(e.asset);
+        if (!assetKey) continue;
+
+        const amount = Math.abs(e.amount); // Always positive for aggregation
+
+        if (e.type === 'withdrawal') {
+          // Find Recipient
+          let recipient = "Unknown";
+
+          // Reuse Bank Report Logic (Simplified for uniformity)
+          // 1. Check History for Address
+          const hist = cacheData.withdrawalHistory.find(h => h.refid === e.refid);
+          if (hist) {
+            const addr = hist.info || hist.address;
+            // 2. Check Address Book
+            const match = cacheData.krakenAddresses.find(a => a.address === addr);
+            if (match) recipient = match.key;
+            else if (addr) recipient = addr;
+
+            // 3. Fallback for Fiat: "Revolut Ltd" etc often in 'addr'
+            if (assetKey === "GBP" || assetKey === "EUR") {
+              if (addr) recipient = addr;
+            }
+          }
+
+          // Clean Recipient Name (remove asset tags)
+          recipient = recipient.replace(/\s*(XRP|USDT|TRC20|ERC20|BTC|ETH)\s*/gi, "").trim();
+
+          if (!recipTotals[recipient]) recipTotals[recipient] = { USDT: 0, XRP: 0, GBP: 0, EUR: 0 };
+          recipTotals[recipient][assetKey] += amount;
+
+        } else if (e.type === 'deposit') {
+          if (assetKey === 'GBP' || assetKey === 'EUR') {
+            depositTotals[assetKey] += amount;
+          }
+        }
+      }
+
+      // Convert to Arrays for Rendering/Export
+      const wRows = Object.keys(recipTotals).map(r => ({
+        recipient: r,
+        ...recipTotals[r]
+      })).sort((a, b) => a.recipient.localeCompare(b.recipient));
+
+      const dRows = [
+        { asset: "GBP", total: depositTotals.GBP },
+        { asset: "EUR", total: depositTotals.EUR }
+      ];
+
+      summaryRecords = { withdrawals: wRows, deposits: dRows };
+      localStorage.setItem("kraken_summary_staging", JSON.stringify(summaryRecords));
+
+      renderSummaryTable();
+    }
+
+    function renderSummaryTable() {
+      const div = document.getElementById("summaryReportArea");
+      div.style.display = "block";
+
+      let html = '<div style="background:#2c3e50; color:#fff; padding:5px 10px; font-size:0.7rem; font-weight:bold; border-radius:4px 4px 0 0;">Withdrawals Summary</div>';
+      html += '<table style="width:100%; border-collapse:collapse; margin-bottom:15px;">';
+      html += '<thead><tr style="background:#f2f2f2;">';
+      html += '<th style="padding:4px; border:1px solid #ddd; text-align:left;">Recipient</th>';
+      html += '<th style="padding:4px; border:1% solid #ddd; text-align:right;">USDT</th>';
+      html += '<th style="padding:4px; border:1px solid #ddd; text-align:right;">XRP</th>';
+      html += '<th style="padding:4px; border:1px solid #ddd; text-align:right;">GBP</th>';
+      html += '<th style="padding:4px; border:1px solid #ddd; text-align:right;">EUR</th>';
+      html += '</tr></thead><tbody>';
+
+      if (summaryRecords.withdrawals.length === 0) {
+        html += '<tr><td colspan="5" style="text-align:center; padding:10px;">No withdrawals in period.</td></tr>';
+      } else {
+        for (const r of summaryRecords.withdrawals) {
+          html += '<tr>';
+          html += `<td style="padding:4px; border:1px solid #ddd;">${escHtml(r.recipient)}</td>`;
+          html += `<td style="padding:4px; border:1px solid #ddd; text-align:right;">${r.USDT > 0 ? r.USDT.toFixed(4) : "-"}</td>`;
+          html += `<td style="padding:4px; border:1px solid #ddd; text-align:right;">${r.XRP > 0 ? r.XRP.toFixed(4) : "-"}</td>`;
+          html += `<td style="padding:4px; border:1px solid #ddd; text-align:right;">${r.GBP > 0 ? r.GBP.toFixed(2) : "-"}</td>`;
+          html += `<td style="padding:4px; border:1px solid #ddd; text-align:right;">${r.EUR > 0 ? r.EUR.toFixed(2) : "-"}</td>`;
+          html += '</tr>';
+        }
+      }
+      html += '</tbody></table>';
+
+      html += '<div style="background:#27ae60; color:#fff; padding:5px 10px; font-size:0.7rem; font-weight:bold; border-radius:4px 4px 0 0;">Fiat Deposits Summary</div>';
+      html += '<table style="width:100%; border-collapse:collapse;">';
+      html += '<thead><tr style="background:#f2f2f2;">';
+      html += '<th style="padding:4px; border:1px solid #ddd; text-align:left;">Asset</th>';
+      html += '<th style="padding:4px; border:1px solid #ddd; text-align:right;">Total Amount</th>';
+      html += '</tr></thead><tbody>';
+
+      for (const r of summaryRecords.deposits) {
+        html += '<tr>';
+        html += `<td style="padding:4px; border:1px solid #ddd;">${r.asset}</td>`;
+        html += `<td style="padding:4px; border:1px solid #ddd; text-align:right; font-weight:bold;">${r.total.toFixed(2)}</td>`;
+        html += '</tr>';
+      }
+      html += '</tbody></table>';
+
+      div.innerHTML = html;
+      div.scrollIntoView({ behavior: "smooth" });
+    }
+
+    function renderBankTable() {
+      const div = document.getElementById("bankReportArea");
+      // Don't force display:block here, just update content. 
+      // Let toggle/generate handle visibility to be consistent.
+
+      let html = '<table style="min-width:100%; width:auto;"><thead><tr>';
+
+      // Fixed Columns
+      html += '<th class="w-bank-datetime">Date</th>';
+      html += '<th class="w-bank-datetime">Time</th>';
+      html += '<th class="w-type">Type</th>';
+      html += '<th class="w-bank-details">Details</th>';
+
+      // Asset Columns (Dynamic)
+      TRACKED_ASSETS.forEach(asset => {
+        html += `<th colspan="3" class="section-border-left" style="text-align:center;">${asset}</th>`;
+      });
+      html += '</tr><tr>';
+
+      // Sub-headers (Amounts)
+      html += '<th colspan="4" style="background:#fff; border:none;"></th>';
+      TRACKED_ASSETS.forEach(asset => {
+        html += `<th class="section-border-left" style="text-align:right; font-size:0.55rem;">Amount</th>`;
+        html += `<th style="text-align:right; font-size:0.55rem;">P/L Fee</th>`;
+        html += `<th style="text-align:right; font-size:0.55rem;">Balance</th>`;
+      });
+      html += '</tr></thead><tbody>';
+
+      if (bankRecords.length === 0) {
+        html += `<tr><td colspan="${4 + (TRACKED_ASSETS.length * 3)}" style="text-align:center; padding:10px;">No bank statement generated. Select dates and click the button.</td></tr>`;
+      } else {
+        for (const r of bankRecords) {
+          const isBalRow = r.type.includes("Balance");
+          const rowStyle = isBalRow ? "background:#f2f2f2; font-weight:bold;" : "";
+
+          html += `<tr style="${rowStyle}">`;
+          html += `<td class="w-bank-datetime">${r.date}</td>`;
+          html += `<td class="w-bank-datetime">${r.time}</td>`;
+          html += `<td class="w-type">${r.type}</td>`;
+          html += `<td class="w-bank-details">${escHtml(r.details)}</td>`;
+
+          TRACKED_ASSETS.forEach(asset => {
+            const amt = r.amounts[asset];
+            const fee = r.fees[asset];
+            const bal = r.balances[asset];
+
+            const dec = (asset === "USDT" || asset === "XRP") ? 4 : 2;
+
+            const showAmt = (amt !== undefined) ? amt.toFixed(dec) : "";
+            const showFee = (fee !== undefined && fee > 0) ? fee.toFixed(dec) : "";
+            const showBal = (bal !== undefined) ? bal.toFixed(dec) : "0.00";
+
+            html += `<td class="w-bank-val section-border-left">${showAmt}</td>`;
+            html += `<td class="w-bank-val" style="color:#c0392b;">${showFee}</td>`;
+            html += `<td class="w-bank-bal">${showBal}</td>`;
+          });
+          html += `</tr>`;
+        }
+      }
+
+      html += '</tbody></table>';
+      div.innerHTML = html;
+    }
+
     // ---------- Boot ----------
     async function waitFor(cond, timeoutMs) {
       const t0 = Date.now();
@@ -2551,6 +3077,23 @@
       if (savedStaging) {
         try {
           stagingRecords = JSON.parse(savedStaging);
+        } catch (e) { }
+      }
+
+      // Load saved Bank Staging
+      const savedBank = localStorage.getItem("kraken_bank_staging");
+      if (savedBank) {
+        try {
+          bankRecords = JSON.parse(savedBank);
+          // We do not auto-render or auto-show, but data is ready.
+        } catch (e) { }
+      }
+
+      // Load saved Summary Staging
+      const savedSummary = localStorage.getItem("kraken_summary_staging");
+      if (savedSummary) {
+        try {
+          summaryRecords = JSON.parse(savedSummary);
         } catch (e) { }
       }
 
