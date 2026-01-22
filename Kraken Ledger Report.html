@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8" />
   <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport" />
-  <title>Kraken Ledger Report v2.61</title>
+  <title>Kraken Ledger Report v2.62</title>
   <script async defer src="https://accounts.google.com/gsi/client"></script>
   <script async defer src="https://apis.google.com/js/api.js"></script>
   <style>
@@ -411,7 +411,7 @@
       <div
         style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; position:relative;">
         <div class="branding-row" style="margin-bottom:0; line-height:1.2;">
-          <div><b>Kraken Reports</b> <span style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.61</span></div>
+          <div><b>Kraken Reports</b> <span style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.62</span></div>
           <div style="font-size:0.65rem; color:#b0b0b0; font-weight:400;">GBP, EUR, USDT, XRP transactions in Date
             range</div>
         </div>
@@ -632,12 +632,12 @@
     <button id="log_btn" onclick="toggleLog()"
       style="width:100%; padding:8px; margin-top:10px; background:#8e44ad; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Display
       Trace Log</button>
-    <div id="trace_log" onclick="toggleLog()">Trace: v2.61 Kraken Withdrawals Report initialized.</div>
+    <div id="trace_log" onclick="toggleLog()">Trace: v2.62 Kraken Withdrawals Report initialized.</div>
   </div>
 
   <script>
     const SHEET_ID = "1Vf0iqthwHv0kFqTRJkYShH_RBpbokLmiEDWGJN3Q_E";
-    const VER = "Kraken Withdrawals Report (v2.61)";
+    const VER = "Kraken Withdrawals Report (v2.62)";
     const KRAKEN_API_URL = "https://api.kraken.com";
 
     // Default API credentials (enter your own in API Config)
@@ -1315,9 +1315,9 @@
       }
       if (hint) hint.textContent = stagingRecords.length + " Report record(s)";
 
-      let html = '<div style="position:relative; background:#e67e22; color:#fff; padding:5px 10px; font-size:0.7rem; font-weight:bold; border-radius:4px 4px 0 0; display:flex; justify-content:space-between; align-items:center; cursor:pointer;" onclick="toggleReportViewer()" title="Click to close report">';
+      let html = '<div onclick="toggleReportViewer()" style="cursor:pointer; background:#d35400; color:#fff; padding:6px 10px; font-size:0.75rem; font-weight:bold; border-radius:4px 4px 0 0; display:flex; justify-content:space-between; align-items:center;" title="Click to close report">';
       html += '<span>Trade/Withdrawal Report</span>';
-      html += '<button onclick="event.stopPropagation(); copyReportToClipboard()" title="Copy Table" style="padding:2px 8px; background:#fff; color:#d35400; border:none; border-radius:3px; font-size:0.6rem; cursor:pointer;">&#x2398; Copy Table</button>';
+      html += '<button onclick="event.stopPropagation(); copyReportToClipboard()" title="Copy Table" style="padding:2px 8px; background:#fff; color:#d35400; border:none; border-radius:3px; font-size:0.65rem; font-weight:600; cursor:pointer;">&#x2398; Copy Table</button>';
       html += '</div>';
 
       html += '<table style="width:100%; border-collapse:collapse;"><thead><tr>';
@@ -2855,35 +2855,31 @@
     }
 
     // Toggle function (Same approach as toggleReportViewer)
-    function toggleBankReport() {
+    async function toggleBankReport() {
       const div = document.getElementById("bankReportArea");
       const isHidden = (div.style.display === "none");
 
       if (isHidden) {
-        // If we have data, show it. If not, maybe generate? 
-        // The button logic handles "Generate" on click if it's the primary action.
-        // But here the button *is* the trigger.
-        // Let's make the button always Generate & Show for simplicity as it's fast.
-        // Generate function with UI feedback
-        async function generateBankReport() {
-          const btn = document.getElementById("btn_bank_statement");
-          const originalText = btn.textContent;
-          btn.textContent = "Generating...";
-          btn.disabled = true;
+        // Generate & Show
+        const btn = document.getElementById("btn_bank_statement");
+        const originalText = btn.textContent;
+        btn.textContent = "Generating...";
+        btn.disabled = true;
 
-          // Wait a tick to allow UI to update
-          await new Promise(r => setTimeout(r, 50));
+        // Yield to allow UI update
+        await new Promise(r => setTimeout(r, 50));
 
-          try {
-            await generateBankReportLogic();
-          } catch (e) {
-            alert("Error: " + e.message);
-          } finally {
-            btn.textContent = originalText;
-            btn.disabled = false;
-          }
+        try {
+          // This function exists globally and populates cacheData.bankRecords then calls renderBankTable()
+          await generateBankReportLogic();
+        } catch (e) {
+          alert("Error generating statement: " + e.message);
+        } finally {
+          btn.textContent = originalText;
+          btn.disabled = false;
         }
       } else {
+        // Hide
         div.style.display = "none";
       }
     }
@@ -2992,19 +2988,37 @@
       const div = document.getElementById("summaryReportArea");
       div.style.display = "block";
 
-      // --- Withdrawals Section ---
-      let html = '<div style="position:relative; background:#2c3e50; color:#fff; padding:5px 10px; font-size:0.7rem; font-weight:bold; border-radius:4px 4px 0 0; display:flex; justify-content:space-between; align-items:center;">';
-      html += '<span>Withdrawals Summary</span>';
-      html += '<button onclick="copySummaryReport()" title="Copy Table" style="padding:2px 8px; background:#fff; color:#2c3e50; border:none; border-radius:3px; font-size:0.6rem; cursor:pointer;">📋 Copy</button>';
+      // Check if empty
+      const isEmpty = (summaryRecords.withdrawals.length === 0 && summaryRecords.deposits.length === 0);
+
+      // --- Header (Toggle) ---
+      // User requested "Copy Table" not to look like a long button. 
+      // We'll separate the header slightly or keep the "long bar" but ensure the button is distinct.
+      // And ensure the whole bar toggles.
+
+      let html = '<div onclick="toggleSummaryReport()" style="cursor:pointer; background:#8e44ad; color:#fff; padding:6px 10px; font-size:0.75rem; font-weight:bold; border-radius:4px 4px 0 0; display:flex; justify-content:space-between; align-items:center;" title="Click to close report">';
+      html += '<span>Statement Summary</span>';
+
+      // Only show copy button if there is data
+      if (!isEmpty) {
+        html += '<button onclick="event.stopPropagation(); copySummaryReport()" title="Copy Table" style="padding:2px 8px; background:#fff; color:#8e44ad; border:none; border-radius:3px; font-size:0.65rem; font-weight:600; cursor:pointer;">&#x2398; Copy Table</button>';
+      }
       html += '</div>';
 
-      html += '<table style="width:100%; border-collapse:collapse; margin-bottom:15px;">';
-      html += '<thead><tr style="background:#f2f2f2;">';
-      html += '<th style="padding:4px; border:1px solid #ddd; text-align:left;">Recipient</th>';
-      html += '<th style="padding:4px; border:1% solid #ddd; text-align:right;">USDT</th>';
-      html += '<th style="padding:4px; border:1px solid #ddd; text-align:right;">XRP</th>';
-      html += '<th style="padding:4px; border:1px solid #ddd; text-align:right;">GBP</th>';
-      html += '<th style="padding:4px; border:1px solid #ddd; text-align:right;">EUR</th>';
+      // --- Body ---
+      if (isEmpty) {
+        html += '<div style="padding:15px; text-align:center; color:#7f8c8d; border:1px solid #ddd; border-top:none; background:#fdfdfd; font-size:0.75rem;">No summary data generated.</div>';
+        div.innerHTML = html;
+        return;
+      }
+
+      html += '<table style="width:100%; border-collapse:collapse; margin-bottom:15px; border:1px solid #ddd; border-top:none; table-layout:fixed;">';
+      html += '<thead><tr style="background:#f9f9f9;">';
+      html += '<th style="padding:5px; border:1px solid #ddd; text-align:left; width:40%;">Recipient</th>';
+      html += '<th style="padding:5px; border:1px solid #ddd; text-align:right; width:15%;">USDT</th>';
+      html += '<th style="padding:5px; border:1px solid #ddd; text-align:right; width:15%;">XRP</th>';
+      html += '<th style="padding:5px; border:1px solid #ddd; text-align:right; width:15%;">GBP</th>';
+      html += '<th style="padding:5px; border:1px solid #ddd; text-align:right; width:15%;">EUR</th>';
       html += '</tr></thead><tbody>';
 
       if (summaryRecords.withdrawals.length === 0) {
@@ -3012,7 +3026,7 @@
       } else {
         for (const r of summaryRecords.withdrawals) {
           html += '<tr>';
-          html += `<td style="padding:4px; border:1px solid #ddd;">${escHtml(r.recipient)}</td>`;
+          html += `<td style="padding:4px; border:1px solid #ddd; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escHtml(r.recipient)}">${escHtml(r.recipient)}</td>`;
           html += `<td style="padding:4px; border:1px solid #ddd; text-align:right;">${r.USDT > 0 ? r.USDT.toFixed(4) : "-"}</td>`;
           html += `<td style="padding:4px; border:1px solid #ddd; text-align:right;">${r.XRP > 0 ? r.XRP.toFixed(4) : "-"}</td>`;
           html += `<td style="padding:4px; border:1px solid #ddd; text-align:right;">${r.GBP > 0 ? r.GBP.toFixed(2) : "-"}</td>`;
