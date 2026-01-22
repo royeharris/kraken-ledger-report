@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8" />
   <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport" />
-  <title>Kraken Ledger Report v2.75</title>
+  <title>Kraken Ledger Report v2.77</title>
   <script async defer src="https://accounts.google.com/gsi/client"></script>
   <script async defer src="https://apis.google.com/js/api.js"></script>
   <style>
@@ -411,7 +411,7 @@
       <div
         style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; position:relative;">
         <div class="branding-row" style="margin-bottom:0; line-height:1.2;">
-          <div><b>Kraken Reports</b> <span style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.75</span></div>
+          <div><b>Kraken Reports</b> <span style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.77</span></div>
           <div style="font-size:0.65rem; color:#b0b0b0; font-weight:400;">GBP, EUR, USDT, XRP transactions in Date
             range</div>
         </div>
@@ -632,12 +632,12 @@
     <button id="log_btn" onclick="toggleLog()"
       style="width:100%; padding:8px; margin-top:10px; background:#8e44ad; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Display
       Trace Log</button>
-    <div id="trace_log" onclick="toggleLog()">Trace: v2.75 Kraken Withdrawals Report initialized.</div>
+    <div id="trace_log" onclick="toggleLog()">Trace: v2.77 Kraken Withdrawals Report initialized.</div>
   </div>
 
   <script>
     const SHEET_ID = "1Vf0iqthwHv0kFqTRJkYShH_RBpbokLmiEDWGJN3Q_E";
-    const VER = "Kraken Withdrawals Report (v2.75)";
+    const VER = "Kraken Withdrawals Report (v2.77)";
     const KRAKEN_API_URL = "https://api.kraken.com";
 
     // Default API credentials (enter your own in API Config)
@@ -2778,10 +2778,19 @@
           const bought = (e.amount > 0 ? e : next);
           const sold = (e.amount < 0 ? e : next);
 
-          let bAsset = (bought.asset || "").replace(/Z|X/g, "").replace("XXRP", "XRP");
-          if (bAsset.includes("USDT")) bAsset = "USDT";
-          let sAsset = (sold.asset || "").replace(/Z|X/g, "").replace("XXRP", "XRP");
-          if (sAsset.includes("USDT")) sAsset = "USDT";
+          // Fix v2.77: Safer asset normalization (don't blindly strip X)
+          const norm = (a) => {
+            a = (a || "").toUpperCase();
+            if (a.includes("XRP") || a === "XXRP") return "XRP";
+            if (a.includes("USDT")) return "USDT";
+            if (a.includes("GBP") || a === "ZGBP") return "GBP";
+            if (a.includes("EUR") || a === "ZEUR") return "EUR";
+            if (a.includes("USD") || a === "ZUSD") return "USD";
+            return a;
+          };
+
+          let bAsset = norm(bought.asset);
+          let sAsset = norm(sold.asset);
 
           row.details = `Buy ${bAsset} / Sell ${sAsset}`;
           i += 2; // Skip next
@@ -3039,32 +3048,91 @@
             cryptoTotals[recipient][assetKey] += amount;
 
             // Calculate GBP Value
-            // Logic: Look up rate for date. If USDT, USDTGBP. If XRP, XRPGBP.
-            // Data 'e.time' is timestamp. formatTimestamp gives YYYY-MM-DD string needed for lookup?
-            // Actually 'cacheData.rates' is an API response object or our custom cache?
-            // Let's look at how renderBankTable calculates values?
-            // No, GenerateReport populates 'rates' dictionary keyed by date string.
-            // We need to construct the date key.
+            // Enhanced Logic (v2.76): Try to identify specific trade counterpart first
+            let gbpVal = 0;
 
-            // Helper to get date key for rates
-            const dt = new Date(e.time * 1000);
-            const y = dt.getUTCFullYear();
-            const m = String(dt.getUTCMonth() + 1).padStart(2, "0");
-            const dStr = String(dt.getUTCDate()).padStart(2, "0");
-            const dateKey = `${y}-${m}-${dStr}`; // "2025-10-14"
+            // We need sortedLedger for matching
+            const sortedLedger = cacheData.withdrawals ? [...cacheData.withdrawals].sort((a, b) => a.time - b.time) : [];
 
-            let dailyRates = null;
-            if (cacheData.rates) {
-              dailyRates = cacheData.rates[dateKey];
+            // Helper for matching (inline for scope access or re-use)
+            // Note: In a full refactor these would be global helpers, but duplicating here for safety/isolation
+            const findTrade = (w) => {
+              const targetAmount = Math.abs(w.amount) + Math.abs(w.fee);
+              // Assuming 'e' is the withdrawal object from 'data' list, we need its index in sortedLedger?
+              // No, we can just search backwards from its time or ID.
+              // Searching by ID is safest to find 'self', then search back.
+              // Optimization: sortedLedger is potentially large.
+              // let's just find the index of 'e' in sortedLedger first.
+              const selfIdx = sortedLedger.findIndex(x => x.refid === w.refid);
+              if (selfIdx === -1) return null;
+
+              for (let i = selfIdx - 1; i >= 0 && i >= selfIdx - 10; i--) {
+                const prev = sortedLedger[i];
+                if (prev.type !== "trade") continue;
+                const prevAsset = (prev.asset || "").toUpperCase();
+                const wAsset = (w.asset || "").toUpperCase();
+                if (!wAsset.includes(prevAsset.replace("X", "")) && !prevAsset.includes(wAsset.replace("X", ""))) continue;
+
+                const tAmount = Math.abs(prev.amount);
+                if (Math.abs(tAmount - targetAmount) <= (targetAmount * 0.0001)) {
+                  return { trade: prev, index: i };
+                }
+              }
+              return null;
+            };
+
+            const findFiat = (tradeIdx, cTrade) => {
+              for (let i = Math.max(0, tradeIdx - 5); i <= Math.min(sortedLedger.length - 1, tradeIdx + 5); i++) {
+                if (i === tradeIdx) continue;
+                const ent = sortedLedger[i];
+                if (ent.type !== "trade") continue;
+                const a = (ent.asset || "").toUpperCase();
+                if (a.includes("GBP") || a.includes("EUR") || a === "ZGBP") {
+                  if (Math.abs(ent.time - cTrade.time) <= 60) return ent;
+                }
+              }
+              return null;
+            };
+
+            const match = findTrade(e);
+            let usedTrade = false;
+
+            if (match) {
+              const fiatT = findFiat(match.index, match.trade);
+              if (fiatT) {
+                const fiatAsset = (fiatT.asset || "").toUpperCase();
+                if (fiatAsset.includes("GBP") || fiatAsset === "ZGBP") {
+                  gbpVal = Math.abs(fiatT.amount);
+                  usedTrade = true;
+                } else if (fiatAsset.includes("EUR") || fiatAsset === "ZEUR") {
+                  // Convert EUR to GBP?
+                  // If we have EUR amount, we need EURGBP rate for that day
+                  // For now, let's just use the cached exchange rate logic below but apply to this amount?
+                  // Or, if strict, we verify. The report seems to want GBP Equivalent.
+                  // If trade was EUR, we have EUR value.
+                  // Let's fallback to rate lookup if not GBP.
+                }
+              }
             }
 
-            let rate = 0;
-            if (dailyRates) {
-              if (assetKey === "USDT") rate = dailyRates.USDTGBP || 0;
-              if (assetKey === "XRP") rate = dailyRates.XRPGBP || 0;
+            if (!usedTrade) {
+              // Fallback: Use Daily Rate
+              const dt = new Date(e.time * 1000);
+              const y = dt.getUTCFullYear();
+              const m = String(dt.getUTCMonth() + 1).padStart(2, "0");
+              const dStr = String(dt.getUTCDate()).padStart(2, "0");
+              const dateKey = `${y}-${m}-${dStr}`;
+
+              let dailyRates = (cacheData.ratesCache && cacheData.ratesCache[dateKey]) ? cacheData.ratesCache[dateKey] : null;
+
+              let rate = 0;
+              if (dailyRates) {
+                if (assetKey === "USDT") rate = dailyRates.USDTGBP || 0;
+                if (assetKey === "XRP") rate = dailyRates.XRPGBP || 0;
+              }
+              gbpVal = amount * rate;
             }
 
-            const gbpVal = amount * rate;
             if (assetKey === "USDT") cryptoTotals[recipient].USDT_GBP += gbpVal;
             if (assetKey === "XRP") cryptoTotals[recipient].XRP_GBP += gbpVal;
 
@@ -3224,7 +3292,7 @@
 
       // Sub-headers (Amounts)
       TRACKED_ASSETS.forEach(asset => {
-        html += `<th class="section-border-left" style="text-align:right; font-size:0.55rem; background:#f9f9f9;">Amount</th>`;
+        html += `<th class="section-border-left" style="text-align:right; font-size:0.55rem; background:#f9f9f9;">Net Amount</th>`;
         html += `<th style="text-align:right; font-size:0.55rem; background:#f9f9f9;">Fee</th>`;
         html += `<th style="text-align:right; font-size:0.55rem; background:#f9f9f9;">Balance</th>`;
       });
