@@ -411,7 +411,7 @@
       <div
         style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; position:relative;">
         <div class="branding-row" style="margin-bottom:0; line-height:1.2;">
-          <div><b>Kraken Reports</b> <span style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.991</span></div>
+          <div><b>Kraken Reports</b> <span style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.992</span></div>
           <div style="font-size:0.65rem; color:#b0b0b0; font-weight:400;">GBP, EUR, USDT, XRP transactions in Date
             range</div>
         </div>
@@ -646,7 +646,7 @@
   <script>
 
     const SHEET_ID = "1Vf0iqthwHv0kFqTRJkYShH_RBpbokLmiEDWGJN3Q_E";
-    const VER = "Kraken Withdrawals Report (v2.991)";
+    const VER = "Kraken Withdrawals Report (v2.992)";
     const KRAKEN_API_URL = "https://api.kraken.com";
 
     // Default API credentials (enter your own in API Config)
@@ -1701,7 +1701,11 @@
           if (typeof e === 'object' && e.result && e.result.error) {
             errMsg = JSON.stringify(e.result.error);
           } else if (typeof e === 'object') {
-            try { errMsg = JSON.stringify(e); } catch (x) { }
+            try {
+              // Handle Error objects which stringify to {}
+              errMsg = e.message ? e.message : JSON.stringify(e);
+              if (errMsg === "{}") errMsg = "Unknown Error (Network/Auth?)";
+            } catch (x) { errMsg = "Unknown Error"; }
           }
 
           if (errMsg.includes("404") || errMsg.includes("NOT_FOUND")) {
@@ -3403,7 +3407,7 @@
       const div = document.getElementById("bankReportArea");
       // Don't force display:block here, just update content. 
 
-      let html = '<table style="min-width:100%; width:auto; border-collapse:collapse;"><thead><tr>';
+      let html = '<table id="bankStmtTable" style="min-width:100%; width:auto; border-collapse:collapse;"><thead><tr>';
 
       // Fixed Columns (Rowspan 2 for vertical centering)
       const hStyle = "border:1px solid #ddd; padding:8px; vertical-align:middle; background:#f9f9f9;";
