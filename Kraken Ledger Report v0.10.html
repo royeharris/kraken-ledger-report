@@ -292,8 +292,8 @@
     }
 
     .w-cur {
-      min-width: 6ch;
-      width: 6ch;
+      min-width: 9ch;
+      width: 9ch;
       /* fits "Conv Currency" */
       text-align: center;
     }
@@ -424,7 +424,7 @@
         style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; position:relative;">
         <div class="branding-row" style="margin-bottom:0; line-height:1.2;">
           <div><b>Kraken Withdrawals Report</b> <span
-              style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.47</span></div>
+              style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.48</span></div>
           <div style="font-size:0.65rem; color:#b0b0b0; font-weight:400;">(GBP equivalent for all XRP and USDT transfers
             in Date range)</div>
         </div>
@@ -637,12 +637,12 @@
     <button id="log_btn" onclick="toggleLog()"
       style="width:100%; padding:8px; margin-top:10px; background:#8e44ad; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Display
       Trace Log</button>
-    <div id="trace_log" onclick="toggleLog()">Trace: v2.47 Kraken Withdrawals Report initialized.</div>
+    <div id="trace_log" onclick="toggleLog()">Trace: v2.48 Kraken Withdrawals Report initialized.</div>
   </div>
 
   <script>
     const SHEET_ID = "1Vf0iqthwHv0kFqTRJkYShH_RBpbokLmiEDWGJN3Q0_E";
-    const VER = "Kraken Withdrawals Report (v2.47)";
+    const VER = "Kraken Withdrawals Report (v2.48)";
     const KRAKEN_API_URL = "https://api.kraken.com";
 
     // Default API credentials (enter your own in API Config)
@@ -670,7 +670,7 @@
       const now = new Date().toLocaleTimeString();
       const base = log.textContent && log.textContent.trim().length
         ? log.textContent
-        : "Trace: v2.47 Kraken Withdrawals Report initialized.";
+        : "Trace: v2.48 Kraken Withdrawals Report initialized.";
       log.textContent = base + "\n[" + now + "] " + msg;
       log.scrollTop = log.scrollHeight;
       console.log(msg);
@@ -1097,6 +1097,13 @@
         await fetchWithdrawalHistory(otp.trim());
 
         updateStatusCounts();
+
+        // Log structure of first address to inspect fields (User Request v2.48)
+        if (cacheData.krakenAddresses.length > 0) {
+          logTrace("DEBUG: First address structure keys: " + Object.keys(cacheData.krakenAddresses[0]).join(", "));
+          logTrace("DEBUG: First address sample: " + JSON.stringify(cacheData.krakenAddresses[0]));
+        }
+
         renderAddressTable();
 
         updateStatus("Addresses: " + cacheData.krakenAddresses.length, "active");
@@ -2328,8 +2335,9 @@
       for (let idx = sortedLedger.length - 1; idx >= 0; idx--) {
         const w = sortedLedger[idx];
 
-        // Only process withdrawals (skip trades, deposits, etc.)
-        if (w.type !== "withdrawal") continue;
+        // Only process withdrawals and trades (skip deposits for now, unless needed)
+        // v2.48: Allow trades to pass through!
+        if (w.type !== "withdrawal" && w.type !== "trade") continue;
 
         const dateStr = new Date(w.time * 1000).toISOString().split("T")[0];
         const rates = cacheData.ratesCache[dateStr] || {};
@@ -2342,36 +2350,60 @@
         let destTag = historyMatch ? (historyMatch.dest || historyMatch.tag || "") : "";
 
         // Find recipient from krakenAddresses
-        // Find recipient from krakenAddresses
         let fullRecipient = "";
-        const addrMatch = cacheData.krakenAddresses.find(a =>
-          a.address === walletAddr && (
-            // If we have a dest tag in history, it MUST match the address book tag
-            // If history has no tag, we match address book entry with no tag
-            (destTag ? (a.tag === destTag) : (!a.tag))
-          )
-        );
+
+        // Helper to normalize string for matching (remove spaces, symbols, lowercase)
+        const normalize = (s) => (s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+
+        const walletAddrNorm = normalize(walletAddr);
+
+        const addrMatch = cacheData.krakenAddresses.find(a => {
+          // Strict match on address field
+          if (a.address === walletAddr) {
+            return (destTag ? (a.tag === destTag) : (!a.tag));
+          }
+          // v2.48: Fuzzy/Normalized match for Fiat IBANs
+          // Check if normalised address in book matches normalised wallet address
+          // OR if the 'info' field (sometimes matches)
+          if (walletAddrNorm.length > 5 && (normalize(a.address) === walletAddrNorm || normalize(a.info) === walletAddrNorm)) {
+            return true;
+          }
+          return false;
+        });
 
         if (addrMatch) {
-          fullRecipient = (addrMatch.key || "").replace(/\\s*/g, "").trim();
+          // Use the Key Name from address book
+          fullRecipient = (addrMatch.key || "").trim();
         } else {
-          // Fallback: if strict match failed, try matching just address if it's NOT XRP/XLM (which usually require tags)
-          // Or if it IS XRP but the address book entry has no tag
+          // Fallback 1: Loose match on address only (for crypto non-tag assets)
           const looseMatch = cacheData.krakenAddresses.find(a => a.address === walletAddr);
-          if (looseMatch) {
-            // For XRP, only use loose match if we really don't have a tag involved
-            if ((w.asset.includes("XRP") || w.asset === "XXRP") && (destTag || looseMatch.tag)) {
-              // Mismatch in tags -> treat as unknown or partial
-            } else {
-              fullRecipient = (looseMatch.key || "").replace(/\\s*/g, "").trim();
-            }
+          if (looseMatch && !((w.asset.includes("XRP") || w.asset === "XXRP") && (destTag || looseMatch.tag))) {
+            fullRecipient = (looseMatch.key || "").trim();
+          }
+        }
+
+        // v2.48 Fallback 2: If still empty and it's a Fiat withdrawal, use the bank name from history
+        if (!fullRecipient && (w.type === "withdrawal")) {
+          const isFiat = w.asset.includes("GBP") || w.asset.includes("EUR") || w.asset.includes("USD") || w.asset.includes("ZGBP") || w.asset.includes("ZEUR") || w.asset.includes("ZUSD");
+          if (isFiat && walletAddr) {
+            fullRecipient = walletAddr; // e.g. "Revolut Ltd"
           }
         }
 
         // Split recipient: first 2 words = name, rest = sent to destination
-        const words = fullRecipient.split(/\s+/);
-        const recipientName = words.slice(0, 2).join(" ");
-        const sentTo = words.slice(2).join(" ").trim();
+        // v2.48: Ensure we handle cases with < 2 words gracefully
+        const words = (fullRecipient || "").split(/\s+/);
+        let recipientName = "";
+        let sentTo = "";
+
+        if (words.length > 0 && words[0] !== "") {
+          if (words.length === 1) {
+            recipientName = words[0];
+          } else {
+            recipientName = words[0] + " " + words[1];
+            sentTo = words.slice(2).join(" ").trim();
+          }
+        }
 
 
         // Calculate GBP equivalent - TRY TRADE MATCHING FIRST
