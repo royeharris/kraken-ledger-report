@@ -768,19 +768,21 @@
     }
 
     // ---------- Date Handling ----------
+    // ---------- Date Handling ----------
     function handleDateChange(id) {
+      // Update Bank Report Button Label (Always run this)
+      updateBankButtonLabel();
+
       const dStr = document.getElementById(id).value;
       const dispEl = document.getElementById(id + "Disp");
-      if (!dispEl) return; // Element doesn't exist in new design
+      if (!dispEl) return; // Element doesn't exist in new design, safe to exit if we only needed to update it
+
       if (!dStr) { dispEl.innerText = ""; return; }
       const [y, m, d] = dStr.split("-").map(Number);
       const dt = new Date(y, m - 1, d);
       const day = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][dt.getDay()];
       const mon = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][dt.getMonth()];
       dispEl.innerText = day + " " + dt.getDate() + " " + mon + " '" + String(dt.getFullYear()).slice(-2);
-
-      // Update Bank Report Button Label
-      updateBankButtonLabel();
     }
 
     function updateBankButtonLabel() {
