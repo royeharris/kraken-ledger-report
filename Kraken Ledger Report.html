@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8" />
   <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport" />
-  <title>Kraken Ledger Report v2.84</title>
+  <title>Kraken Ledger Report v2.85</title>
   <script async defer src="https://accounts.google.com/gsi/client"></script>
   <script async defer src="https://apis.google.com/js/api.js"></script>
   <style>
@@ -411,7 +411,7 @@
       <div
         style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; position:relative;">
         <div class="branding-row" style="margin-bottom:0; line-height:1.2;">
-          <div><b>Kraken Reports</b> <span style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.84</span></div>
+          <div><b>Kraken Reports</b> <span style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.85</span></div>
           <div style="font-size:0.65rem; color:#b0b0b0; font-weight:400;">GBP, EUR, USDT, XRP transactions in Date
             range</div>
         </div>
@@ -632,12 +632,21 @@
     <button id="log_btn" onclick="toggleLog()"
       style="width:100%; padding:8px; margin-top:10px; background:#8e44ad; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Display
       Trace Log</button>
-    <div id="trace_log" onclick="toggleLog()">Trace: v2.84 Kraken Withdrawals Report initialized.</div>
+    <div id="trace_log" onclick="toggleLog()">Trace: v2.85 Kraken Withdrawals Report initialized.</div>
   </div>
 
   <script>
+    window.onerror = function (msg, url, line, col, error) {
+      alert("Error: " + msg + "\nLine: " + line + ":" + col);
+      console.error(msg, error);
+      return false;
+    };
+  </script>
+
+  <script>
+
     const SHEET_ID = "1Vf0iqthwHv0kFqTRJkYShH_RBpbokLmiEDWGJN3Q_E";
-    const VER = "Kraken Withdrawals Report (v2.84)";
+    const VER = "Kraken Withdrawals Report (v2.85)";
     const KRAKEN_API_URL = "https://api.kraken.com";
 
     // Default API credentials (enter your own in API Config)
@@ -1530,7 +1539,15 @@
       requestToken(true, onOk);
     }
 
+    function saveSheetId(val) {
+      if (val) localStorage.setItem("kraken_sheet_id", val.trim());
+    }
+
     async function handleSync() {
+      // Get ID from storage or default
+      const storedSheetId = localStorage.getItem("kraken_sheet_id");
+      const targetSheetId = storedSheetId || SHEET_ID;
+
       // We allow sync if ANY of the staging datasets are present, not just the Report staging
       // But typically user generates reports first.
 
@@ -1544,11 +1561,19 @@
       }
 
       updateStatus("Syncing...", "sync");
-      logTrace(`Sync started. Staging=${stagingRecords.length}, Bank=${hasBank ? bankRecords.length : 0}, Summary=${hasSummary ? "yes" : "no"}`);
+      logTrace(`Sync started. Target Sheet=${targetSheetId.substr(0, 10)}...`);
+      logTrace(`Records: Staging=${stagingRecords.length}, Bank=${hasBank ? bankRecords.length : 0}, Summary=${hasSummary ? "yes" : "no"}`);
 
       ensureTokenThen(async () => {
         try {
-          // 1. ReportStaging (Existing)
+          // Verify Sheet Access First (cheap check)
+          try {
+            await gapi.client.sheets.spreadsheets.get({ spreadsheetId: targetSheetId });
+          } catch (err) {
+            throw new Error("Cannot access Sheet. Please check the ID in API Config and ensure you have permission (404/403).");
+          }
+
+          // 1. ReportStaging
           if (hasStaging) {
             const headers = [
               "Date", "Type", "Time (UTC)", "Recipient", "Sent to", "GBP Sent", "Amount", "Fee", "Asset",
@@ -1561,42 +1586,37 @@
               r.rateSource || '', r.wallet, r.destTag, r.txId
             ]);
 
-            await gapi.client.sheets.spreadsheets.values.clear({ spreadsheetId: SHEET_ID, range: "'ReportStaging'!A:Z" });
+            await gapi.client.sheets.spreadsheets.values.clear({ spreadsheetId: targetSheetId, range: "'ReportStaging'!A:Z" });
             await gapi.client.sheets.spreadsheets.values.update({
-              spreadsheetId: SHEET_ID, range: "'ReportStaging'!A1:P1", valueInputOption: "USER_ENTERED", resource: { values: [headers] }
+              spreadsheetId: targetSheetId, range: "'ReportStaging'!A1:P1", valueInputOption: "USER_ENTERED", resource: { values: [headers] }
             });
             await gapi.client.sheets.spreadsheets.values.update({
-              spreadsheetId: SHEET_ID, range: "'ReportStaging'!A2:P" + (1 + vals.length), valueInputOption: "USER_ENTERED", resource: { values: vals }
+              spreadsheetId: targetSheetId, range: "'ReportStaging'!A2:P" + (1 + vals.length), valueInputOption: "USER_ENTERED", resource: { values: vals }
             });
             logTrace("ReportStaging exported.");
           }
 
-          // 2. KrakenLedger (Existing - Raw Data)
+          // 2. KrakenLedger
           if (cacheData.withdrawals && cacheData.withdrawals.length > 0) {
             const ledgerHeaders = ["Date", "Type", "Time", "Amount", "Fee", "Asset", "Balance", "Ledger ID", "Ref ID"];
             const ledgerVals = cacheData.withdrawals.map(w => [
               w.time ? formatTimestamp(w.time) : '', w.type || '', w.time ? formatTime(w.time) : '', w.amount || 0, w.fee || 0,
               w.asset || '', w.balance || 0, w.ledgerId || '', w.refid || ''
             ]);
-            await gapi.client.sheets.spreadsheets.values.clear({ spreadsheetId: SHEET_ID, range: "'KrakenLedger'!A:Z" });
+            await gapi.client.sheets.spreadsheets.values.clear({ spreadsheetId: targetSheetId, range: "'KrakenLedger'!A:Z" });
             await gapi.client.sheets.spreadsheets.values.update({
-              spreadsheetId: SHEET_ID, range: "'KrakenLedger'!A1:I1", valueInputOption: "USER_ENTERED", resource: { values: [ledgerHeaders] }
+              spreadsheetId: targetSheetId, range: "'KrakenLedger'!A1:I1", valueInputOption: "USER_ENTERED", resource: { values: [ledgerHeaders] }
             });
             await gapi.client.sheets.spreadsheets.values.update({
-              spreadsheetId: SHEET_ID, range: "'KrakenLedger'!A2:I" + (1 + ledgerVals.length), valueInputOption: "USER_ENTERED", resource: { values: ledgerVals }
+              spreadsheetId: targetSheetId, range: "'KrakenLedger'!A2:I" + (1 + ledgerVals.length), valueInputOption: "USER_ENTERED", resource: { values: ledgerVals }
             });
             logTrace("KrakenLedger exported.");
           }
 
-          // 3. KrakenStatement (New)
+          // 3. KrakenStatement
           if (hasBank) {
-            // Headers: Main + Asset Sub-headers
-            // Row 1: Date | Time | Type | Details | GBP | | | EUR | | | ...
-            // Row 2: | | | | Amount | P/L Fee | Balance | Amount | ...
-
             let header1 = ["Date", "Time", "Type", "Details"];
             let header2 = ["", "", "", ""];
-
             TRACKED_ASSETS.forEach(a => {
               header1.push(a, "", "");
               header2.push("Amount", "P/L Fee", "Balance");
@@ -1615,74 +1635,59 @@
               return row;
             });
 
-            const rangeReq = "'KrakenStatement'!A:Z"; // Assume enough columns
-            await gapi.client.sheets.spreadsheets.values.clear({ spreadsheetId: SHEET_ID, range: rangeReq });
-
-            // Update Headers
+            const rangeReq = "'KrakenStatement'!A:Z";
+            await gapi.client.sheets.spreadsheets.values.clear({ spreadsheetId: targetSheetId, range: rangeReq });
             await gapi.client.sheets.spreadsheets.values.update({
-              spreadsheetId: SHEET_ID, range: "'KrakenStatement'!A1", valueInputOption: "USER_ENTERED", resource: { values: [header1, header2] }
+              spreadsheetId: targetSheetId, range: "'KrakenStatement'!A1", valueInputOption: "USER_ENTERED", resource: { values: [header1, header2] }
             });
-            // Update Data
             await gapi.client.sheets.spreadsheets.values.update({
-              spreadsheetId: SHEET_ID, range: "'KrakenStatement'!A3", valueInputOption: "USER_ENTERED", resource: { values: bankVals }
+              spreadsheetId: targetSheetId, range: "'KrakenStatement'!A3", valueInputOption: "USER_ENTERED", resource: { values: bankVals }
             });
             logTrace("KrakenStatement exported.");
           }
 
-          // 4. KrakenStatementSummary (v2.79 Fixed)
+          // 4. KrakenStatementSummary
           if (hasSummary) {
-            // Section 1: CRYPTO Withdrawals
-            // Headers: Recipient | USDT | GBP Equiv | XRP | GBP Equiv
             let s1Headers = ["WITHDRAWALS (CRYPTO)", "", "", "", ""];
             let s1ColHeaders = ["Recipient", "USDT", "GBP Equivalent", "XRP Amount", "GBP Equivalent"];
-
             const s1Rows = (summaryRecords.crypto || []).map(r => [
-              r.recipient,
-              r.USDT || 0, r.USDT_GBP || 0,
-              r.XRP || 0, r.XRP_GBP || 0
+              r.recipient, r.USDT || 0, r.USDT_GBP || 0, r.XRP || 0, r.XRP_GBP || 0
             ]);
 
-            // Section 2: FIAT Withdrawals
-            // Headers: Haricom Bank Account | GBP | EUR
             let s2Headers = ["WITHDRAWALS (FIAT)", "", ""];
             let s2ColHeaders = ["Haricom Bank Account", "GBP Amount", "EUR Amount"];
-
             const s2Rows = (summaryRecords.fiat || []).map(r => [
               r.recipient, r.GBP || 0, r.EUR || 0
             ]);
 
-            // Section 3: Deposits
-            // Headers: Currency | Total Amount
             let s3Headers = ["DEPOSITS (FIAT)", ""];
             let s3ColHeaders = ["Currency", "Total Amount"];
-
             const s3Rows = (summaryRecords.deposits || []).map(r => [
-              r.asset, r.total
+              r.asset, r.total || 0
             ]);
 
             const rangeReq = "'KrakenStatementSummary'!A:Z";
-            await gapi.client.sheets.spreadsheets.values.clear({ spreadsheetId: SHEET_ID, range: rangeReq });
+            await gapi.client.sheets.spreadsheets.values.clear({ spreadsheetId: targetSheetId, range: rangeReq });
 
-            // 1. Write Crypto
+            // S1
             await gapi.client.sheets.spreadsheets.values.update({
-              spreadsheetId: SHEET_ID, range: "'KrakenStatementSummary'!A1", valueInputOption: "USER_ENTERED",
+              spreadsheetId: targetSheetId, range: "'KrakenStatementSummary'!A1", valueInputOption: "USER_ENTERED",
               resource: { values: [s1Headers, s1ColHeaders, ...s1Rows] }
             });
 
-            // 2. Write Fiat (below Crypto)
+            // S2
             let currentRow = 1 + 2 + s1Rows.length + 2;
             await gapi.client.sheets.spreadsheets.values.update({
-              spreadsheetId: SHEET_ID, range: `'KrakenStatementSummary'!A${currentRow}`, valueInputOption: "USER_ENTERED",
+              spreadsheetId: targetSheetId, range: `'KrakenStatementSummary'!A${currentRow}`, valueInputOption: "USER_ENTERED",
               resource: { values: [s2Headers, s2ColHeaders, ...s2Rows] }
             });
 
-            // 3. Write Deposits (below Fiat)
+            // S3
             currentRow = currentRow + 2 + s2Rows.length + 2;
             await gapi.client.sheets.spreadsheets.values.update({
-              spreadsheetId: SHEET_ID, range: `'KrakenStatementSummary'!A${currentRow}`, valueInputOption: "USER_ENTERED",
+              spreadsheetId: targetSheetId, range: `'KrakenStatementSummary'!A${currentRow}`, valueInputOption: "USER_ENTERED",
               resource: { values: [s3Headers, s3ColHeaders, ...s3Rows] }
             });
-
             logTrace("KrakenStatementSummary exported.");
           }
 
@@ -1690,7 +1695,6 @@
           alert("Sync complete.\nReports exported to Google Sheets.");
 
         } catch (e) {
-          // Enhanced Error Logging
           let errMsg = e.message || e;
           if (typeof e === 'object' && e.result && e.result.error) {
             errMsg = JSON.stringify(e.result.error);
@@ -1698,15 +1702,14 @@
             try { errMsg = JSON.stringify(e); } catch (x) { }
           }
 
-          // Check for 404 (Not Found) - usually means Sheet ID invalid or permission denied
           if (errMsg.includes("404") || errMsg.includes("NOT_FOUND")) {
-            logTrace("Sync skipped: verified Sheet ID not found or not accessible. (This is normal if not configured)");
-            updateStatus("Sync Skipped", "idle");
-            // Do NOT alert the user for this common case
+            logTrace("Sync skipped: Sheet ID not found. Please set correct Sheet ID in API Config.");
+            updateStatus("Sync Failed: Check SheetID", "error");
+            alert("Sync Failed: Spreadsheet Not Found (404).\nPlease Open 'API Config' and paste your valid Google Sheet ID.");
           } else {
             updateStatus("Sync error", "error");
             logTrace("Sync error: " + errMsg);
-            alert("Sync failed. Check trace log for details.\n" + errMsg);
+            alert("Sync failed. " + errMsg);
           }
         }
       });
@@ -3091,7 +3094,7 @@
 
         // ... rest of loop
 
-        const amount = Math.abs(e.amount);
+        amount = Math.abs(e.amount);
 
         if (e.type === 'withdrawal') {
           // Find Recipient Logic
@@ -3150,18 +3153,7 @@
         }
       }
 
-      // -- Re-loop for cleaner aggregation logic since I changed mid-stream --
-
-      const cMap = {}; // Crypto
-      const fMap = {}; // Fiat
-
-      for (const e of data) {
-        const assetKey = getAssetKey(e.asset);
-        if (!assetKey) continue;
-
-        // ... Legacy Helper Logic moved to function or duplicated ...
-        // Actually, let's define the helper cleanly outside or inside
-      }
+      // -- Aggregation Complete --
 
       // Helper for GBP Calc (Reused by both New and Legacy paths)
       function calculateGbpValue(e, amount, assetKey) {
@@ -3413,7 +3405,7 @@
           depositTotals[assetKey] += amount;
         }
       }
-    }
+    } // End for loop
 
     const cryptoRows = Object.keys(cryptoTotals).map(r => ({ recipient: r, ...cryptoTotals[r] })).sort((a, b) => a.recipient.localeCompare(b.recipient));
     const fiatRows = Object.keys(fMap).map(r => ({ recipient: r, ...fMap[r] })).sort((a, b) => a.recipient.localeCompare(b.recipient));
@@ -3423,7 +3415,7 @@
     localStorage.setItem("kraken_summary_staging", JSON.stringify(summaryRecords));
 
     renderSummaryTable();
-    }
+  }
 
     function renderSummaryTable() {
       const div = document.getElementById("summaryReportArea");
