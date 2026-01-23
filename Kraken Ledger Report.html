@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8" />
   <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport" />
-  <title>Kraken Ledger Report v2.999</title>
+  <title>Kraken Ledger Report v3.000</title>
   <script async defer src="https://accounts.google.com/gsi/client"></script>
   <script async defer src="https://apis.google.com/js/api.js"></script>
   <style>
@@ -411,7 +411,7 @@
       <div
         style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; position:relative;">
         <div class="branding-row" style="margin-bottom:0; line-height:1.2;">
-          <div><b>Kraken Reports</b> <span style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v2.999</span></div>
+          <div><b>Kraken Reports</b> <span style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v3.000</span></div>
           <div style="font-size:0.65rem; color:#b0b0b0; font-weight:400;">GBP, EUR, USDT, XRP transactions in Date
             range</div>
         </div>
@@ -486,6 +486,12 @@
         <input type="text" id="krakenApiKey" placeholder="API Key with Query permissions" style="margin-bottom:4px;">
         <label>Private Key</label>
         <input type="password" id="krakenPrivateKey" placeholder="Private Key (Base64)" style="margin-bottom:10px;">
+
+        <div
+          style="font-size:0.7rem; font-weight:700; color:#e67e22; margin-bottom:4px; padding-top:8px; border-top:1px solid #ddd;">
+          Google Sheets (for Sync)</div>
+        <label>Sheet ID</label>
+        <input type="text" id="googleSheetId" placeholder="Google Spreadsheet ID" style="margin-bottom:10px;">
 
         <div
           style="font-size:0.7rem; font-weight:700; color:var(--kraken); margin-bottom:4px; padding-top:8px; border-top:1px solid #ddd;">
@@ -646,7 +652,7 @@
   <script>
 
     const SHEET_ID = "1Vf0iqthwHv0kFqTRJkYShH_RBpbokLmiEDWGJN3Q_E";
-    const VER = "Kraken Withdrawals Report (v2.999)";
+    const VER = "Kraken Withdrawals Report (v3.000)";
     const KRAKEN_API_URL = "https://api.kraken.com";
 
     // Default API credentials (enter your own in API Config)
@@ -675,7 +681,7 @@
       const now = new Date().toLocaleTimeString();
       const base = log.textContent && log.textContent.trim().length
         ? log.textContent
-        : "Trace: v2.999 Kraken Ledger Report initialized.";
+        : "Trace: v3.000 Kraken Ledger Report initialized.";
       log.textContent = base + "\n[" + now + "] " + msg;
       log.scrollTop = log.scrollHeight;
       console.log(msg);
@@ -1001,12 +1007,14 @@
       const privateKey = document.getElementById("krakenPrivateKey").value;
       const withdrawKey = document.getElementById("withdrawApiKey").value;
       const withdrawPrivate = document.getElementById("withdrawPrivateKey").value;
+      const sheetId = document.getElementById("googleSheetId").value;
       const proxy = getSelectedProxy();
 
       localStorage.setItem("kraken_api_key", apiKey);
       localStorage.setItem("kraken_private_key", privateKey);
       localStorage.setItem("kraken_withdraw_api_key", withdrawKey);
       localStorage.setItem("kraken_withdraw_private_key", withdrawPrivate);
+      localStorage.setItem("kraken_sheet_id", sheetId);
       localStorage.setItem("kraken_cors_proxy", proxy);
       localStorage.setItem("kraken_cors_proxy_type", document.getElementById("corsProxySelect").value);
 
@@ -1808,6 +1816,7 @@
         const savedProxy = localStorage.getItem("kraken_cors_proxy");
         const savedWithdrawKey = localStorage.getItem("kraken_withdraw_api_key");
         const savedWithdrawPrivate = localStorage.getItem("kraken_withdraw_private_key");
+        const savedSheetId = localStorage.getItem("kraken_sheet_id");
         if (savedKey) document.getElementById("krakenApiKey").value = savedKey;
         if (savedPrivate) document.getElementById("krakenPrivateKey").value = savedPrivate;
         if (savedProxyType) {
@@ -1819,6 +1828,7 @@
         }
         if (savedWithdrawKey) document.getElementById("withdrawApiKey").value = savedWithdrawKey;
         if (savedWithdrawPrivate) document.getElementById("withdrawPrivateKey").value = savedWithdrawPrivate;
+        if (savedSheetId) document.getElementById("googleSheetId").value = savedSheetId;
       }
     }
 
