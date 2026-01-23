@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8" />
   <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport" />
-  <title>Kraken Ledger Report v3.014</title>
+  <title>Kraken Ledger Report v3.015</title>
   <script async defer src="https://accounts.google.com/gsi/client"></script>
   <script async defer src="https://apis.google.com/js/api.js"></script>
   <style>
@@ -411,7 +411,7 @@
       <div
         style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; position:relative;">
         <div class="branding-row" style="margin-bottom:0; line-height:1.2;">
-          <div><b>Kraken Reports</b> <span style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v3.014</span></div>
+          <div><b>Kraken Reports</b> <span style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v3.015</span></div>
           <div style="font-size:0.65rem; color:#b0b0b0; font-weight:400;">GBP, EUR, USDT, XRP transactions in Date
             range</div>
         </div>
@@ -645,7 +645,7 @@
     <button id="log_btn" onclick="toggleLog()"
       style="width:100%; padding:8px; margin-top:10px; background:#8e44ad; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Display
       Trace Log</button>
-    <div id="trace_log" onclick="toggleLog()">Trace: v2.85 Kraken Withdrawals Report initialized.</div>
+    <div id="trace_log" onclick="toggleLog()">Trace: v3.015 Kraken Withdrawals Report initialized.</div>
   </div>
 
   <script>
@@ -659,7 +659,7 @@
   <script>
 
     const SHEET_ID = "1Vf0iqthwHv0kFqTRJkYShH_RBpbokLmiEDWGJN3Q_E";
-    const VER = "Kraken Withdrawals Report (v3.014)";
+    const VER = "Kraken Withdrawals Report (v3.015)";
     const KRAKEN_API_URL = "https://api.kraken.com";
 
     // Default API credentials (enter your own in API Config)
@@ -688,7 +688,7 @@
       const now = new Date().toLocaleTimeString();
       const base = log.textContent && log.textContent.trim().length
         ? log.textContent
-        : "Trace: v3.014 Kraken Ledger Report initialized.";
+        : "Trace: v3.015 Kraken Ledger Report initialized.";
       log.textContent = base + "\n[" + now + "] " + msg;
       log.scrollTop = log.scrollHeight;
       console.log(msg);
@@ -1839,6 +1839,58 @@
     }
 
     // ---------- Kraken API ----------
+
+    // v3.015: Global helper to load credentials (fix for ReferenceError)
+    function loadSavedCredentials() {
+      const savedKey = localStorage.getItem("kraken_api_key");
+      const savedPrivate = localStorage.getItem("kraken_private_key");
+      const savedProxyType = localStorage.getItem("kraken_cors_proxy_type");
+      const savedProxy = localStorage.getItem("kraken_cors_proxy");
+      const savedWithdrawKey = localStorage.getItem("kraken_withdraw_api_key");
+      const savedWithdrawPrivate = localStorage.getItem("kraken_withdraw_private_key");
+
+      if (savedKey) document.getElementById("krakenApiKey").value = savedKey;
+      if (savedPrivate) document.getElementById("krakenPrivateKey").value = savedPrivate;
+      if (savedProxyType) {
+        const sel = document.getElementById("corsProxySelect");
+        if (sel) sel.value = savedProxyType;
+        if (savedProxyType === "custom" && savedProxy) {
+          const inp = document.getElementById("corsProxy");
+          if (inp) { inp.value = savedProxy; inp.style.display = "block"; }
+        }
+      }
+      if (savedWithdrawKey) document.getElementById("withdrawApiKey").value = savedWithdrawKey;
+      if (savedWithdrawPrivate) document.getElementById("withdrawPrivateKey").value = savedWithdrawPrivate;
+
+      logTrace("Credentials loaded from storage.");
+    }
+
+
+    // v3.015: Global helper to load credentials (fix for ReferenceError)
+    function loadSavedCredentials() {
+      const savedKey = localStorage.getItem("kraken_api_key");
+      const savedPrivate = localStorage.getItem("kraken_private_key");
+      const savedProxyType = localStorage.getItem("kraken_cors_proxy_type");
+      const savedProxy = localStorage.getItem("kraken_cors_proxy");
+      const savedWithdrawKey = localStorage.getItem("kraken_withdraw_api_key");
+      const savedWithdrawPrivate = localStorage.getItem("kraken_withdraw_private_key");
+
+      if (savedKey) document.getElementById("krakenApiKey").value = savedKey;
+      if (savedPrivate) document.getElementById("krakenPrivateKey").value = savedPrivate;
+      if (savedProxyType) {
+        const sel = document.getElementById("corsProxySelect");
+        if (sel) sel.value = savedProxyType;
+        if (savedProxyType === "custom" && savedProxy) {
+          const inp = document.getElementById("corsProxy");
+          if (inp) { inp.value = savedProxy; inp.style.display = "block"; }
+        }
+      }
+      if (savedWithdrawKey) document.getElementById("withdrawApiKey").value = savedWithdrawKey;
+      if (savedWithdrawPrivate) document.getElementById("withdrawPrivateKey").value = savedWithdrawPrivate;
+
+      logTrace("Credentials loaded from storage.");
+    }
+
     function toggleApiConfig() {
       const btn = document.getElementById("api_btn");
       const section = document.getElementById("apiConfigSection");
@@ -3130,6 +3182,8 @@
     // STATEMENT SUMMARY REPORT (v2.50)
     // ===========================================
     let summaryRecords = { withdrawals: [], deposits: [] };
+    let depositTotals = { GBP: 0, EUR: 0 }; // v3.015: Global for access in render helpers
+
 
     function toggleSummaryReport() {
       const div = document.getElementById("summaryReportArea");
@@ -3159,7 +3213,7 @@
       // Aggregation Containers
       const cryptoTotals = {}; // { recipient: { USDT: 0, XRP: 0, USDT_GBP: 0, XRP_GBP: 0 } }
       const fMap = {};         // { recipient: { GBP: 0, EUR: 0 } }
-      const depositTotals = { GBP: 0, EUR: 0 };
+      depositTotals = { GBP: 0, EUR: 0 }; // v3.015: Reset global variable
       const feeTotals = { GBP: 0, EUR: 0, USDT: 0, XRP: 0 };
       const fiatWithdrawals = []; // legacy support
 
