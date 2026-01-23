@@ -1725,7 +1725,7 @@
           if (errMsg.includes("404") || errMsg.includes("NOT_FOUND")) {
             logTrace("Sync skipped: Sheet ID not found. Please set correct Sheet ID in API Config.");
             updateStatus("Sync Failed: Check SheetID", "error");
-            alert("Sync Failed: Spreadsheet Not Found (404).\nPlease Open 'API Config' and paste your valid Google Sheet ID.");
+            alert("Sync Failed: Spreadsheet Not Found (404).\n\nTarget Sheet ID: " + targetSheetId + "\n\nPlease correct it in 'API Config' or ensure you have permission.");
           } else {
             updateStatus("Sync error", "error");
             logTrace("Sync error: " + errMsg);
