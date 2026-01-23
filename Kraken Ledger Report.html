@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8" />
   <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport" />
-  <title>Kraken Ledger Report v3.006</title>
+  <title>Kraken Ledger Report v3.008</title>
   <script async defer src="https://accounts.google.com/gsi/client"></script>
   <script async defer src="https://apis.google.com/js/api.js"></script>
   <style>
@@ -411,7 +411,7 @@
       <div
         style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; position:relative;">
         <div class="branding-row" style="margin-bottom:0; line-height:1.2;">
-          <div><b>Kraken Reports</b> <span style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v3.006</span></div>
+          <div><b>Kraken Reports</b> <span style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v3.008</span></div>
           <div style="font-size:0.65rem; color:#b0b0b0; font-weight:400;">GBP, EUR, USDT, XRP transactions in Date
             range</div>
         </div>
@@ -659,7 +659,7 @@
   <script>
 
     const SHEET_ID = "1Vf0iqthwHv0kFqTRJkYShH_RBpbokLmiEDWGJN3Q_E";
-    const VER = "Kraken Withdrawals Report (v3.006)";
+    const VER = "Kraken Withdrawals Report (v3.008)";
     const KRAKEN_API_URL = "https://api.kraken.com";
 
     // Default API credentials (enter your own in API Config)
@@ -688,7 +688,7 @@
       const now = new Date().toLocaleTimeString();
       const base = log.textContent && log.textContent.trim().length
         ? log.textContent
-        : "Trace: v3.006 Kraken Ledger Report initialized.";
+        : "Trace: v3.008 Kraken Ledger Report initialized.";
       log.textContent = base + "\n[" + now + "] " + msg;
       log.scrollTop = log.scrollHeight;
       console.log(msg);
@@ -3219,6 +3219,8 @@
 
       let sourceData = [];
       let isFromTable = false;
+      let depositTotals = { GBP: 0, EUR: 0 };
+      let feeTotals = { GBP: 0, EUR: 0, USDT: 0, XRP: 0 };
 
       if (customRecords && customRecords.length > 0) {
         sourceData = customRecords;
@@ -3298,6 +3300,16 @@
                   depositTotals[asset] += val;
                 }
               }
+            }
+
+            // Accumulate Fees (from Table Row)
+            if (item.fees) {
+              ["GBP", "EUR", "USDT", "XRP"].forEach(fAsset => {
+                // item.fees[fAsset] can be a number or undefined
+                if (item.fees[fAsset] && item.fees[fAsset] > 0) {
+                  if (feeTotals[fAsset] !== undefined) feeTotals[fAsset] += item.fees[fAsset];
+                }
+              });
             }
           }
           continue; // Next row
@@ -3501,7 +3513,8 @@
 
 
       // --- 4. FEES SECTION (New V3.003) ---
-      html += '<div style="background:#c0392b; color:#fff; padding:5px 10px; font-size:0.7rem; font-weight:bold; border-radius:4px 4px 0 0; margin-bottom:0;">Fees (GBP EUR USDT XRP)</div>';
+      // v3.008: Changed color to Orange (#d35400) for better accessibility (Red-Green distinction)
+      html += '<div style="background:#d35400; color:#fff; padding:5px 10px; font-size:0.7rem; font-weight:bold; border-radius:4px 4px 0 0; margin-bottom:0;">Fees (GBP EUR USDT XRP)</div>';
       html += '<table style="width:100%; border-collapse:collapse; margin-bottom:0; border:1px solid #ddd;">';
       html += '<thead><tr style="background:#f2f2f2;">';
       html += '<th style="padding:4px; border:1px solid #ddd; text-align:left;">Currency</th>';
