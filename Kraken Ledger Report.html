@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8" />
   <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport" />
-  <title>Kraken Ledger Report v3.013</title>
+  <title>Kraken Ledger Report v3.014</title>
   <script async defer src="https://accounts.google.com/gsi/client"></script>
   <script async defer src="https://apis.google.com/js/api.js"></script>
   <style>
@@ -411,7 +411,7 @@
       <div
         style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; position:relative;">
         <div class="branding-row" style="margin-bottom:0; line-height:1.2;">
-          <div><b>Kraken Reports</b> <span style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v3.013</span></div>
+          <div><b>Kraken Reports</b> <span style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v3.014</span></div>
           <div style="font-size:0.65rem; color:#b0b0b0; font-weight:400;">GBP, EUR, USDT, XRP transactions in Date
             range</div>
         </div>
@@ -659,7 +659,7 @@
   <script>
 
     const SHEET_ID = "1Vf0iqthwHv0kFqTRJkYShH_RBpbokLmiEDWGJN3Q_E";
-    const VER = "Kraken Withdrawals Report (v3.013)";
+    const VER = "Kraken Withdrawals Report (v3.014)";
     const KRAKEN_API_URL = "https://api.kraken.com";
 
     // Default API credentials (enter your own in API Config)
@@ -688,7 +688,7 @@
       const now = new Date().toLocaleTimeString();
       const base = log.textContent && log.textContent.trim().length
         ? log.textContent
-        : "Trace: v3.013 Kraken Ledger Report initialized.";
+        : "Trace: v3.014 Kraken Ledger Report initialized.";
       log.textContent = base + "\n[" + now + "] " + msg;
       log.scrollTop = log.scrollHeight;
       console.log(msg);
@@ -2665,7 +2665,8 @@
             conversionRate = matchedRate.toFixed(6);
             gbpSent = (netAmount * matchedRate).toFixed(2);
             gbpFee = (absFee * matchedRate).toFixed(2);
-            rateSource = "Trade";
+            // v3.014: "Trade" -> "Exact rate" via User Request
+            rateSource = "Exact rate";
 
             logTrace("Trade match for " + w.refid + ": " + cryptoAmount.toFixed(2) + " " + w.asset +
               " = " + fiatAmount.toFixed(2) + " " + conversionCurrency +
@@ -2687,7 +2688,8 @@
               conversionRate = rates.USDTEUR.toFixed(6);
               conversionCurrency = "EUR";
             }
-            rateSource = rates.USDTSource || "Kraken";
+            // v3.014: "Kraken" -> "Kraken day rate" via User Request
+            rateSource = rates.USDTSource || "Kraken day rate";
           } else if (w.asset.includes("XRP") || w.asset === "XXRP") {
             if (rates.XRPGBP) {
               gbpSent = (netAmount * rates.XRPGBP).toFixed(2);
@@ -2700,7 +2702,7 @@
               conversionRate = rates.XRPEUR.toFixed(6);
               conversionCurrency = "EUR";
             }
-            rateSource = rates.XRPSource || "Kraken";
+            rateSource = rates.XRPSource || "Kraken day rate";
           }
         }
 
