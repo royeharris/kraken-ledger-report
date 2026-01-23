@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8" />
   <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport" />
-  <title>Kraken Ledger Report v3.012</title>
+  <title>Kraken Ledger Report v3.013</title>
   <script async defer src="https://accounts.google.com/gsi/client"></script>
   <script async defer src="https://apis.google.com/js/api.js"></script>
   <style>
@@ -411,7 +411,7 @@
       <div
         style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; position:relative;">
         <div class="branding-row" style="margin-bottom:0; line-height:1.2;">
-          <div><b>Kraken Reports</b> <span style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v3.012</span></div>
+          <div><b>Kraken Reports</b> <span style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v3.013</span></div>
           <div style="font-size:0.65rem; color:#b0b0b0; font-weight:400;">GBP, EUR, USDT, XRP transactions in Date
             range</div>
         </div>
@@ -659,7 +659,7 @@
   <script>
 
     const SHEET_ID = "1Vf0iqthwHv0kFqTRJkYShH_RBpbokLmiEDWGJN3Q_E";
-    const VER = "Kraken Withdrawals Report (v3.012)";
+    const VER = "Kraken Withdrawals Report (v3.013)";
     const KRAKEN_API_URL = "https://api.kraken.com";
 
     // Default API credentials (enter your own in API Config)
@@ -688,7 +688,7 @@
       const now = new Date().toLocaleTimeString();
       const base = log.textContent && log.textContent.trim().length
         ? log.textContent
-        : "Trace: v3.012 Kraken Ledger Report initialized.";
+        : "Trace: v3.013 Kraken Ledger Report initialized.";
       log.textContent = base + "\n[" + now + "] " + msg;
       log.scrollTop = log.scrollHeight;
       console.log(msg);
@@ -1854,27 +1854,11 @@
       }
 
       // Load saved credentials when opening
+      // Load saved credentials when opening (refresh in case changed)
       if (isHidden) {
-        const savedKey = localStorage.getItem("kraken_api_key");
-        const savedPrivate = localStorage.getItem("kraken_private_key");
-        const savedProxyType = localStorage.getItem("kraken_cors_proxy_type");
-        const savedProxy = localStorage.getItem("kraken_cors_proxy");
-        const savedWithdrawKey = localStorage.getItem("kraken_withdraw_api_key");
-        const savedWithdrawPrivate = localStorage.getItem("kraken_withdraw_private_key");
-        const savedSheetId = localStorage.getItem("kraken_sheet_id");
-        if (savedKey) document.getElementById("krakenApiKey").value = savedKey;
-        if (savedPrivate) document.getElementById("krakenPrivateKey").value = savedPrivate;
-        if (savedProxyType) {
-          document.getElementById("corsProxySelect").value = savedProxyType;
-          if (savedProxyType === "custom" && savedProxy) {
-            document.getElementById("corsProxy").value = savedProxy;
-            document.getElementById("corsProxy").style.display = "block";
-          }
-        }
-        if (savedWithdrawKey) document.getElementById("withdrawApiKey").value = savedWithdrawKey;
-        if (savedWithdrawPrivate) document.getElementById("withdrawPrivateKey").value = savedWithdrawPrivate;
-        if (savedSheetId) document.getElementById("googleSheetId").value = savedSheetId;
+        loadSavedCredentials();
       }
+
     }
 
     function getApiCredentials() {
