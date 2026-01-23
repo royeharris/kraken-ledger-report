@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8" />
   <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport" />
-  <title>Kraken Ledger Report v3.000</title>
+  <title>Kraken Ledger Report v3.001</title>
   <script async defer src="https://accounts.google.com/gsi/client"></script>
   <script async defer src="https://apis.google.com/js/api.js"></script>
   <style>
@@ -411,7 +411,7 @@
       <div
         style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; position:relative;">
         <div class="branding-row" style="margin-bottom:0; line-height:1.2;">
-          <div><b>Kraken Reports</b> <span style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v3.000</span></div>
+          <div><b>Kraken Reports</b> <span style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v3.001</span></div>
           <div style="font-size:0.65rem; color:#b0b0b0; font-weight:400;">GBP, EUR, USDT, XRP transactions in Date
             range</div>
         </div>
@@ -490,8 +490,15 @@
         <div
           style="font-size:0.7rem; font-weight:700; color:#e67e22; margin-bottom:4px; padding-top:8px; border-top:1px solid #ddd;">
           Google Sheets (for Sync)</div>
-        <label>Sheet ID</label>
-        <input type="text" id="googleSheetId" placeholder="Google Spreadsheet ID" style="margin-bottom:10px;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <label>Sheet ID</label>
+          <a href="https://docs.google.com/spreadsheets" target="_blank"
+            style="font-size:0.6rem; color:#2980b9; text-decoration:none;">Open Google Sheets ↗</a>
+        </div>
+        <input type="text" id="googleSheetId" placeholder="e.g. 1Vf0iqthwHv0kFqTRJkYShH..." style="margin-bottom:2px;">
+        <div style="font-size:0.6rem; color:#95a5a6; margin-bottom:10px; line-height:1.2;">
+          Found in URL: .../spreadsheets/d/<b>ID_IS_HERE</b>/edit
+        </div>
 
         <div
           style="font-size:0.7rem; font-weight:700; color:var(--kraken); margin-bottom:4px; padding-top:8px; border-top:1px solid #ddd;">
@@ -652,7 +659,7 @@
   <script>
 
     const SHEET_ID = "1Vf0iqthwHv0kFqTRJkYShH_RBpbokLmiEDWGJN3Q_E";
-    const VER = "Kraken Withdrawals Report (v3.000)";
+    const VER = "Kraken Withdrawals Report (v3.001)";
     const KRAKEN_API_URL = "https://api.kraken.com";
 
     // Default API credentials (enter your own in API Config)
@@ -681,7 +688,7 @@
       const now = new Date().toLocaleTimeString();
       const base = log.textContent && log.textContent.trim().length
         ? log.textContent
-        : "Trace: v3.000 Kraken Ledger Report initialized.";
+        : "Trace: v3.001 Kraken Ledger Report initialized.";
       log.textContent = base + "\n[" + now + "] " + msg;
       log.scrollTop = log.scrollHeight;
       console.log(msg);
