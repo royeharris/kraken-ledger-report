@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8" />
   <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport" />
-  <title>Kraken Ledger Report v3.010</title>
+  <title>Kraken Ledger Report v3.011</title>
   <script async defer src="https://accounts.google.com/gsi/client"></script>
   <script async defer src="https://apis.google.com/js/api.js"></script>
   <style>
@@ -411,7 +411,7 @@
       <div
         style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; position:relative;">
         <div class="branding-row" style="margin-bottom:0; line-height:1.2;">
-          <div><b>Kraken Reports</b> <span style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v3.010</span></div>
+          <div><b>Kraken Reports</b> <span style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v3.011</span></div>
           <div style="font-size:0.65rem; color:#b0b0b0; font-weight:400;">GBP, EUR, USDT, XRP transactions in Date
             range</div>
         </div>
@@ -659,7 +659,7 @@
   <script>
 
     const SHEET_ID = "1Vf0iqthwHv0kFqTRJkYShH_RBpbokLmiEDWGJN3Q_E";
-    const VER = "Kraken Withdrawals Report (v3.010)";
+    const VER = "Kraken Withdrawals Report (v3.011)";
     const KRAKEN_API_URL = "https://api.kraken.com";
 
     // Default API credentials (enter your own in API Config)
@@ -688,7 +688,7 @@
       const now = new Date().toLocaleTimeString();
       const base = log.textContent && log.textContent.trim().length
         ? log.textContent
-        : "Trace: v3.010 Kraken Ledger Report initialized.";
+        : "Trace: v3.011 Kraken Ledger Report initialized.";
       log.textContent = base + "\n[" + now + "] " + msg;
       log.scrollTop = log.scrollHeight;
       console.log(msg);
@@ -3249,6 +3249,17 @@
 
           // Extract Recipient from Details
           let recipient = item.details || "Unknown";
+
+          // v3.011: Enhanced Fallback for "Unknown"
+          // If details contains "Withdrawal to..." or similar, extract from there
+          if (recipient === "Unknown" && item._raw && item._raw.info) {
+            recipient = item._raw.info;
+          }
+          if (recipient === "Unknown" && item.details && item.details !== "Unknown") {
+            // Try to parse from the generic details if populated
+            recipient = item.details;
+          }
+
           // Clean Recipient (remove (USDT) etc)
           recipient = recipient.replace(/\(.*\)/, "").trim();
           // Also apply the "First 2 words" rule here to match previous behavior
@@ -3270,8 +3281,15 @@
                 // Calculate GBP
                 // v2.90: Use enriched values from Table Generation if available
                 let gbpVal = 0;
-                if (item.gbpValues && item.gbpValues[asset]) {
-                  gbpVal = item.gbpValues[asset];
+                // v3.011: Fix GBP Equivalent access using correct keys
+                // The key in gbpValues (from step 382) is normalized (USDT, XRP, GBP, EUR)
+                let lookupAsset = asset;
+                // Ensure asset matches the normalization used in generateBankReport
+                if (asset.includes("USDT")) lookupAsset = "USDT";
+                else if (asset.includes("XRP") || asset === "XXRP") lookupAsset = "XRP";
+
+                if (item.gbpValues && item.gbpValues[lookupAsset]) {
+                  gbpVal = item.gbpValues[lookupAsset];
                 } else if (item._raw) {
                   // Fallback to recalculation (less accurate without trade match context)
                   gbpVal = calculateGbpValue(item._raw, amount, asset);
@@ -3521,11 +3539,29 @@
       html += '<th style="padding:4px; border:1px solid #ddd; text-align:right;">Total Amount</th>';
       html += '</tr></thead><tbody>';
 
+      // v3.011: Fee Display Logic with "-" for no records and proper decimals
+
+      const renderFeeRow = (asset, total) => {
+        // Heuristic: If total is 0, check if we had any activity for this asset.
+        let activity = false;
+        if (asset === "GBP" || asset === "EUR") {
+          if (depositTotals[asset] > 0) activity = true;
+          if (summaryRecords.fiat) summaryRecords.fiat.forEach(r => { if (r[asset] > 0) activity = true; });
+        } else {
+          if (summaryRecords.crypto) summaryRecords.crypto.forEach(r => { if (r[asset] > 0) activity = true; });
+        }
+
+        if (!activity && total === 0) return "-";
+
+        const decimals = (asset === "GBP" || asset === "EUR") ? 2 : 4;
+        return total.toFixed(decimals);
+      };
+
       if (summaryRecords.fees && summaryRecords.fees.length > 0) {
         for (const r of summaryRecords.fees) {
           html += '<tr>';
           html += `<td style="padding:4px; border:1px solid #ddd;">${r.asset}</td>`;
-          html += `<td style="padding:4px; border:1px solid #ddd; text-align:right; font-weight:bold;">${parseFloat(r.total || 0).toFixed(4)}</td>`;
+          html += `<td style="padding:4px; border:1px solid #ddd; text-align:right; font-weight:bold;">${renderFeeRow(r.asset, r.total)}</td>`;
           html += '</tr>';
         }
       }
