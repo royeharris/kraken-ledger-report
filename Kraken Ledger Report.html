@@ -4,7 +4,7 @@
 <head>
   <meta charset="utf-8" />
   <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport" />
-  <title>Kraken Ledger Report v2.85</title>
+  <title>Kraken Ledger Report v2.998</title>
   <script async defer src="https://accounts.google.com/gsi/client"></script>
   <script async defer src="https://apis.google.com/js/api.js"></script>
   <style>
@@ -675,7 +675,7 @@
       const now = new Date().toLocaleTimeString();
       const base = log.textContent && log.textContent.trim().length
         ? log.textContent
-        : "Trace: v2.50 Kraken Withdrawals Report initialized.";
+        : "Trace: v2.998 Kraken Ledger Report initialized.";
       log.textContent = base + "\n[" + now + "] " + msg;
       log.scrollTop = log.scrollHeight;
       console.log(msg);
@@ -1713,18 +1713,17 @@
               } catch (z) { errMsg = "Unknown Network Error"; }
             }
           }
-        }
 
-        if (errMsg.includes("404") || errMsg.includes("NOT_FOUND")) {
-          logTrace("Sync skipped: Sheet ID not found. Please set correct Sheet ID in API Config.");
-          updateStatus("Sync Failed: Check SheetID", "error");
-          alert("Sync Failed: Spreadsheet Not Found (404).\nPlease Open 'API Config' and paste your valid Google Sheet ID.");
-        } else {
-          updateStatus("Sync error", "error");
-          logTrace("Sync error: " + errMsg);
-          alert("Sync failed. " + errMsg);
+          if (errMsg.includes("404") || errMsg.includes("NOT_FOUND")) {
+            logTrace("Sync skipped: Sheet ID not found. Please set correct Sheet ID in API Config.");
+            updateStatus("Sync Failed: Check SheetID", "error");
+            alert("Sync Failed: Spreadsheet Not Found (404).\nPlease Open 'API Config' and paste your valid Google Sheet ID.");
+          } else {
+            updateStatus("Sync error", "error");
+            logTrace("Sync error: " + errMsg);
+            alert("Sync failed. " + errMsg);
+          }
         }
-      }
       });
     }
 
