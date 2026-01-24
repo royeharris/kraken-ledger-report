@@ -7,7 +7,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-  <title>Kraken Ledger Report v3.028</title>
+  <title>Kraken Ledger Report v3.029</title>
   <script async defer src="https://accounts.google.com/gsi/client"></script>
   <script async defer src="https://apis.google.com/js/api.js"></script>
   <style>
@@ -433,7 +433,7 @@
       <div
         style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; position:relative;">
         <div class="branding-row" style="margin-bottom:0; line-height:1.2;">
-          <div><b>Kraken Reports</b> <span style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v3.028</span></div>
+          <div><b>Kraken Reports</b> <span style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v3.029</span></div>
           <div style="font-size:0.65rem; color:#b0b0b0; font-weight:400;">GBP EUR USDT XRP transactions in Date
             range</div>
         </div>
@@ -666,8 +666,8 @@
 
     <button id="log_btn" onclick="toggleLog()"
       style="width:100%; padding:8px; margin-top:10px; background:#8e44ad; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Display
-      Trace Log</button>
-    <div id="trace_log" onclick="toggleLog()">Trace: v3.028 Kraken Withdrawals Report initialized.</div>
+      Progress Log</button>
+    <div id="trace_log" onclick="toggleLog()">Trace: v3.029 Kraken Withdrawals Report initialized.</div>
   </div>
 
   <script>
@@ -684,7 +684,7 @@
   <script>
 
     const SHEET_ID = "1Vf0iqthwHv0kFqTRJkYShH_RBpbokLmiEDWGJN3Q_E";
-    const VER = "Kraken Withdrawals Report (v3.028)";
+    const VER = "Kraken Withdrawals Report (v3.029)";
     const KRAKEN_API_URL = "https://api.kraken.com";
 
     // Default API credentials (enter your own in API Config)
@@ -735,10 +735,10 @@
       const isHidden = (log.style.display === "none" || log.style.display === "");
       // Keep button visible, just change label
       if (isHidden) {
-        btn.textContent = "Display Trace Log (click to close)";
+        btn.textContent = "Display Progress Log (click to close)";
         log.style.display = "block";
       } else {
-        btn.textContent = "Display Trace Log";
+        btn.textContent = "Display Progress Log";
         log.style.display = "none";
       }
     }
