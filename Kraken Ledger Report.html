@@ -7,7 +7,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-  <title>Kraken Ledger Report v3.041</title>
+  <title>Kraken Ledger Report v3.043</title>
   <script async defer src="https://accounts.google.com/gsi/client"></script>
   <script async defer src="https://apis.google.com/js/api.js"></script>
   <style>
@@ -433,7 +433,7 @@
       <div
         style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; position:relative;">
         <div class="branding-row" style="margin-bottom:0; line-height:1.2;">
-          <div><b>Kraken Reports</b> <span style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v3.041</span></div>
+          <div><b>Kraken Reports</b> <span style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v3.043</span></div>
           <div style="font-size:0.65rem; color:#b0b0b0; font-weight:400;">GBP | EUR | USDT | XRP | transactions in Date
             range</div>
         </div>
@@ -685,7 +685,7 @@
   <script>
 
     const SHEET_ID = "1Vf0iqthwHv0kFqTRJkYShH_RBpbokLmiEDWGJN3Q_E";
-    const VER = "Kraken Withdrawals Report (v3.041)";
+    const VER = "Kraken Withdrawals Report (v3.043)";
     const KRAKEN_API_URL = "https://api.kraken.com";
 
     // Default API credentials (enter your own in API Config)
@@ -2311,6 +2311,10 @@
           logTrace("Found " + newWallets.length + " other wallet addresses (USDT, etc.).");
         }
 
+        // v3.043: Also fetch history here (reusing OTP) so Read Ledger doesn't need to ask again
+        updateStatus("Fetching history...", "sync");
+        await fetchWithdrawalHistory(otp.trim());
+
         updateStatusCounts();
         updateStatus("Kraken OK", "active");
 
@@ -2629,25 +2633,46 @@
       document.getElementById("summaryReportArea").innerHTML = "";
       updateGlobalRecordCounts();
 
-      // Step 1: Prompt for 2FA
-      const otp = prompt("Enter your Kraken 2FA code:");
-      if (!otp || otp.trim() === "") {
-        logTrace("2FA cancelled by user");
-        return;
+      // Step 1: Prompt for 2FA (Only if we need to fetch addresses/history or if user Has 2FA on Query)
+      // v3.042: Optimisation - Check if we already have addresses/history.
+      // If we have them, we might SKIP the 2FA prompt if the Ledgers API (Query) doesn't enforce it.
+      // However, usually users set 2FA for everything.
+      // SAFE BET: Only prompt if we are actually going to call a 2FA-gated endpoint OR if we suspect Query needs it.
+      // Let's assume Ledgers API (Query) does NOT require 2FA by default, but WithdrawStatus DOES.
+
+      const needAddresses = (!cacheData.krakenAddresses || cacheData.krakenAddresses.length === 0);
+      const needHistory = (!cacheData.withdrawalHistory || cacheData.withdrawalHistory.length === 0);
+
+      let otp = "";
+
+      // If we need data that requires 2FA, prompt now.
+      if (needAddresses || needHistory) {
+        otp = prompt("Enter your Kraken 2FA code (needed for Addresses/History):");
+        if (!otp || otp.trim() === "") {
+          logTrace("2FA cancelled (skipping address/history fetch)");
+          // We can proceed to try fetching Ledgers without 2FA, 
+          // but if the user CANCELLED, maybe they want to abort?
+          // Let's assume they want to try reading ledger anyway if they have addresses cached.
+          if (needAddresses) return; // Can't generate decent report without addresses
+        }
       }
 
       try {
         const creds = getApiCredentials();
         updateStatus("Fetching...", "sync");
 
-        // Step 2: Call Kraken Ledgers API for withdrawals
+        // Step 2: Call Kraken Ledgers API 
+        // Note: Query API often doesn't need 2FA. We pass OTP only if we have it.
         logTrace("Calling Kraken Ledgers API...");
-        const ledgerResult = await callKrakenPrivateAPI("Ledgers", {
+
+        const params = {
           type: "withdrawal",
           start: Math.floor(startTime),
-          end: Math.floor(endTime),
-          otp: otp.trim()
-        }, creds);
+          end: Math.floor(endTime)
+        };
+        if (otp) params.otp = otp.trim();
+
+        const ledgerResult = await callKrakenPrivateAPI("Ledgers", params, creds);
 
         // ledgerResult is { ledger_id: { refid, time, type, subtype, aclass, asset, amount, fee, balance } }
         const allWithdrawals = [];
@@ -2670,15 +2695,19 @@
         cacheData.withdrawals = allWithdrawals;
         logTrace("Fetched " + allWithdrawals.length + " USDT/XRP withdrawals from Ledgers API");
 
-        // Step 3: Call WithdrawStatus for destination details
-        logTrace("Fetching withdrawal details...");
-        await fetchWithdrawalHistory(otp.trim());
+        // Step 3 & 4: Call WithdrawStatus / WithdrawAddresses ONLY if we have OTP
+        if (otp) {
+          logTrace("Fetching withdrawal details...");
+          await fetchWithdrawalHistory(otp.trim());
 
-        // Step 4: Call WithdrawAddresses for recipient names
-        logTrace("Fetching saved addresses...");
-        const addresses = await callKrakenPrivateAPI("WithdrawAddresses", { otp: otp.trim() }, creds);
-        cacheData.krakenAddresses = addresses || [];
-        logTrace("Fetched " + cacheData.krakenAddresses.length + " saved addresses");
+          logTrace("Fetching saved addresses...");
+          const addresses = await callKrakenPrivateAPI("WithdrawAddresses", { otp: otp.trim() }, creds);
+          cacheData.krakenAddresses = addresses || [];
+          logTrace("Fetched " + cacheData.krakenAddresses.length + " saved addresses");
+        } else {
+          logTrace("Skipping address/history fetch (no 2FA provided). Using cached data if available.");
+          logTrace("Cached Addresses: " + cacheData.krakenAddresses.length);
+        }
 
         updateStatusCounts();
 
