@@ -1479,7 +1479,7 @@
       hint.innerHTML = `
         <div style="display:flex; gap:30px; align-items:flex-start;">
           <!-- Col 1: Label -->
-          <div style="display:flex; flex-direction:column; align-items:flex-start; justify-content:center; height:100%; line-height:1.2; color:#333; font-weight:600;" title="${tooltipText}">
+          <div style="display:flex; flex-direction:column; align-items:flex-start; justify-content:center; height:100px; line-height:1.2; color:#333; font-weight:600;" title="${tooltipText}">
             <span>Number of</span>
             <span>Records</span>
           </div>
@@ -1886,16 +1886,16 @@
               s2Rows = [["", "-", "-"]];
             }
 
-            let s3Headers = ["Deposits from Haricom Bank Accounts (GBP EUR)", ""];
-            let s3ColHeaders = ["Currency", "Total Amount"];
+            let s3Headers = ["Deposits from Haricom Bank Accounts (GBP EUR)", "", ""];
+            let s3ColHeaders = ["Currency", "Total Amount", "GBP Equivalent"];
             const s3Rows = (summaryRecords.deposits || []).map(r => [
-              r.asset, fmt(r.total, 2)
+              r.asset, fmt(r.total, 2), fmt(r.gbpVal, 2)
             ]);
 
             let s4Headers = ["Fees (GBP EUR USDT XRP)", ""];
-            let s4ColHeaders = ["Currency", "Total Amount"];
+            let s4ColHeaders = ["Currency", "Total Amount", "GBP Equivalent"];
             const s4Rows = (summaryRecords.fees || []).map(r => [
-              r.asset, (r.asset === "USDT" || r.asset === "XRP") ? fmt(r.total, 4) : fmt(r.total, 2)
+              r.asset, (r.asset === "USDT" || r.asset === "XRP") ? fmt(r.total, 4) : fmt(r.total, 2), fmt(r.gbpVal, 2)
             ]);
 
             const rangeReq = "'KrakenStatementSummary'!A:Z";
@@ -2601,7 +2601,6 @@
       window.handleDateChange = function (id) {
         const val = document.getElementById(id).value;
         if (val) {
-          // Validation check if needed
           const s = document.getElementById("startDate").value;
           const e = document.getElementById("endDate").value;
           if (s && e && s > e) {
@@ -2609,6 +2608,20 @@
             document.getElementById(id).value = "";
             return;
           }
+          // Clear Data and Reports immediately
+          cacheData = { withdrawals: [], krakenAddresses: [], withdrawalHistory: [], destTags: [], wallets: [], ratesCache: cacheData.ratesCache || {} }; // Keep rates cache
+          stagingRecords = [];
+          bankRecords = [];
+          summaryRecords = null;
+
+          document.getElementById("statusSummary").innerHTML = "";
+          document.getElementById("previewArea").innerHTML = "";
+          document.getElementById("bankReportArea").innerHTML = "";
+          document.getElementById("summaryReportArea").innerHTML = "";
+
+          // Reset counts
+          updateGlobalRecordCounts();
+
           updateStatus("Date Changed. Click 'Read Ledger' to refresh.", "active");
         }
       };
@@ -3713,38 +3726,63 @@
               fMap[recipient].EUR_GBP += eurGbpVal;
             }
           }
-        } else if (e.type === 'deposit') {
-          if (assetKey === 'GBP' || assetKey === 'EUR') {
-            depositTotals[assetKey] += amount;
-          }
         }
-
-        // Accumulate Fees from ALL transaction types in the statement
-        // Accumulate Fees from ALL transaction types in the statement
-        const feeSource = item.fees || (e && e.fees);
-        if (feeSource) {
-          ["GBP", "EUR", "USDT", "XRP"].forEach(fAsset => {
-            if (feeSource[fAsset] > 0) feeTotals[fAsset] += feeSource[fAsset];
-          });
+      } else if (e.type === 'deposit') {
+        if (assetKey === 'GBP' || assetKey === 'EUR') {
+          depositTotals[assetKey].total += amount;
+          // Calculate GBP val for deposit
+          let dGbp = 0;
+          if (assetKey === 'GBP') dGbp = amount;
+          else if (assetKey === 'EUR') {
+            // Estimate EUR->GBP
+            // Try to find a rate from cache
+            // Simple approx if not found: 0.85? No, prefer lookup.
+            // Re-use logic:
+            if (item.gbpValues && item.gbpValues.EUR) dGbp = item.gbpValues.EUR;
+            else dGbp = calculateGbpValue(item._raw || e, amount, "EUR");
+          }
+          depositTotals[assetKey].gbpVal += dGbp;
         }
       }
 
-      // -- Aggregation Complete --
+      // Accumulate Fees
+      const feeSource = item.fees || (e && e.fees);
+      if (feeSource) {
+        ["GBP", "EUR", "USDT", "XRP"].forEach(fAsset => {
+          if (feeSource[fAsset] > 0) {
+            const fAmt = feeSource[fAsset];
+            feeTotals[fAsset].total += fAmt;
 
-      const cryptoRows = Object.keys(cryptoTotals).map(r => ({ recipient: r, ...cryptoTotals[r] })).sort((a, b) => a.recipient.localeCompare(b.recipient));
-      const fiatRows = Object.keys(fMap).map(r => ({ recipient: r, ...fMap[r] })).sort((a, b) => a.recipient.localeCompare(b.recipient));
-      const depositRows = [{ asset: "GBP", total: depositTotals.GBP }, { asset: "EUR", total: depositTotals.EUR }];
-      const feeRows = [
-        { asset: "GBP", total: feeTotals.GBP },
-        { asset: "EUR", total: feeTotals.EUR },
-        { asset: "USDT", total: feeTotals.USDT },
-        { asset: "XRP", total: feeTotals.XRP }
-      ];
+            // Calc GBP for Fee
+            let fGbp = 0;
+            if (fAsset === 'GBP') fGbp = fAmt;
+            else {
+              if (item.gbpValues && item.gbpValues[fAsset]) fGbp = item.gbpValues[fAsset] * (fAmt / amount); // Pro-rate? No, separate calc.
+              // Better: direct calc
+              fGbp = calculateGbpValue(item._raw || e, fAmt, fAsset);
+            }
+            feeTotals[fAsset].gbpVal += fGbp;
+          }
+        });
+      }
+    }
 
-      summaryRecords = { crypto: cryptoRows, fiat: fiatRows, deposits: depositRows, fees: feeRows };
-      localStorage.setItem("kraken_summary_staging", JSON.stringify(summaryRecords));
+    // -- Aggregation Complete --
 
-      renderSummaryTable();
+    const cryptoRows = Object.keys(cryptoTotals).map(r => ({ recipient: r, ...cryptoTotals[r] })).sort((a, b) => a.recipient.localeCompare(b.recipient));
+    const fiatRows = Object.keys(fMap).map(r => ({ recipient: r, ...fMap[r] })).sort((a, b) => a.recipient.localeCompare(b.recipient));
+    const depositRows = [{ asset: "GBP", ...depositTotals.GBP }, { asset: "EUR", ...depositTotals.EUR }];
+    const feeRows = [
+      { asset: "GBP", ...feeTotals.GBP },
+      { asset: "EUR", ...feeTotals.EUR },
+      { asset: "USDT", ...feeTotals.USDT },
+      { asset: "XRP", ...feeTotals.XRP }
+    ];
+
+    summaryRecords = { crypto: cryptoRows, fiat: fiatRows, deposits: depositRows, fees: feeRows };
+    localStorage.setItem("kraken_summary_staging", JSON.stringify(summaryRecords));
+
+    renderSummaryTable();
     }
 
     function renderSummaryTable() {
