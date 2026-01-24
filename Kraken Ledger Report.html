@@ -4,7 +4,10 @@
 <head>
   <meta charset="utf-8" />
   <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport" />
-  <title>Kraken Ledger Report v3.015</title>
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+  <title>Kraken Ledger Report v3.026</title>
   <script async defer src="https://accounts.google.com/gsi/client"></script>
   <script async defer src="https://apis.google.com/js/api.js"></script>
   <style>
@@ -159,6 +162,7 @@
 
     .status-row {
       display: flex;
+      flex-wrap: wrap;
       gap: 10px;
       margin: 10px 0;
       padding: 10px;
@@ -411,8 +415,8 @@
       <div
         style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; position:relative;">
         <div class="branding-row" style="margin-bottom:0; line-height:1.2;">
-          <div><b>Kraken Reports</b> <span style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v3.015</span></div>
-          <div style="font-size:0.65rem; color:#b0b0b0; font-weight:400;">GBP, EUR, USDT, XRP transactions in Date
+          <div><b>Kraken Reports</b> <span style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v3.026</span></div>
+          <div style="font-size:0.65rem; color:#b0b0b0; font-weight:400;">GBP EUR USDT XRP transactions in Date
             range</div>
         </div>
         <div id="auth_status"
@@ -601,7 +605,7 @@
 
     <!-- Status Bar -->
     <div class="status-row">
-      <div id="statusSummary" style="flex:4; display:flex; gap:12px; font-size:0.7rem;">
+      <div id="statusSummary" style="flex:4; display:flex; flex-wrap:wrap; gap:12px; font-size:0.7rem;">
         <div>Ref: <b id="withdrawalCount">0</b></div>
       </div>
       <div class="status-item" id="stagingHint" style="flex:1; text-align:right; font-size:0.65rem; color:#7f8c8d;">
@@ -645,21 +649,17 @@
     <button id="log_btn" onclick="toggleLog()"
       style="width:100%; padding:8px; margin-top:10px; background:#8e44ad; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Display
       Trace Log</button>
-    <div id="trace_log" onclick="toggleLog()">Trace: v3.015 Kraken Withdrawals Report initialized.</div>
+    <div id="trace_log" onclick="toggleLog()">Trace: v3.027 Kraken Withdrawals Report initialized.</div>
   </div>
 
   <script>
-    window.onerror = function (msg, url, line, col, error) {
-      alert("Error: " + msg + "\nLine: " + line + ":" + col);
-      console.error(msg, error);
-      return false;
-    };
+
   </script>
 
   <script>
 
     const SHEET_ID = "1Vf0iqthwHv0kFqTRJkYShH_RBpbokLmiEDWGJN3Q_E";
-    const VER = "Kraken Withdrawals Report (v3.015)";
+    const VER = "Kraken Withdrawals Report (v3.027)";
     const KRAKEN_API_URL = "https://api.kraken.com";
 
     // Default API credentials (enter your own in API Config)
@@ -688,7 +688,7 @@
       const now = new Date().toLocaleTimeString();
       const base = log.textContent && log.textContent.trim().length
         ? log.textContent
-        : "Trace: v3.015 Kraken Ledger Report initialized.";
+        : "Trace: v3.025 Kraken Ledger Report initialized.";
       log.textContent = base + "\n[" + now + "] " + msg;
       log.scrollTop = log.scrollHeight;
       console.log(msg);
@@ -696,10 +696,11 @@
 
     window.onerror = function (message, source, lineno, colno) {
       logTrace("FATAL: " + message + " @ " + (source || "") + ":" + lineno + ":" + colno);
-      alert("Application Error: " + message);
+      updateStatus("Error Occurred", "error");
     };
     window.onunhandledrejection = function (ev) {
       logTrace("FATAL PROMISE: " + (ev && ev.reason ? (ev.reason.message || ev.reason) : "unknown"));
+      updateStatus("Error Occurred", "error");
     };
 
     function toggleLog() {
@@ -1036,7 +1037,9 @@
       const endDate = document.getElementById("endDate").value;
 
       if (!startDate || !endDate) {
-        alert("Please select Start Date and End Date first.");
+        // alert("Please select Start Date and End Date first.");
+        logTrace("WARNING: User attempted to read ledger without setting dates.");
+        updateStatus("Set Date Range", "error");
         logTrace("ERROR: Date range not set");
         return;
       }
@@ -1131,7 +1134,7 @@
       } catch (e) {
         updateStatus("Ledger Error", "error");
         logTrace("ERROR in readLedger: " + (e.message || e));
-        alert("Error reading ledger: " + (e.message || e));
+        // alert("Error reading ledger: " + (e.message || e));
       }
     }
 
@@ -1178,7 +1181,7 @@
       } catch (e) {
         updateStatus("Address Error", "error");
         logTrace("ERROR in pullAddresses: " + (e.message || e));
-        alert("Error pulling addresses: " + (e.message || e));
+        // alert("Error pulling addresses: " + (e.message || e));
       }
     }
 
@@ -1222,14 +1225,16 @@
 
       // Check prerequisites
       if (cacheData.withdrawals.length === 0) {
-        alert("No ledger data loaded. Please click 'Read Ledger' first.");
+        logTrace("ERROR: No ledger data loaded. Please click 'Read Ledger' first.");
+        updateStatus("No Ledger Data", "error");
         logTrace("ERROR: No withdrawals loaded");
         resetGenerateButton(btn);
         return;
       }
 
       if (cacheData.krakenAddresses.length === 0) {
-        alert("No addresses loaded. Please click 'Pull Addresses' first (requires 2FA).");
+        logTrace("ERROR: No addresses loaded. Please click 'Pull Addresses' first.");
+        updateStatus("No Addresses", "error");
         logTrace("ERROR: No addresses loaded");
         resetGenerateButton(btn);
         return;
@@ -1597,11 +1602,21 @@
               "GBP Fee", "Conv Rate", "Conv Currency", "Source", "Destination", "Dest Tag", "Transaction ID"
             ];
 
-            const vals = stagingRecords.map(r => [
-              r.dateSent, r.type || '', r.timeSent || '', r.recipient, r.sentTo || '', r.gbpSent || '',
-              r.amount, r.fee, r.asset, r.gbpFee || '', r.conversionRate || '', r.conversionCurrency || '',
-              r.rateSource || '', r.wallet, r.destTag, r.txId
-            ]);
+            const vals = stagingRecords.map(r => {
+              // v3.022: Format Based on Asset Type
+              const asset = (r.asset || "").toUpperCase();
+              const isCrypto = asset.includes("USDT") || asset.includes("XRP") || asset.includes("BTC") || asset.includes("ETH");
+              const decimals = isCrypto ? 4 : 2;
+
+              const fmt = (v) => (v !== undefined && v !== "") ? parseFloat(v).toFixed(decimals) : "";
+              const fmtFiat = (v) => (v !== undefined && v !== "") ? parseFloat(v).toFixed(2) : "";
+
+              return [
+                r.dateSent, r.type || '', r.timeSent || '', r.recipient, r.sentTo || '', fmtFiat(r.gbpSent),
+                fmt(r.amount), fmt(r.fee), r.asset, fmtFiat(r.gbpFee), r.conversionRate || '', r.conversionCurrency || '',
+                r.rateSource || '', r.wallet, r.destTag, r.txId
+              ];
+            });
 
             await gapi.client.sheets.spreadsheets.values.clear({ spreadsheetId: targetSheetId, range: "'ReportStaging'!A:Z" });
             await gapi.client.sheets.spreadsheets.values.update({
@@ -1682,36 +1697,45 @@
             let s1ColHeaders = ["Recipient", "USDT", "Avg Rate", "GBP Equivalent", "XRP Amount", "Avg Rate", "GBP Equivalent"];
 
             let s1Rows = [];
+            const fmt = (v, d) => (v && parseFloat(v) !== 0) ? parseFloat(v).toFixed(d) : "-";
+
             if (summaryRecords.crypto && summaryRecords.crypto.length > 0) {
               s1Rows = summaryRecords.crypto.map(r => {
                 const usdtRate = (r.USDT > 0 && r.USDT_GBP > 0) ? (r.USDT_GBP / r.USDT).toFixed(4) : "";
                 const xrpRate = (r.XRP > 0 && r.XRP_GBP > 0) ? (r.XRP_GBP / r.XRP).toFixed(4) : "";
-                return [r.recipient, r.USDT || 0, usdtRate, r.USDT_GBP || 0, r.XRP || 0, xrpRate, r.XRP_GBP || 0];
+                return [
+                  r.recipient,
+                  fmt(r.USDT, 4),
+                  usdtRate,
+                  fmt(r.USDT_GBP, 2),
+                  fmt(r.XRP, 4),
+                  xrpRate,
+                  fmt(r.XRP_GBP, 2)
+                ];
               });
             } else {
-              // Empty row with 0s
-              s1Rows = [["", 0, "", 0, 0, "", 0]];
+              s1Rows = [["", "-", "", "-", "-", "", "-"]];
             }
 
             let s2Headers = ["Withdrawals to Haricom Bank Accounts (GBP EUR)", "", ""];
             let s2ColHeaders = ["Haricom Bank Account", "GBP Amount", "EUR Amount"];
             let s2Rows = [];
             if (summaryRecords.fiat && summaryRecords.fiat.length > 0) {
-              s2Rows = summaryRecords.fiat.map(r => [r.recipient, r.GBP || 0, r.EUR || 0]);
+              s2Rows = summaryRecords.fiat.map(r => [r.recipient, fmt(r.GBP, 2), fmt(r.EUR, 2)]);
             } else {
-              s2Rows = [["", 0, 0]];
+              s2Rows = [["", "-", "-"]];
             }
 
             let s3Headers = ["Deposits from Haricom Bank Accounts (GBP EUR)", ""];
             let s3ColHeaders = ["Currency", "Total Amount"];
             const s3Rows = (summaryRecords.deposits || []).map(r => [
-              r.asset, r.total || 0
+              r.asset, fmt(r.total, 2)
             ]);
 
             let s4Headers = ["Fees (GBP EUR USDT XRP)", ""];
             let s4ColHeaders = ["Currency", "Total Amount"];
             const s4Rows = (summaryRecords.fees || []).map(r => [
-              r.asset, r.total || 0
+              r.asset, (r.asset === "USDT" || r.asset === "XRP") ? fmt(r.total, 4) : fmt(r.total, 2)
             ]);
 
             const rangeReq = "'KrakenStatementSummary'!A:Z";
@@ -1747,7 +1771,7 @@
           }
 
           updateStatus("Synced All", "active");
-          alert("Sync complete.\nReports exported to Google Sheets.");
+          // alert("Sync complete.\nReports exported to Google Sheets.");
 
         } catch (e) {
           let errMsg;
@@ -1770,11 +1794,11 @@
           if (errMsg.includes("404") || errMsg.includes("NOT_FOUND")) {
             logTrace("Sync skipped: Sheet ID not found. Please set correct Sheet ID in API Config.");
             updateStatus("Sync Failed: Check SheetID", "error");
-            alert("Sync Failed: Spreadsheet Not Found (404).\n\nTarget Sheet ID: " + targetSheetId + "\n\nPlease correct it in 'API Config' or ensure you have permission.");
+            // alert("Sync Failed: Spreadsheet Not Found (404).\n\nTarget Sheet ID: " + targetSheetId + "\n\nPlease correct it in 'API Config' or ensure you have permission.");
           } else {
             updateStatus("Sync error", "error");
             logTrace("Sync error: " + errMsg);
-            alert("Sync failed. " + errMsg);
+            // alert("Sync failed. " + errMsg);
           }
         }
       });
@@ -1957,6 +1981,10 @@
 
     // Kraken API signature generation using Web Crypto API
     async function createKrakenSignature(urlPath, postData, privateKeyBase64) {
+      if (!privateKeyBase64 || privateKeyBase64.length < 10) {
+        throw new Error("Invalid Private Key: Key is empty or too short");
+      }
+
       const encoder = new TextEncoder();
 
       // Step 1: Get nonce from postData
@@ -1974,14 +2002,29 @@
       combined.set(new Uint8Array(sha256Hash), pathBytes.length);
 
       // Step 4: HMAC-SHA512 with decoded private key
-      const privateKeyBytes = base64ToArrayBuffer(privateKeyBase64);
-      const hmacKey = await crypto.subtle.importKey(
-        "raw",
-        privateKeyBytes,
-        { name: "HMAC", hash: "SHA-512" },
-        false,
-        ["sign"]
-      );
+      let privateKeyBytes;
+      try {
+        privateKeyBytes = base64ToArrayBuffer(privateKeyBase64);
+      } catch (e) {
+        throw new Error("Invalid Private Key: Not a valid Base64 string");
+      }
+
+      if (privateKeyBytes.byteLength === 0) {
+        throw new Error("Invalid Private Key: Decoded key is empty");
+      }
+
+      let hmacKey;
+      try {
+        hmacKey = await crypto.subtle.importKey(
+          "raw",
+          privateKeyBytes,
+          { name: "HMAC", hash: "SHA-512" },
+          false,
+          ["sign"]
+        );
+      } catch (e) {
+        throw new Error("Crypto Import Key Error: " + (e.message || e) + " (Check Private Key format)");
+      }
 
       const signature = await crypto.subtle.sign("HMAC", hmacKey, combined);
 
@@ -2135,13 +2178,13 @@
         const summary = "Fetched " + cacheData.krakenAddresses.length + " addresses.\n" +
           "XRP (with dest tags): " + newDestTags.length + "\n" +
           "Other wallets: " + newWallets.length;
-        alert(summary);
+        // alert(summary);
         logTrace(summary.replace(/\n/g, " | "));
 
       } catch (e) {
         updateStatus("Kraken Error", "error");
         logTrace("Kraken API error: " + (e.message || e));
-        alert("Kraken API Error:\n" + (e.message || e) + "\n\nCheck trace log for details.");
+        // alert("Kraken API Error:\n" + (e.message || e) + "\n\nCheck trace log for details.");
       }
     }
 
@@ -2495,6 +2538,8 @@
       logTrace("Generating report from " + cacheData.withdrawals.length + " entries...");
 
       stagingRecords = [];
+      document.getElementById("previewArea").innerHTML = ""; // v3.017: Clear previous report
+      document.getElementById("bankReportArea").innerHTML = "";
 
       // Sort ALL ledger entries by time (ascending) for trade matching
       const sortedLedger = [...cacheData.withdrawals].sort((a, b) => a.time - b.time);
@@ -2591,10 +2636,10 @@
           cacheData.ratesCache[dateStr] = {
             USDTGBP: usdtRates.gbpRate,
             USDTEUR: usdtRates.eurRate,
-            USDTSource: usdtRates.rateSource || "Kraken",
+            USDTSource: usdtRates.rateSource || "Kraken day rate",
             XRPGBP: xrpRates.gbpRate,
             XRPEUR: xrpRates.eurRate,
-            XRPSource: xrpRates.rateSource || "Kraken"
+            XRPSource: xrpRates.rateSource || "Kraken day rate"
           };
 
 
@@ -3036,6 +3081,9 @@
               const words = recipient.split(/\s+/).slice(0, 2).join(" ");
               // Clean common suffixes if needed, or just trust words
               detail = `${words}`;
+            } else if (e.info && e.info !== "Withdrawal" && e.info !== "Deposit") {
+              // v3.017: Fallback to ledger info if no address match (e.g. "Revolut Ltd")
+              detail = e.info;
             }
 
             // Fix: Override for Revolut GBP
@@ -3088,7 +3136,8 @@
       div.style.display = "block"; // Auto-show after generate
 
       // V2.84: Generate Summary immediately from these records to ensure consistency
-      generateStatementSummary(bankRecords);
+      // v3.025: Decoupled to avoid "Frankenstein" behavior (Summary opening with Statement)
+      // generateStatementSummary(bankRecords);
     }
 
     // Toggle function (Same approach as toggleReportViewer)
@@ -3189,7 +3238,12 @@
       const div = document.getElementById("summaryReportArea");
       const isHidden = (div.style.display === "none");
       if (isHidden) {
-        generateStatementSummary();
+        // v3.027: Prefer bankRecords if available so Summary matches the Report
+        if (typeof bankRecords !== "undefined" && bankRecords.length > 0) {
+          generateStatementSummary(bankRecords);
+        } else {
+          generateStatementSummary();
+        }
       } else {
         div.style.display = "none";
       }
@@ -3301,11 +3355,21 @@
           }
 
           // Clean Recipient (remove (USDT) etc)
+          // v3.027: Handling "Revolut Business (GBP)" -> "Revolut Business"
           recipient = recipient.replace(/\(.*\)/, "").trim();
-          // Also apply the "First 2 words" rule here to match previous behavior
-          recipient = recipient.replace(/\s*(XRP|USDT|TRC20|ERC20|BTC|ETH)\s*/gi, "").trim();
-          const words = recipient.split(/\s+/);
-          if (words.length > 2) recipient = words.slice(0, 2).join(" ");
+
+          // Also apply the "First 2 words" rule but be careful not to kill valid names
+          // Check for specific known bank names first
+          if (recipient.includes("Revolut")) {
+            // Keep "Revolut Ltd" or "Revolut Business"
+          } else {
+            recipient = recipient.replace(/\s*(XRP|USDT|TRC20|ERC20|BTC|ETH)\s*/gi, "").trim();
+            const words = recipient.split(/\s+/);
+            if (words.length > 2) recipient = words.slice(0, 2).join(" ");
+          }
+
+          // v3.019: Fix Inconsistency - Override Revolut naming for Summary
+          if (recipient === "Revolut Ltd") recipient = "Revolut Business";
 
           // Iterate Asssets in this Row
           for (const [asset, val] of Object.entries(item.amounts)) {
@@ -3333,6 +3397,17 @@
                 } else if (item._raw) {
                   // Fallback to recalculation (less accurate without trade match context)
                   gbpVal = calculateGbpValue(item._raw, amount, asset);
+                }
+
+                // v3.019: Robust Fallback for Missing GBP (Check Withdrawal Cache directly)
+                if ((!gbpVal || gbpVal === 0) && item._raw && cacheData.withdrawalCache) {
+                  const exactMatch = cacheData.withdrawalCache.find(w => w.refid === item._raw.refid);
+                  if (exactMatch && exactMatch.gbpSent) {
+                    gbpVal = parseFloat(exactMatch.gbpSent);
+                    logTrace(`Fallback success for ${recipient} (${asset}): Found calculated GBP ${gbpVal}`);
+                  } else {
+                    logTrace(`Fallback failed for ${recipient} (${asset}): No match in withdrawalCache`);
+                  }
                 }
 
                 if (asset === "USDT") cryptoTotals[recipient].USDT_GBP += gbpVal;
@@ -3446,9 +3521,11 @@
         }
 
         // Accumulate Fees from ALL transaction types in the statement
-        if (e.fees) {
+        // Accumulate Fees from ALL transaction types in the statement
+        const feeSource = item.fees || (e && e.fees);
+        if (feeSource) {
           ["GBP", "EUR", "USDT", "XRP"].forEach(fAsset => {
-            if (e.fees[fAsset] > 0) feeTotals[fAsset] += e.fees[fAsset];
+            if (feeSource[fAsset] > 0) feeTotals[fAsset] += feeSource[fAsset];
           });
         }
       }
@@ -3527,7 +3604,7 @@
           html += '</tr>';
         }
       } else {
-        html += '<tr><td colspan="5" style="padding:8px; text-align:center; color:#999; font-size:0.7rem;">0.00</td></tr>';
+        html += '<tr><td colspan="5" style="padding:15px; text-align:center; color:#7f8c8d; font-style:italic;">No withdrawals found for this period.</td></tr>';
       }
       html += '</tbody></table></div>';
 
@@ -3550,7 +3627,7 @@
           html += '</tr>';
         }
       } else {
-        html += '<tr><td colspan="3" style="padding:8px; text-align:center; color:#999; font-size:0.7rem;">0.00</td></tr>';
+        html += '<tr><td colspan="3" style="padding:15px; text-align:center; color:#7f8c8d; font-style:italic;">No withdrawals found for this period.</td></tr>';
       }
       html += '</tbody></table></div>';
 
