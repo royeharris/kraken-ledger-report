@@ -7,7 +7,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-  <title>Kraken Ledger Report v3.045</title>
+  <title>Kraken Ledger Report v3.046</title>
   <script async defer src="https://accounts.google.com/gsi/client"></script>
   <script async defer src="https://apis.google.com/js/api.js"></script>
   <style>
@@ -433,7 +433,7 @@
       <div
         style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; position:relative;">
         <div class="branding-row" style="margin-bottom:0; line-height:1.2;">
-          <div><b>Kraken Reports</b> <span style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v3.045</span></div>
+          <div><b>Kraken Reports</b> <span style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v3.046</span></div>
           <div style="font-size:0.65rem; color:#b0b0b0; font-weight:400;">GBP | EUR | USDT | XRP | transactions in Date
             range</div>
         </div>
@@ -685,7 +685,7 @@
   <script>
 
     const SHEET_ID = "1Vf0iqthwHv0kFqTRJkYShH_RBpbokLmiEDWGJN3Q_E";
-    const VER = "Kraken Withdrawals Report (v3.045)";
+    const VER = "Kraken Withdrawals Report (v3.046)";
     const KRAKEN_API_URL = "https://api.kraken.com";
 
     // Default API credentials (enter your own in API Config)
@@ -1506,6 +1506,8 @@
 
           <!-- Col 4: Statement Report -->
           <div style="display:flex; flex-direction:column; align-items:flex-start; line-height:1.2; color:#2980b9; min-width:50px;">
+            <span style="font-size:0.6rem;">Statement</span>
+            <span style="font-weight:800; font-size:0.9rem;">${bankCount}</span>
           </div>
         </div>
       `;
@@ -1518,14 +1520,14 @@
           <div style="display:flex; width:100%; height:100%; align-items:center;">
              <!-- 1. Addresses (Left) -->
              <div style="flex:1; display:flex; align-items:center; justify-content:flex-start;">
-                <div style="color:#d35400; font-size:0.85rem; padding-left:10px;">Addresses: <b style="font-size:1rem;">${cacheData.krakenAddresses.length}</b></div>
+                <div style="color:#d35400; font-size:0.8rem; padding-left:10px;">Addresses: <b style="font-size:0.8rem;">${cacheData.krakenAddresses.length}</b></div>
              </div>
              
              <!-- 2. Ledger Stats (Center) -->
-             <div style="flex:2; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px; font-size:0.7rem;">
-                 <div style="color:#27ae60;">Withdrawals: <b>${wCount}</b></div>
-                 <div style="color:#2980b9;">Deposits: <b>${dCount}</b></div>
-                 <div style="color:#8e44ad;">Trades: <b>${Math.floor(tFiatCrypto)}</b> fiat&gt;crypto / <b>${Math.floor(tCryptoFiat)}</b> crypto&gt;fiat / <b>${Math.floor(tFiatFiat)}</b> fiat&gt;fiat</div>
+             <div style="flex:2; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:3px;">
+                 <div style="color:#27ae60; font-size:0.8rem;">Withdrawals: <b style="font-size:0.8rem;">${wCount}</b></div>
+                 <div style="color:#2980b9; font-size:0.8rem;">Deposits: <b style="font-size:0.8rem;">${dCount}</b></div>
+                 <div style="color:#8e44ad; font-size:0.8rem;">Trades: <b style="font-size:0.8rem;">${Math.floor(tFiatCrypto)}</b> fiat&gt;crypto / <b style="font-size:0.8rem;">${Math.floor(tCryptoFiat)}</b> crypto&gt;fiat / <b style="font-size:0.8rem;">${Math.floor(tFiatFiat)}</b> fiat&gt;fiat</div>
              </div>
           </div>
         `;
@@ -2721,6 +2723,12 @@
 
         cacheData.withdrawals = allWithdrawals;
         logTrace("Fetched " + allWithdrawals.length + " USDT/XRP withdrawals from Ledgers API");
+
+        if (allWithdrawals.length === 0) {
+          updateStatus("0 Records", "idle");
+          alert("Ledger read complete. 0 records found for this date range.\n\nCheck your dates or account selection.");
+          return;
+        }
 
         // Step 3 & 4: Call WithdrawStatus / WithdrawAddresses ONLY if we have OTP
         if (otp) {
