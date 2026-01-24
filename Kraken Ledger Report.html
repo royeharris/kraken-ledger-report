@@ -685,7 +685,7 @@
   <script>
 
     const SHEET_ID = "1Vf0iqthwHv0kFqTRJkYShH_RBpbokLmiEDWGJN3Q_E";
-    const VER = "Kraken Withdrawals Report (v3.030)";
+    const VER = "Kraken Withdrawals Report (v3.040)";
     const KRAKEN_API_URL = "https://api.kraken.com";
 
     // Default API credentials (enter your own in API Config)
@@ -1477,32 +1477,29 @@
 
       // Flex layout for vertical stacking: Label | Ledger | Trade/Withdraw Report | Statement Report
       hint.innerHTML = `
-        <div style="display:flex; gap:30px; align-items:flex-start;">
+        <div style="display:flex; gap:15px; align-items:center; flex-wrap:wrap;">
           <!-- Col 1: Label -->
-          <div style="display:flex; flex-direction:column; align-items:flex-start; justify-content:center; height:100px; line-height:1.2; color:#333; font-weight:600;" title="${tooltipText}">
+          <div style="display:flex; flex-direction:column; align-items:flex-start; line-height:1.2; color:#333; font-weight:600;" title="${tooltipText}">
             <span>Number of</span>
             <span>Records</span>
           </div>
 
           <!-- Col 2: Ledger -->
-          <div style="display:flex; flex-direction:column; align-items:flex-start; line-height:1.2; color:#16a085;">
-            <span>Ledger</span>
-            <span style="visibility:hidden;">-</span> <!-- Spacer to align with 3-line headers -->
-            <span style="font-weight:bold;">${ledgerCount}</span>
+          <div style="display:flex; flex-direction:column; align-items:flex-start; line-height:1.2; color:#16a085; min-width:50px;">
+            <span style="font-size:0.6rem;">Ledger</span>
+            <span style="font-weight:800; font-size:0.9rem;">${ledgerCount}</span>
           </div>
 
           <!-- Col 3: Trade/Withdraw Report -->
-          <div style="display:flex; flex-direction:column; align-items:flex-start; line-height:1.2; color:#d35400;">
-            <span>Trade/Withdraw</span>
-            <span>Report</span>
-            <span style="font-weight:bold;">${reportCount}</span>
+          <div style="display:flex; flex-direction:column; align-items:flex-start; line-height:1.2; color:#d35400; min-width:50px;">
+            <span style="font-size:0.6rem;">T/W Report</span>
+            <span style="font-weight:800; font-size:0.9rem;">${reportCount}</span>
           </div>
 
           <!-- Col 4: Statement Report -->
-          <div style="display:flex; flex-direction:column; align-items:flex-start; line-height:1.2; color:#2980b9;">
-            <span>Statement</span>
-            <span>Report</span>
-            <span style="font-weight:bold;">${bankCount}</span>
+          <div style="display:flex; flex-direction:column; align-items:flex-start; line-height:1.2; color:#2980b9; min-width:50px;">
+            <span style="font-size:0.6rem;">Statement</span>
+            <span style="font-weight:800; font-size:0.9rem;">${bankCount}</span>
           </div>
         </div>
       `;
@@ -2034,9 +2031,11 @@
       const savedProxy = localStorage.getItem("kraken_cors_proxy");
       const savedWithdrawKey = localStorage.getItem("kraken_withdraw_api_key");
       const savedWithdrawPrivate = localStorage.getItem("kraken_withdraw_private_key");
+      const savedSheetId = localStorage.getItem("kraken_sheet_id");
 
       if (savedKey) document.getElementById("krakenApiKey").value = savedKey;
       if (savedPrivate) document.getElementById("krakenPrivateKey").value = savedPrivate;
+      if (savedSheetId) document.getElementById("googleSheetId").value = savedSheetId;
       if (savedProxyType) {
         const sel = document.getElementById("corsProxySelect");
         if (sel) sel.value = savedProxyType;
@@ -4133,11 +4132,13 @@
       const savedProxy = localStorage.getItem("kraken_cors_proxy");
       const savedWithdrawKey = localStorage.getItem("kraken_withdraw_api_key");
       const savedWithdrawPrivate = localStorage.getItem("kraken_withdraw_private_key");
+      const savedSheetId = localStorage.getItem("kraken_sheet_id");
 
       // Force update of date-dependent buttons on boot (in case of browser autofill)
       setTimeout(() => updateBankButtonLabel(), 500);
       if (savedKey) document.getElementById("krakenApiKey").value = savedKey;
       if (savedPrivate) document.getElementById("krakenPrivateKey").value = savedPrivate;
+      if (savedSheetId) document.getElementById("googleSheetId").value = savedSheetId;
       if (savedProxyType) {
         document.getElementById("corsProxySelect").value = savedProxyType;
         if (savedProxyType === "custom" && savedProxy) {
