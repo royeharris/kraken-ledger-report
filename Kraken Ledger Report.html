@@ -7,7 +7,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-  <title>Kraken Ledger Report v3.048</title>
+  <title>Kraken Ledger Report v3.049</title>
   <script async defer src="https://accounts.google.com/gsi/client"></script>
   <script async defer src="https://apis.google.com/js/api.js"></script>
   <style>
@@ -433,7 +433,7 @@
       <div
         style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; position:relative;">
         <div class="branding-row" style="margin-bottom:0; line-height:1.2;">
-          <div><b>Kraken Reports</b> <span style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v3.048</span></div>
+          <div><b>Kraken Reports</b> <span style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v3.049</span></div>
           <div style="font-size:0.65rem; color:#b0b0b0; font-weight:400;">GBP | EUR | USDT | XRP | transactions in Date
             range</div>
         </div>
@@ -685,7 +685,7 @@
   <script>
 
     const SHEET_ID = "1Vf0iqthwHv0kFqTRJkYShH_RBpbokLmiEDWGJN3Q_E";
-    const VER = "Kraken Withdrawals Report (v3.048)";
+    const VER = "Kraken Withdrawals Report (v3.049)";
     const KRAKEN_API_URL = "https://api.kraken.com";
 
     // Default API credentials (enter your own in API Config)
@@ -2744,6 +2744,50 @@
         } else {
           logTrace("Skipping address/history fetch (no 2FA provided). Using cached data if available.");
           logTrace("Cached Addresses: " + cacheData.krakenAddresses.length);
+        }
+
+        // v3.049: Restore Trade Scope Analysis
+        // Group trades by refid to determine scope (fiat-crypto, fiat-fiat, etc.)
+        const isFiat = (a) => ["GBP", "EUR", "USD", "ZGBP", "ZEUR", "ZUSD"].some(f => a.includes(f));
+        const groups = {};
+        for (const w of cacheData.withdrawals) {
+          if (w.type === 'trade') {
+            if (!groups[w.refid]) groups[w.refid] = [];
+            groups[w.refid].push(w);
+          }
+        }
+        for (const refid in groups) {
+          const pair = groups[refid];
+          let scope = "unknown";
+
+          if (pair.length === 2) {
+            const a = pair[0];
+            const b = pair[1];
+            const aFiat = isFiat(a.asset);
+            const bFiat = isFiat(b.asset);
+
+            if (aFiat && bFiat) scope = "fiat-fiat";
+            else if (aFiat || bFiat) {
+              const fiatSide = aFiat ? a : b;
+              // If Fiat is negative (spent) -> Fiat to Crypto
+              if (fiatSide.amount < 0) scope = "fiat-crypto";
+              else scope = "crypto-fiat";
+            } else {
+              scope = "crypto-crypto";
+            }
+          } else if (pair.length === 1) {
+            // Only one side captured (other matching side filtered out, likely crypto)
+            const a = pair[0];
+            if (isFiat(a.asset)) {
+              if (a.amount < 0) scope = "fiat-crypto"; // Sold Fiat for (Hidden Crypto)
+              else scope = "crypto-fiat"; // Bought Fiat with (Hidden Crypto)
+            } else {
+              scope = "crypto-crypto"; // Crypto for (Hidden Crypto/USD?)
+            }
+          }
+
+          // Assign scope to all entries in the group
+          pair.forEach(p => p.tradeScope = scope);
         }
 
         updateStatusCounts();
