@@ -2608,20 +2608,6 @@
             document.getElementById(id).value = "";
             return;
           }
-          // Clear Data and Reports immediately
-          cacheData = { withdrawals: [], krakenAddresses: [], withdrawalHistory: [], destTags: [], wallets: [], ratesCache: cacheData.ratesCache || {} }; // Keep rates cache
-          stagingRecords = [];
-          bankRecords = [];
-          summaryRecords = null;
-
-          document.getElementById("statusSummary").innerHTML = "";
-          document.getElementById("previewArea").innerHTML = "";
-          document.getElementById("bankReportArea").innerHTML = "";
-          document.getElementById("summaryReportArea").innerHTML = "";
-
-          // Reset counts
-          updateGlobalRecordCounts();
-
           updateStatus("Date Changed. Click 'Read Ledger' to refresh.", "active");
         }
       };
@@ -2636,6 +2622,26 @@
 
       logTrace("Date range: " + startDate + " to " + endDate);
       logTrace("Unix range: " + startTime + " to " + endTime);
+
+      // Check if data exists and ask for confirmation
+      if (cacheData.withdrawals.length > 0 || stagingRecords.length > 0) {
+        if (!confirm("Start new Ledger Read? This will clear all current reports and data.")) {
+          return;
+        }
+      }
+
+      // Clear Data and Reports (Keep ratesCache/credentials)
+      const oldRates = cacheData.ratesCache || {};
+      cacheData = { withdrawals: [], krakenAddresses: [], withdrawalHistory: [], destTags: [], wallets: [], ratesCache: oldRates };
+      stagingRecords = [];
+      bankRecords = [];
+      summaryRecords = null;
+
+      document.getElementById("statusSummary").innerHTML = "";
+      document.getElementById("previewArea").innerHTML = "";
+      document.getElementById("bankReportArea").innerHTML = "";
+      document.getElementById("summaryReportArea").innerHTML = "";
+      updateGlobalRecordCounts();
 
       // Step 1: Prompt for 2FA
       const otp = prompt("Enter your Kraken 2FA code:");
