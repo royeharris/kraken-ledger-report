@@ -7,7 +7,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-  <title>Kraken Ledger Report v3.029</title>
+  <title>Kraken Ledger Report v3.030</title>
   <script async defer src="https://accounts.google.com/gsi/client"></script>
   <script async defer src="https://apis.google.com/js/api.js"></script>
   <style>
@@ -433,7 +433,7 @@
       <div
         style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; position:relative;">
         <div class="branding-row" style="margin-bottom:0; line-height:1.2;">
-          <div><b>Kraken Reports</b> <span style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v3.029</span></div>
+          <div><b>Kraken Reports</b> <span style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v3.030</span></div>
           <div style="font-size:0.65rem; color:#b0b0b0; font-weight:400;">GBP EUR USDT XRP transactions in Date
             range</div>
         </div>
@@ -667,7 +667,7 @@
     <button id="log_btn" onclick="toggleLog()"
       style="width:100%; padding:8px; margin-top:10px; background:#8e44ad; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Display
       Progress Log</button>
-    <div id="trace_log" onclick="toggleLog()">Trace: v3.029 Kraken Withdrawals Report initialized.</div>
+    <div id="trace_log" onclick="toggleLog()">Trace: v3.030 Kraken Withdrawals Report initialized.</div>
   </div>
 
   <script>
@@ -684,7 +684,7 @@
   <script>
 
     const SHEET_ID = "1Vf0iqthwHv0kFqTRJkYShH_RBpbokLmiEDWGJN3Q_E";
-    const VER = "Kraken Withdrawals Report (v3.029)";
+    const VER = "Kraken Withdrawals Report (v3.030)";
     const KRAKEN_API_URL = "https://api.kraken.com";
 
     // Default API credentials (enter your own in API Config)
@@ -862,18 +862,35 @@
       btn.innerText = "Reset";
       btn.style.animation = "";
 
-      // Reset UI state and clear rates cache so null rates can be re-fetched
+      // Reset UI state and Clear ALL Data (Ledger, Reports, Cache)
       document.getElementById("startDate").value = "";
       document.getElementById("endDate").value = "";
+
+      // Clear Memory Variables
       stagingRecords = [];
-      cacheData.ratesCache = {};  // Clear rates cache
+      cacheData.withdrawals = [];
+      cacheData.ratesCache = {};
+      cacheData.withdrawalCache = [];
+      if (typeof bankRecords !== 'undefined') bankRecords = [];
+      if (typeof summaryRecords !== 'undefined') summaryRecords = { crypto: [], fiat: [], deposits: [], fees: [] };
+
+      // Clear LocalStorage
       localStorage.removeItem("kraken_staging");
-      localStorage.removeItem("kraken_v2_rates");  // Clear persisted rates
+      localStorage.removeItem("kraken_v2_withdrawals");
+      localStorage.removeItem("kraken_v2_rates");
+      localStorage.removeItem("kraken_summary_staging");
+
+      // Clear Views
       renderPreview();
+      renderLedgerTable();
+      const bankArea = document.getElementById("bankReportArea");
+      if (bankArea) bankArea.style.display = 'none'; // Hide bank area
+      const summaryArea = document.getElementById("summaryReportArea");
+      if (summaryArea) summaryArea.style.display = 'none'; // Hide summary area
+
       updateStatus("Ready", "idle");
-      updateStatusCounts();
-      logTrace("=== APPLICATION RESET ===");
-      logTrace("UI reset. Rates cache cleared. Staging cleared.");
+      updateStatusCounts(); // This calls updateGlobalRecordCounts internally now
+      logTrace("=== APPLICATION RESET ===\nUI reset. Ledger cleared. Reports cleared.");
     }
 
 
@@ -997,6 +1014,8 @@
 
       const aCount = document.getElementById("addressCount");
       if (aCount) aCount.innerText = cacheData.krakenAddresses.length;
+
+      updateGlobalRecordCounts(); // Ensure detailed counts are updated
     }
 
     // ---------- CORS Proxy Handling ----------
@@ -1163,6 +1182,52 @@
           if (hasMore) {
             await new Promise(r => setTimeout(r, 1000));
           }
+        }
+
+        // --- CLASSIFY TRADES (One-Time Pass) ---
+        // Group by RefID to analyze the full context of each trade (Trade Pairs)
+        const tradeGroups = {};
+        for (const entry of allLedgerEntries) {
+          if (entry.type === 'trade') {
+            if (!tradeGroups[entry.refid]) tradeGroups[entry.refid] = [];
+            tradeGroups[entry.refid].push(entry);
+          }
+        }
+
+        for (const [refid, group] of Object.entries(tradeGroups)) {
+          // Identify assets involved in this trade
+          let hasFiat = false;
+          let hasCrypto = false;
+
+          group.forEach(t => {
+            const a = t.asset.toUpperCase();
+            const isFiat = a.includes("GBP") || a.includes("EUR") || a.includes("USD") || a === "ZGBP" || a === "ZEUR";
+            if (isFiat) hasFiat = true;
+            else hasCrypto = true; // Assumption: if not fiat, it's crypto (USDT, XRP, ETH etc)
+          });
+
+          let typeLabel = "unknown";
+          if (hasFiat && hasCrypto) {
+            // Determine direction? 
+            // Spend Fiat -> Buy Crypto (Fiat -> Crypto)
+            // Spend Crypto -> Buy Fiat (Crypto -> Fiat)
+            // We check the SPEND side (negative amount)
+            const spendSide = group.find(t => t.amount < 0);
+            if (spendSide) {
+              const a = spendSide.asset.toUpperCase();
+              const spendIsFiat = a.includes("GBP") || a.includes("EUR") || a.includes("USD") || a === "ZGBP" || a === "ZEUR";
+              typeLabel = spendIsFiat ? "fiat-crypto" : "crypto-fiat";
+            } else {
+              typeLabel = "fiat-crypto"; // Fallback/Mixed
+            }
+          } else if (hasFiat && !hasCrypto) {
+            typeLabel = "fiat-fiat";
+          } else if (!hasFiat && hasCrypto) {
+            typeLabel = "crypto-crypto";
+          }
+
+          // TAG EVERY ROW IN THIS GROUP with the global classification
+          group.forEach(t => t.tradeScope = typeLabel);
         }
 
         cacheData.withdrawals = allLedgerEntries;  // Still use withdrawals key for compatibility
@@ -1338,6 +1403,7 @@
         html += "</tr>";
       }
       tbody.innerHTML = html;
+      updateGlobalRecordCounts();
     }
 
     // ========== Copy to Clipboard Functions ==========
@@ -1389,17 +1455,31 @@
       });
     }
 
+    // Helper for detailed record counts (User Requested Format)
+    function updateGlobalRecordCounts() {
+      const hint = document.getElementById("stagingHint");
+      if (!hint) return;
+
+      const ledgerCount = (cacheData.withdrawals && Array.isArray(cacheData.withdrawals)) ? cacheData.withdrawals.length : 0;
+      const reportCount = (stagingRecords && Array.isArray(stagingRecords)) ? stagingRecords.length : 0;
+      const bankCount = (typeof bankRecords !== 'undefined' && Array.isArray(bankRecords)) ? bankRecords.length : 0;
+
+      // "No. records: Ledger (xx) | Trade/Withdrawal Report (xx) | Statement Report (xx)"
+      hint.innerHTML = `<span style="color:#333;">No. records:</span> <span style="color:#16a085;">Ledger (${ledgerCount})</span> <span style="color:#bbb;">|</span> <span style="color:#d35400;">Trade/Withdrawal Report (${reportCount})</span> <span style="color:#bbb;">|</span> <span style="color:#2980b9;">Statement Report (${bankCount})</span>`;
+    }
+
     // ---------- Staging Table Render ----------
     function renderPreview() {
       const area = document.getElementById("previewArea");
-      const hint = document.getElementById("stagingHint");
+
+      updateGlobalRecordCounts(); // Update counts on render
+
       if (!stagingRecords.length) {
         area.innerHTML = "";
-        if (hint) hint.textContent = "No staging records. Click 'Generate Report' after loading data.";
         return;
       }
-      if (hint) hint.textContent = stagingRecords.length + " Report record(s)";
 
+      // Header for Preview
       let html = '<div onclick="toggleReportViewer()" style="cursor:pointer; background:#d35400; color:#fff; padding:6px 10px; font-size:0.75rem; font-weight:bold; border-radius:4px 4px 0 0; display:flex; justify-content:space-between; align-items:center;" title="Click to close report">';
       html += '<span>Trade/Withdrawal Report</span>';
       html += '<button onclick="event.stopPropagation(); copyReportToClipboard()" title="Copy Table" style="padding:2px 8px; background:#fff; color:#d35400; border:none; border-radius:3px; font-size:0.65rem; font-weight:600; cursor:pointer;">&#x2398; Copy Table</button>';
@@ -1615,7 +1695,7 @@
 
       const hasStaging = stagingRecords.length > 0;
       const hasBank = (typeof bankRecords !== "undefined" && bankRecords.length > 0);
-      const hasSummary = (typeof summaryRecords !== "undefined" && (summaryRecords.crypto.length > 0 || summaryRecords.fiat.length > 0 || summaryRecords.deposits.length > 0));
+      const hasSummary = (typeof summaryRecords !== "undefined" && summaryRecords.crypto && (summaryRecords.crypto.length > 0 || summaryRecords.fiat.length > 0 || summaryRecords.deposits.length > 0));
 
       if (!hasStaging && !hasBank && !hasSummary) {
         alert("No reports generated to sync. Please generate a report first.");
@@ -2662,7 +2742,7 @@
 
       if (ratesToFetch.length > 0) {
         logTrace("Fetching rates for " + ratesToFetch.length + " dates...");
-        updateStatus("Fetching rates...", "sync");
+        updateStatus("Fetching rates... " + fetchCount + "/" + ratesToFetch.length, "sync");
 
         let fetchCount = 0;
         for (const { dateStr, timestamp } of ratesToFetch) {
@@ -3279,7 +3359,7 @@
     // ===========================================
     // STATEMENT SUMMARY REPORT (v2.50)
     // ===========================================
-    let summaryRecords = { withdrawals: [], deposits: [] };
+    let summaryRecords = { crypto: [], fiat: [], deposits: [], fees: [] };
     let depositTotals = { GBP: 0, EUR: 0 }; // v3.015: Global for access in render helpers
 
 
@@ -3741,6 +3821,7 @@
     function renderBankTable() {
       const div = document.getElementById("bankReportArea");
       // Don't force display:block here, just update content. 
+      updateGlobalRecordCounts();
 
       let html = '<table id="bankStmtTable" style="min-width:100%; width:auto; border-collapse:collapse;"><thead><tr>';
 
@@ -3847,7 +3928,7 @@
     function copySummaryReport() {
       if (typeof summaryRecords === "undefined") return;
 
-      const hasData = (summaryRecords.crypto.length > 0 || summaryRecords.fiat.length > 0 || summaryRecords.deposits.length > 0);
+      const hasData = (summaryRecords.crypto && (summaryRecords.crypto.length > 0 || summaryRecords.fiat.length > 0 || summaryRecords.deposits.length > 0));
       if (!hasData) { alert("No data to copy."); return; }
 
       const div = document.getElementById("summaryReportArea");
