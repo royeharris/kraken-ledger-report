@@ -1474,8 +1474,11 @@
         `2. T/W Report (${reportCount}): Detailed list (Should match Ledger).\n` +
         `3. Statement (${bankCount}): Low count expected (Merges 2x Trade lines into 1).`;
 
-      // "No. records: Ledger (xx) | Trade/Withdrawal Report (xx) | Statement Report (xx)"
-      hint.innerHTML = `<span style="color:#333; cursor:help;" title="${tooltipText}">No. records:</span> <span style="color:#16a085;">Ledger (${ledgerCount})</span> <span style="color:#bbb;">|</span> <span style="color:#d35400;">Trade/Withdrawal Report (${reportCount})</span> <span style="color:#bbb;">|</span> <span style="color:#2980b9;">Statement Report (${bankCount})</span>`;
+      // "Number of records: Ledger xx | Trade/Withdrawal Report xx | Statement Report xx"
+      hint.innerHTML = `<span style="color:#333; cursor:help; margin-right:5px;" title="${tooltipText}">Number of records:</span> ` +
+        `<span style="color:#16a085; text-align:left; display:inline-block;">Ledger ${ledgerCount}</span> <span style="color:#bbb; margin:0 5px;">|</span> ` +
+        `<span style="color:#d35400; text-align:left; display:inline-block;">Trade/Withdrawal Report ${reportCount}</span> <span style="color:#bbb; margin:0 5px;">|</span> ` +
+        `<span style="color:#2980b9; text-align:left; display:inline-block;">Statement Report ${bankCount}</span>`;
     }
 
     // ---------- Staging Table Render ----------
