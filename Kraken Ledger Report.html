@@ -7,7 +7,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-  <title>Kraken Ledger Report v3.043</title>
+  <title>Kraken Ledger Report v3.044</title>
   <script async defer src="https://accounts.google.com/gsi/client"></script>
   <script async defer src="https://apis.google.com/js/api.js"></script>
   <style>
@@ -1475,6 +1475,14 @@
         `2. T/W Report (${reportCount}): Detailed list (Should match Ledger).\n` +
         `3. Statement (${bankCount}): Low count expected (Merges 2x Trade lines into 1).`;
 
+      // Calculate Counts
+      const wCount = cacheData.withdrawals.filter(w => w.type === 'withdrawal').length;
+      const dCount = cacheData.withdrawals.filter(w => w.type === 'deposit').length;
+      const tCount = cacheData.withdrawals.filter(w => w.type === 'trade').length;
+      const tFiatCrypto = cacheData.withdrawals.filter(w => w.type === 'trade' && w.tradeScope === 'fiat-crypto').length / 2;
+      const tCryptoFiat = cacheData.withdrawals.filter(w => w.type === 'trade' && w.tradeScope === 'crypto-fiat').length / 2;
+      const tFiatFiat = cacheData.withdrawals.filter(w => w.type === 'trade' && w.tradeScope === 'fiat-fiat').length / 2;
+
       // Flex layout for vertical stacking: Label | Ledger | Trade/Withdraw Report | Statement Report
       hint.innerHTML = `
         <div style="display:flex; gap:15px; align-items:center; flex-wrap:wrap;">
@@ -1503,6 +1511,26 @@
           </div>
         </div>
       `;
+
+      // Update Main Status Summary (Left Side)
+      const summaryDiv = document.getElementById("statusSummary");
+      if (summaryDiv) {
+        summaryDiv.innerHTML = `
+          <div style="display:flex; flex-direction:column; gap:2px;">
+             <!-- Line 1: Addresses -->
+             <div style="color:#d35400;">Addresses: <b>${cacheData.krakenAddresses.length}</b></div>
+             
+             <!-- Line 2: Withdrawals -->
+             <div style="color:#27ae60;">Withdrawals: <b>${wCount}</b></div>
+             
+             <!-- Line 3: Deposits (Moved here as requested) -->
+             <div style="color:#2980b9;">Deposits: <b>${dCount}</b></div>
+             
+             <!-- Line 4: Trades -->
+             <div style="color:#8e44ad;">Trades: <b>${Math.floor(tFiatCrypto)}</b> fiat&gt;crypto / <b>${Math.floor(tCryptoFiat)}</b> crypto&gt;fiat / <b>${Math.floor(tFiatFiat)}</b> fiat&gt;fiat</div>
+          </div>
+        `;
+      }
     }
 
     // ---------- Staging Table Render ----------
@@ -2726,7 +2754,8 @@
     // Generate report from cached data (no API calls except for rates)
     async function generateReportFromCache() {
       if (cacheData.withdrawals.length === 0) {
-        alert("No withdrawal data. Please Fetch first.");
+        logTrace("No withdrawal data found for this period.");
+        updateStatus("No Data Found", "idle");
         return;
       }
 
