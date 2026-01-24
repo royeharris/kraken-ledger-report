@@ -7,7 +7,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-  <title>Kraken Ledger Report v3.027</title>
+  <title>Kraken Ledger Report v3.028</title>
   <script async defer src="https://accounts.google.com/gsi/client"></script>
   <script async defer src="https://apis.google.com/js/api.js"></script>
   <style>
@@ -322,6 +322,24 @@
     .w-bank-details {
       min-width: 25ch;
       width: 25ch;
+      /* Sticky Description Column */
+      position: sticky;
+      left: 0;
+      background-color: inherit;
+      /* will inherit row background */
+      z-index: 2;
+      /* higher than normal cells */
+    }
+
+    /* Filter Input Optimization */
+    #typeFilterInput,
+    #descFilterInput {
+      width: 90%;
+      font-size: 0.55rem;
+      padding: 1px;
+      margin-top: 1px;
+      height: 18px;
+      /* Reduced fixed height */
     }
 
     .w-bank-val {
@@ -415,7 +433,7 @@
       <div
         style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; position:relative;">
         <div class="branding-row" style="margin-bottom:0; line-height:1.2;">
-          <div><b>Kraken Reports</b> <span style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v3.027</span></div>
+          <div><b>Kraken Reports</b> <span style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v3.028</span></div>
           <div style="font-size:0.65rem; color:#b0b0b0; font-weight:400;">GBP EUR USDT XRP transactions in Date
             range</div>
         </div>
@@ -649,17 +667,24 @@
     <button id="log_btn" onclick="toggleLog()"
       style="width:100%; padding:8px; margin-top:10px; background:#8e44ad; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Display
       Trace Log</button>
-    <div id="trace_log" onclick="toggleLog()">Trace: v3.027 Kraken Withdrawals Report initialized.</div>
+    <div id="trace_log" onclick="toggleLog()">Trace: v3.028 Kraken Withdrawals Report initialized.</div>
   </div>
 
   <script>
-
+    window.onerror = function (message, source, lineno, colno) {
+      logTrace("FATAL: " + message + " @ " + (source || "") + ":" + lineno + ":" + colno);
+      updateStatus("Error Occurred", "error");
+    };
+    window.onunhandledrejection = function (ev) {
+      logTrace("FATAL PROMISE: " + (ev && ev.reason ? (ev.reason.message || ev.reason) : "unknown"));
+      updateStatus("Error Occurred", "error");
+    };
   </script>
 
   <script>
 
     const SHEET_ID = "1Vf0iqthwHv0kFqTRJkYShH_RBpbokLmiEDWGJN3Q_E";
-    const VER = "Kraken Withdrawals Report (v3.027)";
+    const VER = "Kraken Withdrawals Report (v3.028)";
     const KRAKEN_API_URL = "https://api.kraken.com";
 
     // Default API credentials (enter your own in API Config)
@@ -909,7 +934,7 @@
     function updateStatusCounts() {
       // Calculate categorized counts
       let wCrypto = 0, wFiat = 0, dFiat = 0;
-      let tradesFiatToCrypto = 0, tradesCryptoToFiat = 0;
+      let tradesFiatToCrypto = 0, tradesCryptoToFiat = 0, tradesFiatToFiat = 0;
 
       for (const w of cacheData.withdrawals) {
         const type = (w.type || "").toLowerCase();
@@ -931,8 +956,25 @@
           // Fiat -> Crypto (Buy): Spend Fiat (Amount < 0, Asset Fiat)
           // Crypto -> Fiat (Sell): Spend Crypto (Amount < 0, Asset Crypto)
           if (w.amount < 0) {
-            if (isFiat) tradesFiatToCrypto++;
-            else tradesCryptoToFiat++;
+            // Find the "Buy" side (positive amount, same refid) to check its asset
+            const buySide = cacheData.withdrawals.find(b => b.refid === w.refid && b.amount > 0);
+
+            if (buySide) {
+              const buyAsset = (buySide.asset || "").toUpperCase();
+              const isBuyFiat = (buyAsset.includes("GBP") || buyAsset.includes("EUR") || buyAsset.includes("USD") || buyAsset === "ZGBP" || buyAsset === "ZEUR" || buyAsset === "ZUSD");
+
+              if (isFiat && isBuyFiat) {
+                tradesFiatToFiat++;
+              } else if (isFiat) {
+                tradesFiatToCrypto++;
+              } else {
+                tradesCryptoToFiat++;
+              }
+            } else {
+              // Fallback if unmatched (shouldn't happen often)
+              if (isFiat) tradesFiatToCrypto++;
+              else tradesCryptoToFiat++;
+            }
           }
         }
       }
@@ -943,7 +985,7 @@
         <div class="status-item"><span style="color:#d35400;">Addresses:</span> <b id="addressCount">${cacheData.krakenAddresses.length}</b></div>
         <div class="status-item"><span style="color:#27ae60;">Withdrawals:</span> <b>${wCrypto}</b> (Crypto) / <b>${wFiat}</b> (Fiat)</div>
         <div class="status-item"><span style="color:#2980b9;">Deposits:</span> <b>${dFiat}</b> (Fiat)</div>
-        <div class="status-item"><span style="color:#8e44ad;">Trades:</span> <b>${tradesFiatToCrypto}</b> (fiat&gt;crypto) / <b>${tradesCryptoToFiat}</b> (crypto&gt;fiat)</div>
+        <div class="status-item"><span style="color:#8e44ad;">Trades:</span> <b>${tradesFiatToCrypto}</b> (fiat&gt;crypto) / <b>${tradesCryptoToFiat}</b> (crypto&gt;fiat) / <b>${tradesFiatToFiat}</b> (fiat&gt;fiat)</div>
       `;
 
       const el = document.getElementById("statusSummary");
@@ -1225,17 +1267,15 @@
 
       // Check prerequisites
       if (cacheData.withdrawals.length === 0) {
-        logTrace("ERROR: No ledger data loaded. Please click 'Read Ledger' first.");
-        updateStatus("No Ledger Data", "error");
-        logTrace("ERROR: No withdrawals loaded");
+        logTrace("Action Required: Please click 'Read Ledger' before generating a report.");
+        updateStatus("No Ledger Data", "idle");
         resetGenerateButton(btn);
         return;
       }
 
       if (cacheData.krakenAddresses.length === 0) {
-        logTrace("ERROR: No addresses loaded. Please click 'Pull Addresses' first.");
-        updateStatus("No Addresses", "error");
-        logTrace("ERROR: No addresses loaded");
+        logTrace("Action Required: Please click 'Pull Addresses' to enrich the report with recipient names.");
+        updateStatus("No Addresses", "idle");
         resetGenerateButton(btn);
         return;
       }
@@ -3081,6 +3121,11 @@
               const words = recipient.split(/\s+/).slice(0, 2).join(" ");
               // Clean common suffixes if needed, or just trust words
               detail = `${words}`;
+
+              // v3.028: Fix "Withdrawal (EUR)" showing instead of name
+              // Use the detected name as the primary detail
+              row.details = detail;
+
             } else if (e.info && e.info !== "Withdrawal" && e.info !== "Deposit") {
               // v3.017: Fallback to ledger info if no address match (e.g. "Revolut Ltd")
               detail = e.info;
@@ -3093,7 +3138,11 @@
 
             // Append Asset (cleaned)
             let cleanAsset = normalizedAsset.replace("ZEUR", "EUR").replace("ZGBP", "GBP").replace("ZUSD", "USD");
-            detail += ` (${cleanAsset})`;
+
+            // v3.028: Make sure we don't double append
+            if (!detail.includes("(" + cleanAsset + ")")) {
+              detail += ` (${cleanAsset})`;
+            }
 
             row.details = detail;
 
@@ -3702,13 +3751,11 @@
       html += `<th rowspan="2" class="w-type" style="${hStyle}">
         Type<br/>
         <input type="text" id="typeFilterInput" placeholder="Filter..." 
-        style="width:90%; font-size:0.6rem; padding:2px; margin-top:2px;" 
         onkeyup="filterBankReport()" onclick="event.stopPropagation()">
       </th>`;
       html += `<th rowspan="2" class="w-bank-details" style="${hStyle}">
         Description<br/>
         <input type="text" id="descFilterInput" placeholder="Filter..." 
-        style="width:90%; font-size:0.6rem; padding:2px; margin-top:2px;" 
         onkeyup="filterBankReport()" onclick="event.stopPropagation()">
       </th>`;
 
