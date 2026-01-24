@@ -573,11 +573,12 @@
             <th style="padding:4px; border:1px solid #a5d6a7; width:140px;">Key Name</th>
             <th style="padding:4px; border:1px solid #a5d6a7; width:200px;">Address</th>
             <th style="padding:4px; border:1px solid #a5d6a7; width:60px;">Dest Tag</th>
+            <th style="padding:4px; border:1px solid #a5d6a7; width:150px;">Info / Bank Details</th>
           </tr>
         </thead>
         <tbody id="addressTableBody">
           <tr>
-            <td colspan="5" style="padding:8px; text-align:center; color:#7f8c8d;">No addresses loaded. Click "Pull
+            <td colspan="6" style="padding:8px; text-align:center; color:#7f8c8d;">No addresses loaded. Click "Pull
               Addresses" first.</td>
           </tr>
         </tbody>
@@ -1412,10 +1413,10 @@
         alert("No addresses to copy.");
         return;
       }
-      let text = "Asset\tRecipient\tKey Name\tAddress\tDest Tag\n";
+      let text = "Asset\tRecipient\tKey Name\tAddress\tDest Tag\tInfo\n";
       for (const a of cacheData.krakenAddresses) {
         const recipient = (a.key || "").replace(/\s*(XRP|USDT|TRC20|ERC20)\s*/gi, "").trim();
-        text += (a.asset || "") + "\t" + recipient + "\t" + (a.key || "") + "\t" + (a.address || "") + "\t" + (a.tag || a.memo || "") + "\n";
+        text += (a.asset || "") + "\t" + recipient + "\t" + (a.key || "") + "\t" + (a.address || "") + "\t" + (a.tag || a.memo || "") + "\t" + (a.info || "") + "\n";
       }
       navigator.clipboard.writeText(text).then(() => {
         alert("Addresses copied to clipboard!");
@@ -1464,8 +1465,17 @@
       const reportCount = (stagingRecords && Array.isArray(stagingRecords)) ? stagingRecords.length : 0;
       const bankCount = (typeof bankRecords !== 'undefined' && Array.isArray(bankRecords)) ? bankRecords.length : 0;
 
+      // Calculate Reconciliations for Tooltip
+      const depositCount = cacheData.withdrawals.filter(w => w.type === 'deposit').length;
+
+
+      const tooltipText = `Logic Breakdown:\n` +
+        `1. Ledger (${ledgerCount}): All raw records.\n` +
+        `2. T/W Report (${reportCount}): Detailed list (Should match Ledger).\n` +
+        `3. Statement (${bankCount}): Low count expected (Merges 2x Trade lines into 1).`;
+
       // "No. records: Ledger (xx) | Trade/Withdrawal Report (xx) | Statement Report (xx)"
-      hint.innerHTML = `<span style="color:#333;">No. records:</span> <span style="color:#16a085;">Ledger (${ledgerCount})</span> <span style="color:#bbb;">|</span> <span style="color:#d35400;">Trade/Withdrawal Report (${reportCount})</span> <span style="color:#bbb;">|</span> <span style="color:#2980b9;">Statement Report (${bankCount})</span>`;
+      hint.innerHTML = `<span style="color:#333; cursor:help;" title="${tooltipText}">No. records:</span> <span style="color:#16a085;">Ledger (${ledgerCount})</span> <span style="color:#bbb;">|</span> <span style="color:#d35400;">Trade/Withdrawal Report (${reportCount})</span> <span style="color:#bbb;">|</span> <span style="color:#2980b9;">Statement Report (${bankCount})</span>`;
     }
 
     // ---------- Staging Table Render ----------
@@ -1481,7 +1491,7 @@
 
       // Header for Preview
       let html = '<div onclick="toggleReportViewer()" style="cursor:pointer; background:#d35400; color:#fff; padding:6px 10px; font-size:0.75rem; font-weight:bold; border-radius:4px 4px 0 0; display:flex; justify-content:space-between; align-items:center;" title="Click to close report">';
-      html += '<span>Trade/Withdrawal Report</span>';
+      html += '<span>Trades, Withdrawals, Deposits</span>';
       html += '<button onclick="event.stopPropagation(); copyReportToClipboard()" title="Copy Table" style="padding:2px 8px; background:#fff; color:#d35400; border:none; border-radius:3px; font-size:0.65rem; font-weight:600; cursor:pointer;">&#x2398; Copy Table</button>';
       html += '</div>';
 
@@ -1945,7 +1955,7 @@
       const addresses = cacheData.krakenAddresses || [];
 
       if (addresses.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" style="padding:8px; text-align:center; color:#7f8c8d;">No addresses loaded. Click "Fetch Addresses" first.</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="6" style="padding:8px; text-align:center; color:#7f8c8d;">No addresses loaded. Click "Fetch Addresses" first.</td></tr>';
         return;
       }
 
@@ -1969,6 +1979,7 @@
         const recipient = escHtml((addr.key || "").replace(/\s*(XRP|USDT|TRC20|ERC20|BTC|ETH)/gi, "").trim());
         const address = escHtml(addr.address || "");
         const destTag = escHtml(addr.tag || addr.memo || "");
+        const info = escHtml(addr.info || addr.bank_details || "");
 
         html += '<tr style="border-bottom:1px solid #e0e0e0;">';
         html += '<td style="padding:4px; border:1px solid #e0e0e0; width:45px; font-size:0.6rem;">' + asset + '</td>';
@@ -1976,6 +1987,7 @@
         html += '<td style="padding:4px; border:1px solid #e0e0e0; width:200px; max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:0.6rem;" title="' + keyName + '">' + keyName + '</td>';
         html += '<td style="padding:4px; border:1px solid #e0e0e0; font-family:monospace; font-size:0.5rem; word-break:break-all;" title="' + address + '">' + address + '</td>';
         html += '<td style="padding:4px; border:1px solid #e0e0e0; width:70px; font-size:0.6rem;">' + destTag + '</td>';
+        html += '<td style="padding:4px; border:1px solid #e0e0e0; width:150px; font-size:0.6rem; word-break:break-word;" title="' + info + '">' + info + '</td>';
         html += '</tr>';
       }
 
@@ -2777,9 +2789,9 @@
       for (let idx = sortedLedger.length - 1; idx >= 0; idx--) {
         const w = sortedLedger[idx];
 
-        // Only process withdrawals and trades (skip deposits for now, unless needed)
-        // v2.48: Allow trades to pass through!
-        if (w.type !== "withdrawal" && w.type !== "trade") continue;
+        // Only process withdrawals, deposits, and trades
+        // v3.030: Include deposits as requested
+        if (w.type !== "withdrawal" && w.type !== "trade" && w.type !== "deposit") continue;
 
         const dateStr = new Date(w.time * 1000).toISOString().split("T")[0];
         const rates = cacheData.ratesCache[dateStr] || {};
@@ -3212,9 +3224,9 @@
             }
 
             // Fix: Override for Revolut GBP
-            if (detail === "Revolut Ltd" && (e.asset === "ZGBP" || e.asset === "GBP")) {
-              detail = "Revolut Business";
-            }
+            // v3.030: User requested NO hardcoding of bank names.
+            // Keeping dynamic logic only.
+            // if (detail === "Revolut Ltd") { detail = "Revolut Business"; }
 
             // Append Asset (cleaned)
             let cleanAsset = normalizedAsset.replace("ZEUR", "EUR").replace("ZGBP", "GBP").replace("ZUSD", "USD");
@@ -3497,8 +3509,8 @@
             if (words.length > 2) recipient = words.slice(0, 2).join(" ");
           }
 
-          // v3.019: Fix Inconsistency - Override Revolut naming for Summary
-          if (recipient === "Revolut Ltd") recipient = "Revolut Business";
+          // v3.030: User requested NO hardcoding.
+          // if (recipient === "Revolut Ltd") recipient = "Revolut Business";
 
           // Iterate Asssets in this Row
           for (const [asset, val] of Object.entries(item.amounts)) {
@@ -3640,8 +3652,37 @@
 
           } else {
             // Fiat: List Items (or Aggregated? User said "Withdrawals to ... - summary")
-            if (!fMap[recipient]) fMap[recipient] = { GBP: 0, EUR: 0 };
+            if (!fMap[recipient]) fMap[recipient] = { GBP: 0, EUR: 0, EUR_GBP: 0 }; // Initialize with EUR_GBP container
             fMap[recipient][assetKey] += amount;
+
+            // if asset is EUR, calculate its GBP value
+            if (assetKey === "EUR") {
+              let eurGbpVal = 0;
+              if (item.gbpValues && item.gbpValues.EUR) {
+                eurGbpVal = item.gbpValues.EUR;
+              } else if (item._raw) {
+                // Fallback logic
+                eurGbpVal = calculateGbpValue(item._raw, amount, "EUR");
+                // If calculateGbpValue doesn't handle EUR well (it might expect USDT/XRP), check cache
+                if ((!eurGbpVal || eurGbpVal === 0) && cacheData.ratesCache) {
+                  const dStr = new Date(item._raw.time * 1000).toISOString().split('T')[0];
+                  const dayRates = cacheData.ratesCache[dStr];
+                  if (dayRates && dayRates.USDTEUR && dayRates.USDTGBP) {
+                    // Cross rate: EUR -> USDT -> GBP ? Or direct?
+                    // We usually don't have EURGBP in cache directly unless we fetch it.
+                    // But we do fetch it! See line 2420 (fetchOHLC("GBPEUR")).
+                    // Wait, ratesCache structure (Line 2710) only stores USDTGBP, USDTEUR, XRPGBP, XRPEUR.
+                    // It does NOT store GBPEUR directly in the final cache object usually?
+                    // Let's check line 2710.
+                    // Providing a decent estimate: EUR / USDTEUR * USDTGBP ??
+                    if (dayRates.USDTEUR > 0) {
+                      eurGbpVal = amount / dayRates.USDTEUR * dayRates.USDTGBP;
+                    }
+                  }
+                }
+              }
+              fMap[recipient].EUR_GBP += eurGbpVal;
+            }
           }
         } else if (e.type === 'deposit') {
           if (assetKey === 'GBP' || assetKey === 'EUR') {
@@ -3739,26 +3780,33 @@
 
       // --- 2. FIAT TABLE ---
       html += '<div style="background:#27ae60; color:#fff; padding:5px 10px; font-size:0.7rem; font-weight:bold; border-radius:4px 4px 0 0; margin-bottom:0;">Withdrawals to Haricom Bank Accounts (GBP EUR)</div>';
-      html += '<div style="overflow-x:auto;">';
-      html += '<table style="width:100%; border-collapse:collapse; margin-bottom:20px; border:1px solid #ddd; table-layout:fixed;">';
-      html += '<thead style="background:#f9f9f9;"><tr>';
-      html += '<th style="padding:6px; border:1px solid #ddd; text-align:left; width:50%;">Haricom Bank Account</th>';
-      html += '<th style="padding:6px; border:1px solid #ddd; text-align:right; width:25%;">GBP</th>';
-      html += '<th style="padding:6px; border:1px solid #ddd; text-align:right; width:25%;">EUR</th>';
+      html += '<table style="width:100%; border-collapse:collapse; margin-bottom:20px; border:1px solid #ddd;">';
+      html += '<thead><tr style="background:#f2f2f2;">';
+      html += '<th style="padding:4px; border:1px solid #ddd; text-align:left;">Haricom Bank Account</th>';
+      html += '<th style="padding:4px; border:1px solid #ddd; text-align:right;">GBP</th>';
+      html += '<th style="padding:4px; border:1px solid #ddd; text-align:right;">EUR</th>';
+      html += '<th style="padding:4px; border:1px solid #ddd; text-align:right;">GBP Equivalent (of EUR)</th>'; // New Column
       html += '</tr></thead><tbody>';
 
-      if (summaryRecords.fiat && summaryRecords.fiat.length > 0) {
-        for (const r of summaryRecords.fiat) {
+      const fiatRecipients = summaryRecords.fiat || [];
+      if (fiatRecipients.length === 0) {
+        html += '<tr><td colspan="4" style="text-align:center; padding:10px; font-style:italic; color:#7f8c8d;">No withdrawals found for this period.</td></tr>';
+      } else {
+        for (const r of fiatRecipients) {
+          const gbpShow = (r.GBP && r.GBP > 0) ? r.GBP.toFixed(2) : "-";
+          const eurShow = (r.EUR && r.EUR > 0) ? r.EUR.toFixed(2) : "-";
+          // GBP Equivalent for EUR
+          const eqShow = (r.EUR && r.EUR > 0) ? (r.EUR_GBP ? r.EUR_GBP.toFixed(2) : "0.00") : "n/a";
+
           html += '<tr>';
-          html += `<td style="padding:5px; border:1px solid #ddd; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escHtml(r.recipient)}">${escHtml(r.recipient)}</td>`;
-          html += `<td style="padding:5px; border:1px solid #ddd; text-align:right;">${r.GBP > 0 ? r.GBP.toFixed(2) : "-"}</td>`;
-          html += `<td style="padding:5px; border:1px solid #ddd; text-align:right;">${r.EUR > 0 ? r.EUR.toFixed(2) : "-"}</td>`;
+          html += `<td style="padding:4px; border:1px solid #ddd;">${r.recipient}</td>`;
+          html += `<td style="padding:4px; border:1px solid #ddd; text-align:right;">${gbpShow}</td>`;
+          html += `<td style="padding:4px; border:1px solid #ddd; text-align:right;">${eurShow}</td>`;
+          html += `<td style="padding:4px; border:1px solid #ddd; text-align:right; color:#7f8c8d;">${eqShow}</td>`;
           html += '</tr>';
         }
-      } else {
-        html += '<tr><td colspan="3" style="padding:15px; text-align:center; color:#7f8c8d; font-style:italic;">No withdrawals found for this period.</td></tr>';
       }
-      html += '</tbody></table></div>';
+      html += '</tbody></table>';
 
       // -- RE-IMPLEMENTING DEPOSITS SECTION TO BE ALWAYS VISIBLE --
       html += '<div style="background:#27ae60; color:#fff; padding:5px 10px; font-size:0.7rem; font-weight:bold; border-radius:4px 4px 0 0; margin-bottom:0; margin-top:20px;">Deposits from Haricom Bank Accounts (GBP EUR)</div>';
