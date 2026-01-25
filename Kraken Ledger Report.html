@@ -3330,7 +3330,7 @@
     // STATEMENT SUMMARY REPORT (v2.50)
     // ===========================================
     let summaryRecords = { crypto: [], fiat: [], deposits: [], fees: [] };
-    let depositTotals = { GBP: 0, EUR: 0 }; // v3.015: Global for access in render helpers
+    let depositTotals = { GBP: { total: 0, gbpVal: 0 }, EUR: { total: 0, gbpVal: 0 } }; // v3.015: Global for access in render helpers
 
 
     function toggleSummaryReport() {
@@ -3366,8 +3366,8 @@
       // Aggregation Containers
       const cryptoTotals = {}; // { recipient: { USDT: 0, XRP: 0, USDT_GBP: 0, XRP_GBP: 0 } }
       const fMap = {};         // { recipient: { GBP: 0, EUR: 0 } }
-      depositTotals = { GBP: 0, EUR: 0 }; // v3.015: Reset global variable
-      const feeTotals = { GBP: 0, EUR: 0, USDT: 0, XRP: 0 };
+      depositTotals = { GBP: { total: 0, gbpVal: 0 }, EUR: { total: 0, gbpVal: 0 } }; // v3.015: Reset global variable
+      const feeTotals = { GBP: { total: 0, gbpVal: 0 }, EUR: { total: 0, gbpVal: 0 }, USDT: { total: 0, gbpVal: 0 }, XRP: { total: 0, gbpVal: 0 } };
       const fiatWithdrawals = []; // legacy support
 
       // Helper to normalize
@@ -3474,134 +3474,17 @@
           for (const [asset, val] of Object.entries(item.amounts)) {
             if (!val) continue;
             if (asset === "USDT" || asset === "XRP") {
-              // Crypto
-              if (val < 0) { // Withdrawal
-                amount = Math.abs(val);
-                if (!cryptoTotals[recipient]) cryptoTotals[recipient] = { USDT: 0, XRP: 0, USDT_GBP: 0, XRP_GBP: 0 };
-                cryptoTotals[recipient][asset] += amount; // Accumulate once
-
-
-                // Calculate GBP
-                // v2.90: Use enriched values from Table Generation if available
-                let gbpVal = 0;
-                // v3.011: Fix GBP Equivalent access using correct keys
-                // The key in gbpValues (from step 382) is normalized (USDT, XRP, GBP, EUR)
-                let lookupAsset = asset;
-                // Ensure asset matches the normalization used in generateBankReport
-                if (asset.includes("USDT")) lookupAsset = "USDT";
-                else if (asset.includes("XRP") || asset === "XXRP") lookupAsset = "XRP";
-
-                if (item.gbpValues && item.gbpValues[lookupAsset]) {
-                  gbpVal = item.gbpValues[lookupAsset];
-                } else if (item._raw) {
-                  // Fallback to recalculation (less accurate without trade match context)
-                  gbpVal = calculateGbpValue(item._raw, amount, asset);
-                }
-
-                // v3.019: Robust Fallback for Missing GBP (Check Withdrawal Cache directly)
-                if ((!gbpVal || gbpVal === 0) && item._raw && cacheData.withdrawalCache) {
-                  const exactMatch = cacheData.withdrawalCache.find(w => w.refid === item._raw.refid);
-                  if (exactMatch && exactMatch.gbpSent) {
-                    gbpVal = parseFloat(exactMatch.gbpSent);
-                    logTrace(`Fallback success for ${recipient} (${asset}): Found calculated GBP ${gbpVal}`);
-                  } else {
-                    logTrace(`Fallback failed for ${recipient} (${asset}): No match in withdrawalCache`);
-                  }
-                }
-
-                if (asset === "USDT") cryptoTotals[recipient].USDT_GBP += gbpVal;
-                if (asset === "XRP") cryptoTotals[recipient].XRP_GBP += gbpVal;
+              // Crypto: Aggregated
+              if (!cryptoTotals[recipient]) cryptoTotals[recipient] = { USDT: 0, XRP: 0, USDT_GBP: 0, XRP_GBP: 0 };
+              
+              if (!isFinite(amount)) {
+                const error = `Summary error: invalid crypto amount ${amount} for ${assetKey} to ${recipient}`;
+                updateStatus(error, "error");
+                console.error(error, { item });
+                throw new Error(error);
               }
-            } else if (asset === "GBP" || asset === "EUR") {
-              // Fiat
-              if (val < 0) { // Withdrawal
-                amount = Math.abs(val);
-                // Add to fiatWithdrawals logic
-                // We need to aggregate fiat too
-                let exist = fiatWithdrawals.find(f => f.recipient === recipient);
-                if (!exist) {
-                  exist = { recipient: recipient, GBP: 0, EUR: 0 };
-                  fiatWithdrawals.push(exist);
-                }
-                exist[asset] += amount;
-              } else if (val > 0) { // Deposit
-                // item.type === 'deposit' check?
-                // In bankRecords, positive is Credit.
-                // Check if it's considered a "Deposit" type?
-                if (item.type && item.type.toLowerCase().includes("deposit")) {
-                  depositTotals[asset] += val;
-                }
-              }
-            }
-
-            // Accumulate Fees (from Table Row)
-            if (item.fees) {
-              ["GBP", "EUR", "USDT", "XRP"].forEach(fAsset => {
-                // item.fees[fAsset] can be a number or undefined
-                if (item.fees[fAsset] && item.fees[fAsset] > 0) {
-                  if (feeTotals[fAsset] !== undefined) feeTotals[fAsset] += item.fees[fAsset];
-                }
-              });
-            }
-          }
-          continue; // Next row
-        }
-
-        // --- LEGACY LOOP (If no table data) ---
-        e = item;
-
-        // Prevent processing the same RefID twice (fixes potential double counting)
-        // ... (Existing Key Logic)
-
-        const uniqueKey = `${e.refid}_${e.amount}_${e.time}_${e.asset}_${e.type}`;
-        if (seenIds.has(uniqueKey)) continue;
-        seenIds.add(uniqueKey);
-
-        assetKey = getAssetKey(e.asset);
-        if (!assetKey) continue;
-
-        amount = Math.abs(e.amount);
-
-        if (e.type === 'withdrawal') {
-          // Find Recipient Logic
-          let recipient = "Unknown";
-
-          // 1. Try to link to Withdrawal History via Refid
-          const hist = cacheData.withdrawalHistory.find(h => h.refid === e.refid);
-          let addr = null;
-
-          if (hist) {
-            addr = hist.info || hist.address;
-
-            // 2. Check Address Book
-            // Try matching method depending on crypto/fiat
-            if (addr) {
-              const match = cacheData.krakenAddresses.find(a => a.address === addr);
-              if (match) recipient = match.key; // Use the "Key Name" (e.g. Revolut B (EUR))
-              else recipient = addr; // Fallback to raw info
-            }
-          }
-
-          // 3. Fallback: If still unknown, use checking logic from 'info' text often found in ledgers? 
-          if (recipient === "Unknown" && (assetKey === "GBP" || assetKey === "EUR")) {
-            // Best effort
-          }
-
-          // CLEANING & TRUNCATION
-          // Remove asset tags
-          recipient = recipient.replace(/\s*(XRP|USDT|TRC20|ERC20|BTC|ETH)\s*/gi, "").trim();
-
-          // STRICT RULE: First 2 words only
-          const words = recipient.split(/\s+/);
-          if (words.length > 2) {
-            recipient = words.slice(0, 2).join(" ");
-          }
-
-          // Segregate Data
-          if (assetKey === "USDT" || assetKey === "XRP") {
-            // Crypto: Aggregated
-            if (!cryptoTotals[recipient]) cryptoTotals[recipient] = { USDT: 0, XRP: 0 };
-            cryptoTotals[recipient][assetKey] += amount;
+              
+              cryptoTotals[recipient][assetKey] += amount;
 
             // Calc GBP
             const gbpVal = calculateGbpValue(e, amount, assetKey);
@@ -3644,6 +3527,13 @@
           }
         } else if (e.type === 'deposit') {
           if (assetKey === 'GBP' || assetKey === 'EUR') {
+            if (!isFinite(amount)) {
+              const error = `Summary error: invalid deposit amount ${amount} for ${assetKey} in row ${e.time}`;
+              updateStatus(error, "error");
+              console.error(error, { e });
+              throw new Error(error);
+            }
+            
             depositTotals[assetKey].total += amount;
             // Calculate GBP val for deposit
             let dGbp = 0;
@@ -3653,8 +3543,18 @@
               // Try to find a rate from cache
               // Simple approx if not found: 0.85? No, prefer lookup.
               // Re-use logic:
-              if (item.gbpValues && item.gbpValues.EUR) dGbp = item.gbpValues.EUR;
-              else dGbp = calculateGbpValue(item._raw || e, amount, "EUR");
+              if (item.gbpValues && item.gbpValues.EUR && isFinite(item.gbpValues.EUR)) {
+                dGbp = item.gbpValues.EUR;
+              } else {
+                dGbp = calculateGbpValue(item._raw || e, amount, "EUR");
+              }
+              
+              if (!isFinite(dGbp)) {
+                const error = `Summary error: invalid GBP value ${dGbp} for EUR deposit in row ${e.time}`;
+                updateStatus(error, "error");
+                console.error(error, { e, dGbp });
+                throw new Error(error);
+              }
             }
             depositTotals[assetKey].gbpVal += dGbp;
           }
@@ -3664,17 +3564,29 @@
         const feeSource = item.fees || (e && e.fees);
         if (feeSource) {
           ["GBP", "EUR", "USDT", "XRP"].forEach(fAsset => {
-            if (feeSource[fAsset] > 0) {
+          if (feeSource[fAsset] > 0) {
               const fAmt = feeSource[fAsset];
+              if (!isFinite(fAmt)) {
+                const error = `Summary error: invalid fee amount ${fAmt} for ${fAsset} in row ${r.date} ${r.time}`;
+                updateStatus(error, "error");
+                console.error(error, { row, fAsset });
+                throw new Error(error);
+              }
+              
               feeTotals[fAsset].total += fAmt;
 
               // Calc GBP for Fee
               let fGbp = 0;
               if (fAsset === 'GBP') fGbp = fAmt;
               else {
-                if (item.gbpValues && item.gbpValues[fAsset]) fGbp = item.gbpValues[fAsset] * (fAmt / amount); // Pro-rate? No, separate calc.
-                // Better: direct calc
-                fGbp = calculateGbpValue(item._raw || e, fAmt, fAsset);
+                if (item.gbpValues && item.gbpValues[fAsset] && isFinite(item.gbpValues[fAsset])) {
+                  fGbp = calculateGbpValue(item._raw || e, fAmt, fAsset);
+                } else {
+                  const error = `Summary error: missing GBP value for ${fAsset} fee in row ${r.date} ${r.time}`;
+                  updateStatus(error, "error");
+                  console.error(error, { row, fAsset, gbpValues: item.gbpValues });
+                  throw new Error(error);
+                }
               }
               feeTotals[fAsset].gbpVal += fGbp;
             }
@@ -3798,9 +3710,10 @@
       html += '<th style="padding:4px; border:1px solid #ddd; text-align:right;">Total Amount</th>';
       html += '</tr></thead><tbody>';
       for (const r of summaryRecords.deposits) {
+        const total = (r && r.total !== undefined) ? r.total : 0;
         html += '<tr>';
         html += `<td style="padding:4px; border:1px solid #ddd;">${r.asset}</td>`;
-        html += `<td style="padding:4px; border:1px solid #ddd; text-align:right; font-weight:bold;">${parseFloat(r.total || 0).toFixed(2)}</td>`;
+        html += `<td style="padding:4px; border:1px solid #ddd; text-align:right; font-weight:bold;">${total.toFixed(2)}</td>`;
         html += '</tr>';
       }
       html += '</tbody></table>';
@@ -3817,11 +3730,11 @@
 
       // v3.011: Fee Display Logic with "-" for no records and proper decimals
 
-      const renderFeeRow = (asset, total) => {
+        const renderFeeRow = (asset, total) => {
         // Heuristic: If total is 0, check if we had any activity for this asset.
         let activity = false;
         if (asset === "GBP" || asset === "EUR") {
-          if (depositTotals[asset] > 0) activity = true;
+          if (depositTotals[asset] && depositTotals[asset].total > 0) activity = true;
           if (summaryRecords.fiat) summaryRecords.fiat.forEach(r => { if (r[asset] > 0) activity = true; });
         } else {
           if (summaryRecords.crypto) summaryRecords.crypto.forEach(r => { if (r[asset] > 0) activity = true; });
@@ -3880,6 +3793,10 @@
 
         html += `<th colspan="4" class="section-border-left" style="text-align:center; border-bottom:none; background:#f9f9f9;">${cleanAsset}</th>`;
       });
+      
+      // Add USDT (GBP equivalent) group
+      html += `<th colspan="4" class="section-border-left" style="text-align:center; border-bottom:none; background:#f9f9f9;">USDT (GBP equivalent)</th>`;
+      
       html += '</tr><tr>';
 
       // Sub-headers (Amounts)
@@ -3889,10 +3806,16 @@
         html += `<th style="text-align:right; font-size:0.55rem; background:#f9f9f9;">Fee</th>`;
         html += `<th style="text-align:right; font-size:0.55rem; background:#f9f9f9;">Balance</th>`;
       });
+      
+      // Sub-headers for USDT (GBP equivalent)
+      html += `<th class="section-border-left" style="text-align:right; font-size:0.55rem; background:#f9f9f9;">Debit</th>`;
+      html += `<th style="text-align:right; font-size:0.55rem; background:#f9f9f9;">Credit</th>`;
+      html += `<th style="text-align:right; font-size:0.55rem; background:#f9f9f9;">Fee</th>`;
+      html += `<th style="text-align:right; font-size:0.55rem; background:#f9f9f9;">Balance</th>`;
       html += '</tr></thead><tbody>';
 
       if (bankRecords.length === 0) {
-        html += `<tr><td colspan="${4 + (TRACKED_ASSETS.length * 4)}" style="text-align:center; padding:10px;">No bank statement generated. Select dates and click the button.</td></tr>`;
+        html += `<tr><td colspan="${4 + (TRACKED_ASSETS.length * 4) + 4}" style="text-align:center; padding:10px;">No bank statement generated. Select dates and click the button.</td></tr>`;
       } else {
         for (const r of bankRecords) {
           // Rule: Only bold the Closing Balance (or Opening?) - User said "remove bold from balances"
@@ -3940,6 +3863,53 @@
             html += `<td class="w-bank-val" style="padding:4px; border-bottom:1px solid #eee; color:#7f8c8d;">${showFee}</td>`;
             html += `<td class="w-bank-bal" style="padding:4px; border-bottom:1px solid #eee;">${showBal}</td>`;
           });
+
+          // Add USDT (GBP equivalent) columns
+          const usdtAmt = r.amounts["USDT"];
+          const usdtFee = r.fees["USDT"];
+          const usdtBal = r.balances["USDT"];
+          
+          // Function to get USDT→GBP rate for this row
+          const usdtToGbpRate = (row) => {
+            // Primary: reuse derived rate from gbpValues if available
+            if (row.gbpValues && row.gbpValues["USDT"] && usdtAmt !== undefined && Math.abs(usdtAmt) > 0) {
+              return row.gbpValues["USDT"] / Math.abs(usdtAmt);
+            }
+            
+            // Fallback: find in withdrawal cache
+            if (row._raw && cacheData.withdrawalCache) {
+              const match = cacheData.withdrawalCache.find(w => w.refid === row._raw.refid);
+              if (match && match.gbpSent && usdtAmt !== undefined && Math.abs(usdtAmt) > 0) {
+                return parseFloat(match.gbpSent) / Math.abs(usdtAmt);
+              }
+            }
+            
+            // If rate cannot be found and row has USDT values, that's an error
+            if ((usdtAmt !== undefined && usdtAmt !== 0) || 
+                (usdtFee !== undefined && usdtFee !== 0) || 
+                (usdtBal !== undefined && usdtBal !== 0)) {
+              const error = `Missing USDT→GBP rate for row ${r.date} ${r.time} ${r.details}`;
+              updateStatus(error, "error");
+              console.error("USDT Rate Error:", error, { row, usdtAmt, usdtFee, usdtBal });
+              throw new Error(error);
+            }
+            
+            return 0; // No USDT values, no rate needed
+          };
+
+          const gbpRate = usdtToGbpRate(r);
+          
+          // Calculate GBP equivalents (only if USDT values exist)
+          const usdtDebitGbp = (usdtAmt !== undefined && usdtAmt < 0) ? (Math.abs(usdtAmt) * gbpRate).toFixed(2) : "";
+          const usdtCreditGbp = (usdtAmt !== undefined && usdtAmt > 0) ? (Math.abs(usdtAmt) * gbpRate).toFixed(2) : "";
+          const usdtFeeGbp = (usdtFee !== undefined && usdtFee > 0) ? (usdtFee * gbpRate).toFixed(2) : "";
+          const usdtBalGbp = (usdtBal !== undefined) ? (usdtBal * gbpRate).toFixed(2) : "";
+
+          // Add GBP equivalent cells
+          html += `<td class="w-bank-val section-border-left" style="padding:4px; border-bottom:1px solid #eee; color:#c0392b;">${usdtDebitGbp}</td>`;
+          html += `<td class="w-bank-val" style="padding:4px; border-bottom:1px solid #eee; color:#27ae60;">${usdtCreditGbp}</td>`;
+          html += `<td class="w-bank-val" style="padding:4px; border-bottom:1px solid #eee; color:#7f8c8d;">${usdtFeeGbp}</td>`;
+          html += `<td class="w-bank-bal" style="padding:4px; border-bottom:1px solid #eee;">${usdtBalGbp}</td>`;
           html += `</tr>`;
         }
       }
