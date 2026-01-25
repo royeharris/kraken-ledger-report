@@ -436,6 +436,7 @@
           <div><b>Kraken Reports</b> <span style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v3.049</span></div>
           <div style="font-size:0.65rem; color:#b0b0b0; font-weight:400;">GBP | EUR | USDT | XRP | transactions in Date
             range</div>
+          <div style="font-size:0.55rem; color:#95a5a6; margin-top:2px;" id="buildInfo">Build: Loading...</div>
         </div>
         <div id="auth_status"
           style="position:absolute; left:50%; transform:translateX(-50%); font-size:0.7rem; font-weight:700;">Status:
@@ -672,6 +673,94 @@
   </div>
 
   <script>
+    // ========== UI INITIALIZATION ==========
+    function initUI() {
+      // Required button IDs that must be present
+      const requiredButtons = [
+        "generate_btn",      // Generate Report
+        "api_btn",         // API Config
+        "address_btn",      // Display Addresses
+        "ledger_btn",       // Display Ledger
+        "report_btn",       // Display Trade/Withdrawal Report
+        "btn_bank_statement", // Kraken Statement
+        "btn_statement_summary", // Statement Summary
+        "log_btn",         // Display Progress Log
+        "resetBtn"         // Reset button
+      ];
+
+      let initError = false;
+      const errorMsg = (buttonId) => `UI init error: missing button ${buttonId}`;
+
+      // Check each required button exists
+      for (const buttonId of requiredButtons) {
+        const button = document.getElementById(buttonId);
+        if (!button) {
+          initError = true;
+          updateStatus(errorMsg(buttonId), "error");
+          console.error(errorMsg(buttonId));
+        } else {
+          // Add click handler if not already present
+          if (!button.hasAttribute('data-click-bound')) {
+            button.addEventListener('click', (e) => {
+              logTrace(`Button clicked: ${buttonId}`);
+              // Call existing global functions that should be defined
+              switch(buttonId) {
+                case "generate_btn": generateReport(); break;
+                case "api_btn": toggleApiConfig(); break;
+                case "address_btn": toggleAddressViewer(); break;
+                case "ledger_btn": toggleLedgerViewer(); break;
+                case "report_btn": toggleReportViewer(); break;
+                case "btn_bank_statement": toggleBankReport(); break;
+                case "btn_statement_summary": toggleSummaryReport(); break;
+                case "log_btn": toggleLog(); break;
+                case "resetBtn": handleReportReset(); break;
+                default: console.warn(`Unhandled button: ${buttonId}`);
+              }
+            });
+            button.setAttribute('data-click-bound', 'true');
+          }
+        }
+      }
+
+      // Set build information
+      const buildInfo = document.getElementById("buildInfo");
+      if (buildInfo) {
+        buildInfo.textContent = `Build: v3.049 - e8ea73b`;
+      }
+
+      if (!initError) {
+        logTrace("initUI complete: All button handlers bound successfully");
+        console.log("All UI buttons initialized and responsive");
+      }
+    }
+
+    // ========== ERROR TRAPPING ==========
+    window.addEventListener('error', (e) => {
+      const message = e.message || e.error || 'Unknown error';
+      const source = e.filename || e.source || 'Unknown source';
+      const lineno = e.lineno || e.lineno || 'Unknown line';
+      const colno = e.colno || e.colno || 'Unknown column';
+      
+      logTrace(`WINDOW ERROR: ${message} @ ${source}:${lineno}:${colno}`);
+      updateStatus(`Error: ${message}`, "error");
+      console.error('Window error details:', { message, source, lineno, colno, error: e });
+    });
+
+    window.addEventListener('unhandledrejection', (e) => {
+      const reason = e.reason ? (e.reason.message || e.reason) : 'unknown rejection';
+      logTrace(`UNHANDLED PROMISE REJECTION: ${reason}`);
+      updateStatus('Promise rejected', "error");
+      console.error('Unhandled promise rejection:', { reason, event: e });
+    });
+
+    // Initialize UI when DOM is ready
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', initUI);
+    } else {
+      // DOM already loaded, initialize immediately
+      initUI();
+    }
+
     window.onerror = function (message, source, lineno, colno) {
       logTrace("FATAL: " + message + " @ " + (source || "") + ":" + lineno + ":" + colno);
       updateStatus("Error Occurred", "error");
