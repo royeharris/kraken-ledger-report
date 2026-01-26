@@ -725,7 +725,7 @@
       // Set build information
       const buildInfo = document.getElementById("buildInfo");
       if (buildInfo) {
-        buildInfo.textContent = `Build: v3.049 - e8ea73b`;
+        buildInfo.textContent = `Build: v3.049 - bb0ac84`;
       }
 
       if (!initError) {
@@ -780,6 +780,25 @@
     // Default API credentials (enter your own in API Config)
     const DEFAULT_API_KEY = "";
     const DEFAULT_PRIVATE_KEY = "";
+
+    // Ensure logTrace is defined before any usage
+    function logTrace(msg) {
+      try {
+        // Append to trace buffer/UI if exists, otherwise console.log
+        const traceLog = document.getElementById("trace_log");
+        if (traceLog) {
+          const base = traceLog.textContent && traceLog.textContent.trim().length
+            ? traceLog.textContent
+            : "Trace: v3.030 Kraken Ledger Report initialized.";
+          traceLog.textContent = base + "\n[" + new Date().toLocaleTimeString() + "] " + msg;
+          traceLog.scrollTop = traceLog.scrollHeight;
+        } else {
+          console.log("Trace: " + msg);
+        }
+      } catch (e) {
+        console.error("logTrace error:", e);
+      }
+    }
 
     // Cache data structure (v2.0)
     let cacheData = {
