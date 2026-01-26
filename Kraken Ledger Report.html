@@ -441,13 +441,22 @@
   }
 
   function resetStatementDerivedState(){
+    // Derived summary state (must not leak across date ranges)
     window.statementSummaryTotals = {};
     window.feesByAsset = {};
     window.closingBalances = {};
-    window.fxRateCache = {};
     window.summaryAlreadyBuilt = false;
-    if (window.logTrace) logTrace("Statement Summary state reset due to date-range change.");
-  }
+
+    // Cached FX rates + cached withdrawal rows used by summary/trade matching
+    try {
+      if (typeof cacheData !== "undefined" && cacheData){
+        cacheData.ratesCache = {};
+        cacheData.withdrawalCache = [];
+      }
+    } catch(e) {}
+
+    if (window.logTrace) logTrace("Statement Summary + rates cache reset due to date-range change.");
+}
 
   window.__checkAndResetSummaryState = function(){
     const key = getDateRangeKey();
@@ -463,6 +472,25 @@
 })();
 </script>
 
+
+<script>
+const APP_VERSION = "v3.042-2";
+</script>
+
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+  const v = (typeof APP_VERSION !== "undefined") ? APP_VERSION : "";
+  const headerEl = document.getElementById("appVersion");
+  if (headerEl && v) headerEl.textContent = v;
+
+  const traceEl = document.getElementById("trace_log");
+  if (traceEl && v) traceEl.textContent = `Trace: ${v} Kraken Withdrawals Report initialized.`;
+
+  if (v) document.title = `Kraken Reports ${v}`;
+});
+</script>
+
 </head>
 
 <body>
@@ -471,7 +499,7 @@
       <div
         style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; position:relative;">
         <div class="branding-row" style="margin-bottom:0; line-height:1.2;">
-          <div><b>Kraken Reports</b> <span style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v3.041</span></div>
+          <div><b>Kraken Reports</b> <span style="font-size:0.7rem; color:#7f8c8d; font-weight:600;"><span id="appVersion"></span></span></div>
           <div style="font-size:0.65rem; color:#b0b0b0; font-weight:400;">GBP | EUR | USDT | XRP transactions in Date
             range</div>
         </div>
@@ -706,7 +734,7 @@
     <button id="log_btn" onclick="toggleLog()"
       style="width:100%; padding:8px; margin-top:10px; background:#8e44ad; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Display
       Progress Log</button>
-    <div id="trace_log" onclick="toggleLog()">Trace: v3.042-1 Kraken Withdrawals Report initialized.</div>
+    <div id="trace_log" onclick="toggleLog()">Trace: v3.042-2 Kraken Withdrawals Report initialized.</div>
   </div>
 
   <script>
@@ -761,7 +789,7 @@
       const now = new Date().toLocaleTimeString();
       const base = log.textContent && log.textContent.trim().length
         ? log.textContent
-        : "Trace: v3.025 Kraken Ledger Report initialized.";
+        : "Trace: v3.042-2 Kraken Ledger Report initialized.";
       log.textContent = base + "\n[" + now + "] " + msg;
       log.scrollTop = log.scrollHeight;
       console.log(msg);
@@ -803,7 +831,7 @@
     function copyTraceToClipboard() {
       const log = document.getElementById("trace_log");
       const text = log.textContent || "";
-      if (!text.trim() || text.trim() === "Trace: v2.15 Kraken Ledger Report initialized.") {
+      if (!text.trim() || text.trim() === "Trace: v3.042-2 Kraken Ledger Report initialized.") {
         alert("There are no trace log records to copy.");
         return;
       }
