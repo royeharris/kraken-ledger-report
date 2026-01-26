@@ -7,7 +7,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-  <title>Kraken Ledger Report v3.041</title>
+  <title>Kraken Ledger Report v3.040</title>
   <script async defer src="https://accounts.google.com/gsi/client"></script>
   <script async defer src="https://apis.google.com/js/api.js"></script>
   <style>
@@ -431,28 +431,7 @@
 #summaryReport table td .gbp-amt, #summaryReport table td .gbp-eq, #summaryReport table td .gbpEq { font-weight: 700 !important; }
 #summaryReport table td .na { color: #000 !important; font-weight: 400 !important; }
 </style>
-
-<script>
-(function(){
-  var originalTitle = document.title;
-  function extractRange(){
-    var el = document.querySelector('h2, h3, .statement-title');
-    if(!el) return '';
-    var m = el.textContent.match(/(\d{2}\s\w+\s\d{4}).*(\d{2}\s\w+\s\d{4})/);
-    if(!m) return '';
-    return m[1].replace(/\s/g,'-').toUpperCase() + " to " + m[2].replace(/\s/g,'-').toUpperCase();
-  }
-  window.addEventListener('beforeprint', function(){
-    var r = extractRange();
-    if(r) document.title = "Kraken Statement Summary " + r;
-  });
-  window.addEventListener('afterprint', function(){
-    document.title = originalTitle;
-  });
-})();
-</script>
 </head>
-
 
 <body>
   <div class="container">
@@ -460,7 +439,7 @@
       <div
         style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; position:relative;">
         <div class="branding-row" style="margin-bottom:0; line-height:1.2;">
-          <div><b>Kraken Reports</b> <span style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v3.041</span></div>
+          <div><b>Kraken Reports</b> <span style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v3.040</span></div>
           <div style="font-size:0.65rem; color:#b0b0b0; font-weight:400;">GBP | EUR | USDT | XRP transactions in Date
             range</div>
         </div>
@@ -695,7 +674,7 @@
     <button id="log_btn" onclick="toggleLog()"
       style="width:100%; padding:8px; margin-top:10px; background:#8e44ad; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Display
       Progress Log</button>
-    <div id="trace_log" onclick="toggleLog()">Trace: v3.042 Kraken Withdrawals Report initialized.</div>
+    <div id="trace_log" onclick="toggleLog()">Trace: v3.040 Kraken Withdrawals Report initialized.</div>
   </div>
 
   <script>
@@ -721,7 +700,7 @@
   <script>
 
     const SHEET_ID = "1Vf0iqthwHv0kFqTRJkYShH_RBpbokLmiEDWGJN3Q_E";
-    const VER = "Kraken Withdrawals Report (v3.041)";
+    const VER = "Kraken Withdrawals Report (v3.040)";
     const KRAKEN_API_URL = "https://api.kraken.com";
 
     // Default API credentials (enter your own in API Config)
@@ -1080,7 +1059,7 @@
 
     // ---------- Local Save/Load (v2.0) ----------
 
-// v3.041: Internal cache saver used by Summary/Closing Balances (silent, no alerts)
+// v3.040: Internal cache saver used by Summary/Closing Balances (silent, no alerts)
 function saveCacheToLocalStorage() {
   try {
     localStorage.setItem("kraken_v2_withdrawals", JSON.stringify(cacheData.withdrawals || []));
@@ -3902,7 +3881,7 @@ if (item.fees) {
       html += '<div onclick="toggleSummaryReport()" style="cursor:pointer; background:#2980b9; color:#fff; padding:8px 15px; font-size:0.8rem; font-weight:bold; display:flex; justify-content:space-between; align-items:center;" title="Click to close report">';
       html += '<span>Statement Summary</span>';
       if (!isEmpty) {
-        html += '<span style="display:flex; gap:6px; align-items:center;"><button onclick="event.stopPropagation(); printStatementSummary()" title="Print / Save PDF" style="padding:2px 8px; background:#fff; color:#000; border:none; border-radius:3px; font-size:0.65rem; font-weight:600; cursor:pointer;">&#x1F5B6; Print PDF</button><button onclick="event.stopPropagation(); copySummaryReport()" title="Copy Table" style="padding:2px 8px; background:#fff; color:#000; border:none; border-radius:3px; font-size:0.65rem; font-weight:600; cursor:pointer;">&#x2398; Copy Tables</button></span>';
+        html += '<button onclick="event.stopPropagation(); copySummaryReport()" title="Copy Table" style="padding:2px 8px; background:#fff; color:#000; border:none; border-radius:3px; font-size:0.65rem; font-weight:600; cursor:pointer;">&#x2398; Copy Tables</button>';
       }
       html += '</div>';
 
@@ -3936,9 +3915,9 @@ if (item.fees) {
           html += '<tr>';
           html += `<td style="padding:5px; border:1px solid #ddd; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escHtml(r.recipient)}">${escHtml(r.recipient)}</td>`;
           html += `<td style="padding:5px; border:1px solid #ddd; text-align:right;">${r.USDT > 0 ? r.USDT.toFixed(4) : "-"}</td>`;
-          html += `<td style="padding:5px; border:1px solid #ddd; text-align:right; color:#000; font-weight:bold;">${r.USDT_GBP > 0 ? r.USDT_GBP.toFixed(2) : "-"}</td>`;
+          html += `<td style="padding:5px; border:1px solid #ddd; text-align:right; color:#000;">${r.USDT_GBP > 0 ? r.USDT_GBP.toFixed(2) : "-"}</td>`;
           html += `<td style="padding:5px; border:1px solid #ddd; text-align:right;">${r.XRP > 0 ? r.XRP.toFixed(4) : "-"}</td>`;
-          html += `<td style="padding:5px; border:1px solid #ddd; text-align:right; color:#000; font-weight:bold;">${r.XRP_GBP > 0 ? r.XRP_GBP.toFixed(2) : "-"}</td>`;
+          html += `<td style="padding:5px; border:1px solid #ddd; text-align:right; color:#000;">${r.XRP_GBP > 0 ? r.XRP_GBP.toFixed(2) : "-"}</td>`;
           html += '</tr>';
         }
       } else {
@@ -4303,76 +4282,6 @@ html += '</div></div>'; // Close padding div, Close container div
 
       const div = document.getElementById("summaryReportArea");
       copyNodeText(div);
-    }
-
-
-    // v3.041: Print / Save Statement Summary as PDF (browser print-to-PDF)
-    function printStatementSummary() {
-      const src = document.getElementById("summaryReportArea");
-      if (!src || src.style.display === "none") { alert("Statement Summary is not displayed."); return; }
-
-      // Derive statement range from the Kraken Statement button label
-      let stmtLabel = "";
-      const stmtBtn = document.getElementById("btn_bank_statement");
-      if (stmtBtn && stmtBtn.textContent) {
-        stmtLabel = stmtBtn.textContent.trim();
-      }
-      if (stmtLabel.startsWith("Kraken Statement")) {
-        stmtLabel = stmtLabel.replace(/^Kraken Statement\s*/, "Kraken Statement Summary ");
-      } else if (!stmtLabel) {
-        stmtLabel = "Kraken Statement Summary";
-      }
-
-      // Clone and strip interactive controls
-      const tmp = document.createElement("div");
-      tmp.innerHTML = src.innerHTML;
-      tmp.querySelectorAll("button").forEach(b => b.remove());
-
-      // Prefer the content area (tables) rather than the clickable container header
-      const content = tmp.querySelector('div[style*="padding:15px"]');
-      const tablesHtml = content ? content.innerHTML : tmp.innerHTML;
-
-      const titleLine = "Kraken Reports v3.042";
-      const subtitleLine = "GBP | EUR | USDT | XRP transactions in Date range";
-
-      const w = window.open("", "_blank");
-      if (!w) { alert("Popup blocked. Allow popups to print."); return; }
-
-      w.document.open();
-      w.document.write(`<!doctype html>
-<html>
-<head>
-<meta charset="utf-8"/>
-<title>Kraken Statement Summary</title>
-<style>
-  @page { margin: 12mm; }
-  * { box-sizing: border-box; }
-  body { font-family: Arial, Helvetica, sans-serif; color:#000; margin:0; }
-  .hdr { margin-bottom: 10px; }
-  .hdr .t1 { font-size: 18px; font-weight: 700; }
-  .hdr .t2 { font-size: 12px; color:#444; margin-top: 2px; }
-  .subhdr { margin: 10px 0 14px; font-size: 14px; font-weight: 700; }
-  table { width: 100% !important; border-collapse: collapse; table-layout: fixed; }
-  th, td { border: 1px solid #ddd; padding: 5px; font-size: 11px; vertical-align: top; }
-  th { background: #f9f9f9; font-weight: 700; }
-  .section-title { font-size: 12px; font-weight: 700; color:#fff; padding: 6px 10px; border-radius: 4px 4px 0 0; margin: 12px 0 0; }
-  .wrap { overflow: visible !important; }
-  /* Preserve colors in print */
-  body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-</style>
-</head>
-<body>
-  <div class="hdr">
-    <div class="t1">${titleLine}</div>
-    <div class="t2">${subtitleLine}</div>
-  </div>
-  <div class="subhdr">${escHtml(stmtLabel)}</div>
-  <div class="wrap">${tablesHtml}</div>
-</body>
-</html>`);
-      w.document.close();
-      w.focus();
-      setTimeout(() => { w.print(); }, 250);
     }
 
     function filterDetails(query) {
