@@ -1853,7 +1853,7 @@
 
           // 4. KrakenStatementSummary
           if (hasSummary) {
-            let s1Headers = ["Withdrawals to Recipients (USDT XRP)", "", "", "", "", "", ""];
+            let s1Headers = ["Withdrawals to Recipients  USDT | XRP", "", "", "", "", "", ""];
             let s1ColHeaders = ["Recipient", "USDT", "Avg Rate", "GBP Equivalent", "XRP Amount", "Avg Rate", "GBP Equivalent"];
 
             let s1Rows = [];
@@ -1877,7 +1877,7 @@
               s1Rows = [["", "-", "", "-", "-", "", "-"]];
             }
 
-            let s2Headers = ["Withdrawals to Haricom Bank Accounts (GBP EUR)", "", ""];
+            let s2Headers = ["Withdrawals to Haricom Bank Accounts  GBP | EUR", "", ""];
             let s2ColHeaders = ["Haricom Bank Account", "GBP Amount", "EUR Amount"];
             let s2Rows = [];
             if (summaryRecords.fiat && summaryRecords.fiat.length > 0) {
@@ -1886,13 +1886,15 @@
               s2Rows = [["", "-", "-"]];
             }
 
-            let s3Headers = ["Deposits from Haricom Bank Accounts (GBP EUR)", ""];
-            let s3ColHeaders = ["Currency", "Total Amount"];
+            let s3Headers = ["Deposits from Haricom Bank Accounts  GBP | EUR", ""];
+            let s3ColHeaders = ["Currency", "Total Amount", "GBP Equivalent"];
             const s3Rows = (summaryRecords.deposits || []).map(r => [
-              r.asset, fmt(r.total, 2)
+              r.asset,
+              fmt(r.total, 2),
+              (r.asset === "GBP") ? "n/a" : fmt(r.gbpEq || 0, 2)
             ]);
 
-            let s4Headers = ["Fees (GBP EUR USDT XRP)", ""];
+            let s4Headers = ["Fees  GBP | EUR | USDT | XRP", ""];
             let s4ColHeaders = ["Currency", "Total Amount", "GBP Equivalent"];
             const s4Rows = (summaryRecords.fees || []).map(r => [
               r.asset,
@@ -3629,6 +3631,23 @@
                 // Check if it's considered a "Deposit" type?
                 if (item.type && item.type.toLowerCase().includes("deposit")) {
                   depositTotals[asset] += val;
+
+// GBP Equivalent for EUR deposits (table-mode) using same day-rate cache as withdrawals/fees
+if (asset === "EUR" && val > 0) {
+  let gbpEq = 0;
+  if (item.gbpValues && item.gbpValues.EUR) {
+    gbpEq = item.gbpValues.EUR;
+  } else if (item._raw && item._raw.time) {
+    const dObj = new Date(item._raw.time * 1000);
+    const dStr = dObj.toISOString().split("T")[0];
+    const dayRates = cacheData && cacheData.ratesCache ? cacheData.ratesCache[dStr] : null;
+    if (dayRates && dayRates.USDTGBP && dayRates.USDTEUR) {
+      const eurGbp = dayRates.USDTGBP / dayRates.USDTEUR;
+      gbpEq = val * eurGbp;
+    }
+  }
+  if (gbpEq) depositGbpTotals.EUR += gbpEq;
+}
                 }
               }
             }
@@ -3793,7 +3812,10 @@ if (item.fees) {
 
       const cryptoRows = Object.keys(cryptoTotals).map(r => ({ recipient: r, ...cryptoTotals[r] })).sort((a, b) => a.recipient.localeCompare(b.recipient));
       const fiatRows = Object.keys(fMap).map(r => ({ recipient: r, ...fMap[r] })).sort((a, b) => a.recipient.localeCompare(b.recipient));
-      const depositRows = [{ asset: "GBP", total: depositTotals.GBP }, { asset: "EUR", total: depositTotals.EUR }];
+      const depositRows = [
+        { asset: "GBP", total: depositTotals.GBP, gbpEq: null },
+        { asset: "EUR", total: depositTotals.EUR, gbpEq: depositGbpTotals.EUR }
+      ];
       const feeRows = [
         { asset: "GBP", total: feeTotals.GBP, gbpEq: null },
         { asset: "EUR", total: feeTotals.EUR, gbpEq: feeGbpTotals.EUR },
@@ -3838,7 +3860,7 @@ if (item.fees) {
       html += '<div style="padding:15px;">'; // Padding for content
 
       // --- 1. CRYPTO TABLE ---
-      html += '<div style="background:#8e44ad; color:#fff; padding:5px 10px; font-size:0.7rem; font-weight:bold; border-radius:4px 4px 0 0; margin-bottom:0;">Withdrawals to Recipients (USDT XRP)</div>';
+      html += '<div style="background:#8e44ad; color:#fff; padding:5px 10px; font-size:0.7rem; font-weight:bold; border-radius:4px 4px 0 0; margin-bottom:0;">Withdrawals to Recipients  USDT | XRP</div>';
       html += '<div style="overflow-x:auto;">';
       html += '<table style="width:100%; border-collapse:collapse; margin-bottom:20px; border:1px solid #ddd; table-layout:fixed;">';
       html += '<thead style="background:#f9f9f9;"><tr>';
@@ -3868,7 +3890,7 @@ if (item.fees) {
       html += '</tbody></table></div>';
 
       // --- 2. FIAT TABLE ---
-      html += '<div style="background:#27ae60; color:#fff; padding:5px 10px; font-size:0.7rem; font-weight:bold; border-radius:4px 4px 0 0; margin-bottom:0;">Withdrawals to Haricom Bank Accounts (GBP EUR)</div>';
+      html += '<div style="background:#27ae60; color:#fff; padding:5px 10px; font-size:0.7rem; font-weight:bold; border-radius:4px 4px 0 0; margin-bottom:0;">Withdrawals to Haricom Bank Accounts  GBP | EUR</div>';
       html += '<table style="width:100%; border-collapse:collapse; margin-bottom:20px; border:1px solid #ddd;">';
       html += '<thead><tr style="background:#f2f2f2;">';
       html += '<th style="padding:4px; border:1px solid #ddd; text-align:left;">Haricom Bank Account</th>';
@@ -3891,31 +3913,48 @@ if (item.fees) {
           html += `<td style="padding:4px; border:1px solid #ddd;">${r.recipient}</td>`;
           html += `<td style="padding:4px; border:1px solid #ddd; text-align:right;">${gbpShow}</td>`;
           html += `<td style="padding:4px; border:1px solid #ddd; text-align:right;">${eurShow}</td>`;
-          html += `<td style="padding:4px; border:1px solid #ddd; text-align:right; color:#7f8c8d;">${eqShow}</td>`;
+          const eqStyle = (r.EUR && r.EUR > 0) ? "font-weight:bold; color:#000;" : "color:#7f8c8d;";
+          html += `<td style="padding:4px; border:1px solid #ddd; text-align:right; ${eqStyle}">${eqShow}</td>`;
           html += '</tr>';
         }
       }
       html += '</tbody></table>';
 
       // -- RE-IMPLEMENTING DEPOSITS SECTION TO BE ALWAYS VISIBLE --
-      html += '<div style="background:#27ae60; color:#fff; padding:5px 10px; font-size:0.7rem; font-weight:bold; border-radius:4px 4px 0 0; margin-bottom:0; margin-top:20px;">Deposits from Haricom Bank Accounts (GBP EUR)</div>';
+      html += '<div style="background:#27ae60; color:#fff; padding:5px 10px; font-size:0.7rem; font-weight:bold; border-radius:4px 4px 0 0; margin-bottom:0; margin-top:20px;">Deposits from Haricom Bank Accounts  GBP | EUR</div>';
       html += '<table style="width:100%; border-collapse:collapse; margin-bottom:20px; border:1px solid #ddd;">';
       html += '<thead><tr style="background:#f2f2f2;">';
       html += '<th style="padding:4px; border:1px solid #ddd; text-align:left;">Currency</th>';
       html += '<th style="padding:4px; border:1px solid #ddd; text-align:right;">Total Amount</th><th style="padding:4px; border:1px solid #ddd; text-align:right;">GBP Equivalent</th>';
       html += '</tr></thead><tbody>';
-      for (const r of summaryRecords.deposits) {
-        html += '<tr>';
-        html += `<td style="padding:4px; border:1px solid #ddd;">${r.asset}</td>`;
-        html += `<td style="padding:4px; border:1px solid #ddd; text-align:right; font-weight:bold;">${parseFloat(r.total || 0).toFixed(2)}</td>`;
-        html += '</tr>';
-      }
-      html += '</tbody></table>';
+for (const r of summaryRecords.deposits) {
+  const asset = r.asset;
+  const total = parseFloat(r.total || 0);
+  const totalShow = total.toFixed(2);
+
+  let gbpEqShow = "-";
+  if (asset === "GBP") {
+    gbpEqShow = "n/a";
+  } else if (asset === "EUR") {
+    const eq = (typeof r.gbpEq === "number") ? r.gbpEq : parseFloat(r.gbpEq || 0);
+    gbpEqShow = (eq || total === 0) ? (eq || 0).toFixed(2) : "0.00";
+  }
+
+  const totalStyle = (asset === "GBP") ? "font-weight:bold;" : "";
+  const eqStyle = (asset === "EUR") ? "font-weight:bold; color:#000;" : "color:#7f8c8d;";
+
+  html += '<tr>';
+  html += `<td style="padding:4px; border:1px solid #ddd;">${asset}</td>`;
+  html += `<td style="padding:4px; border:1px solid #ddd; text-align:right; ${totalStyle}">${totalShow}</td>`;
+  html += `<td style="padding:4px; border:1px solid #ddd; text-align:right; ${eqStyle}">${gbpEqShow}</td>`;
+  html += '</tr>';
+}
+html += '</tbody></table>';
 
 
       // --- 4. FEES SECTION (New V3.003) ---
       // v3.010: Changed color to Dark Slate (#2c3e50) for better accessibility (Red-Green distinction) and avoiding warning associations
-      html += '<div style="background:#2c3e50; color:#fff; padding:5px 10px; font-size:0.7rem; font-weight:bold; border-radius:4px 4px 0 0; margin-bottom:0;">Fees (GBP EUR USDT XRP)</div>';
+      html += '<div style="background:#2c3e50; color:#fff; padding:5px 10px; font-size:0.7rem; font-weight:bold; border-radius:4px 4px 0 0; margin-bottom:0;">Fees  GBP | EUR | USDT | XRP</div>';
       html += '<table style="width:100%; border-collapse:collapse; margin-bottom:0; border:1px solid #ddd;">';
       html += '<thead><tr style="background:#f2f2f2;">';
       html += '<th style="padding:4px; border:1px solid #ddd; text-align:left;">Currency</th>';
@@ -3961,14 +4000,84 @@ const renderFeeGbpEq = (asset, gbpEq, total) => {
         for (const r of summaryRecords.fees) {
           html += '<tr>';
           html += `<td style="padding:4px; border:1px solid #ddd;">${r.asset}</td>`;
-          html += `<td style="padding:4px; border:1px solid #ddd; text-align:right; font-weight:bold;">${renderFeeRow(r.asset, r.total)}</td>`;
-          html += `<td style="padding:4px; border:1px solid #ddd; text-align:right; font-weight:bold;">${renderFeeGbpEq(r.asset, r.gbpEq, r.total)}</td>`;
+          html += `<td style="padding:4px; border:1px solid #ddd; text-align:right; ${r.asset==="GBP" ? "font-weight:bold;" : ""}">${renderFeeRow(r.asset, r.total)}</td>`;
+          html += `<td style="padding:4px; border:1px solid #ddd; text-align:right; ${r.asset!=="GBP" ? "font-weight:bold; color:#000;" : "color:#7f8c8d;"}">${renderFeeGbpEq(r.asset, r.gbpEq, r.total)}</td>`;
           html += '</tr>';
         }
       }
       html += '</tbody></table>';
 
-      html += '</div></div>'; // Close padding div, Close container div
+      
+      // --- 5. CLOSING BALANCES (GBP | EUR | USDT | XRP) ---
+      // Uses the Statement row "Closing Balance" as source of truth (same data used to render the statement table)
+      let closingBalances = null;
+      if (Array.isArray(bankRecords) && bankRecords.length > 0) {
+        for (let i = bankRecords.length - 1; i >= 0; i--) {
+          const r = bankRecords[i];
+          if (r && (r.details === "Closing Balance" || r.type === "Balance")) {
+            if (r.balances) { closingBalances = r.balances; break; }
+          }
+        }
+      }
+
+      // Determine end-of-period FX rates for GBP equivalent conversions
+      const endDateStr = (() => {
+        try {
+          const v = document.getElementById("endDate").value;
+          if (!v) return null;
+          return new Date(v).toISOString().split("T")[0];
+        } catch(e) { return null; }
+      })();
+
+      const endRates = (endDateStr && cacheData && cacheData.ratesCache) ? cacheData.ratesCache[endDateStr] : null;
+      const endUSDTGBP = endRates && endRates.USDTGBP ? endRates.USDTGBP : null;
+      const endUSDTEUR = endRates && endRates.USDTEUR ? endRates.USDTEUR : null;
+      const endXRPGBP  = endRates && endRates.XRPGBP  ? endRates.XRPGBP  : null;
+      const endEURGBP  = (endUSDTGBP && endUSDTEUR) ? (endUSDTGBP / endUSDTEUR) : null;
+
+      const fmtBal = (asset, v) => {
+        if (v === null || v === undefined) return "-";
+        const n = parseFloat(v);
+        if (!isFinite(n)) return "-";
+        const d = (asset === "GBP" || asset === "EUR") ? 2 : 4;
+        return n.toFixed(d);
+      };
+
+      const fmtGbpEq = (asset, v) => {
+        if (asset === "GBP") return "n/a";
+        if (v === null || v === undefined) return "-";
+        const n = parseFloat(v);
+        if (!isFinite(n)) return "-";
+        return n.toFixed(2);
+      };
+
+      html += '<div style="background:#2980b9; color:#fff; padding:5px 10px; font-size:0.7rem; font-weight:bold; border-radius:4px 4px 0 0; margin-top:14px; margin-bottom:0;">Closing Balances  GBP | EUR | USDT | XRP</div>';
+      html += '<table style="width:100%; border-collapse:collapse; margin-bottom:0; border:1px solid #ddd;">';
+      html += '<thead><tr style="background:#f2f2f2;">';
+      html += '<th style="padding:4px; border:1px solid #ddd; text-align:left;">Asset</th>';
+      html += '<th style="padding:4px; border:1px solid #ddd; text-align:right;">Balance</th>';
+      html += '<th style="padding:4px; border:1px solid #ddd; text-align:right;">GBP Equivalent</th>';
+      html += '</tr></thead><tbody>';
+
+      const assetsCB = ["GBP","EUR","USDT","XRP"];
+      for (const a of assetsCB) {
+        const bal = (closingBalances && closingBalances[a] !== undefined) ? closingBalances[a] : null;
+
+        let gbpEq = null;
+        if (a === "EUR" && endEURGBP) gbpEq = (bal !== null ? (parseFloat(bal) * endEURGBP) : null);
+        if (a === "USDT" && endUSDTGBP) gbpEq = (bal !== null ? (parseFloat(bal) * endUSDTGBP) : null);
+        if (a === "XRP" && endXRPGBP) gbpEq = (bal !== null ? (parseFloat(bal) * endXRPGBP) : null);
+
+        html += '<tr>';
+        html += `<td style="padding:4px; border:1px solid #ddd; text-align:left;">${a}</td>`;
+        html += `<td style="padding:4px; border:1px solid #ddd; text-align:right; ${a==="GBP" ? "font-weight:bold; color:#000;" : "color:#000;"}">${fmtBal(a, bal)}</td>`;
+        html += `<td style="padding:4px; border:1px solid #ddd; text-align:right; ${a!=="GBP" ? "font-weight:bold; color:#000;" : "color:#7f8c8d;"}">${fmtGbpEq(a, gbpEq)}</td>`;
+        html += '</tr>';
+      }
+
+      html += '</tbody></table>';
+
+html += '</div></div>'; // Close padding div, Close container div
       div.innerHTML = html;
       if (div.scrollIntoView) div.scrollIntoView({ behavior: "smooth" });
     }
