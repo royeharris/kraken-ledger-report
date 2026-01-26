@@ -7,7 +7,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-  <title>Kraken Ledger Report v3.037</title>
+  <title>Kraken Ledger Report v3.038</title>
   <script async defer src="https://accounts.google.com/gsi/client"></script>
   <script async defer src="https://apis.google.com/js/api.js"></script>
   <style>
@@ -424,7 +424,13 @@
         padding: 8px 10px;
       }
     }
-  </style>
+  
+/* Statement Summary - enforce accountant-friendly monochrome */
+#summaryReport table td, #summaryReport table td span { color: #000 !important; }
+#summaryReport table td { font-weight: 400; }
+#summaryReport table td .gbp-amt, #summaryReport table td .gbp-eq, #summaryReport table td .gbpEq { font-weight: 700 !important; }
+#summaryReport table td .na { color: #000 !important; font-weight: 400 !important; }
+</style>
 </head>
 
 <body>
@@ -433,7 +439,7 @@
       <div
         style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; position:relative;">
         <div class="branding-row" style="margin-bottom:0; line-height:1.2;">
-          <div><b>Kraken Reports</b> <span style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v3.037</span></div>
+          <div><b>Kraken Reports</b> <span style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v3.038</span></div>
           <div style="font-size:0.65rem; color:#b0b0b0; font-weight:400;">GBP | EUR | USDT | XRP transactions in Date
             range</div>
         </div>
@@ -515,7 +521,7 @@
         <div style="display:flex; justify-content:space-between; align-items:center;">
           <label>Sheet ID</label>
           <a href="https://docs.google.com/spreadsheets" target="_blank"
-            style="font-size:0.6rem; color:#2980b9; text-decoration:none;">Open Google Sheets ↗</a>
+            style="font-size:0.6rem; color:#000; text-decoration:none;">Open Google Sheets ↗</a>
         </div>
         <input type="text" id="googleSheetId" placeholder="e.g. 1Vf0iqthwHv0kFqTRJkYShH..." style="margin-bottom:2px;">
         <div style="font-size:0.6rem; color:#95a5a6; margin-bottom:10px; line-height:1.2;">
@@ -559,7 +565,7 @@
       style="display:none; margin-bottom:15px; padding:10px; background:#e8f5e9; border-radius:6px; max-height:300px; overflow-y:auto; border:2px solid #27ae60; cursor:pointer;">
       <div
         style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; padding-bottom:6px; border-bottom:1px solid #a5d6a7;">
-        <span style="font-size:0.85rem; font-weight:700; color:#27ae60;">📋 Withdrawal Addresses (click to
+        <span style="font-size:0.85rem; font-weight:700; color:#000;">📋 Withdrawal Addresses (click to
           close)</span>
         <button onclick="event.stopPropagation(); copyAddressesToClipboard();"
           style="padding:4px 8px; background:#27ae60; color:#fff; border:none; border-radius:4px; font-size:0.6rem; cursor:pointer;">Copy
@@ -668,7 +674,7 @@
     <button id="log_btn" onclick="toggleLog()"
       style="width:100%; padding:8px; margin-top:10px; background:#8e44ad; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Display
       Progress Log</button>
-    <div id="trace_log" onclick="toggleLog()">Trace: v3.037 Kraken Withdrawals Report initialized.</div>
+    <div id="trace_log" onclick="toggleLog()">Trace: v3.038 Kraken Withdrawals Report initialized.</div>
   </div>
 
   <script>
@@ -685,7 +691,7 @@
   <script>
 
     const SHEET_ID = "1Vf0iqthwHv0kFqTRJkYShH_RBpbokLmiEDWGJN3Q_E";
-    const VER = "Kraken Withdrawals Report (v3.030)";
+    const VER = "Kraken Withdrawals Report (v3.038)";
     const KRAKEN_API_URL = "https://api.kraken.com";
 
     // Default API credentials (enter your own in API Config)
@@ -1002,7 +1008,7 @@
       const summaryHtml = `
         <div style="display:flex; flex-direction:column; gap:4px; align-items:flex-start;">
           <div class="status-item" style="width:100%;"><span style="color:#d35400;">Addresses:</span> <b id="addressCount">${cacheData.krakenAddresses.length}</b></div>
-          <div class="status-item" style="width:100%;"><span style="color:#27ae60;">Withdrawals:</span> <b>${wCrypto}</b> Crypto / <b>${wFiat}</b> Fiat <span style="color:#bbb; margin:0 8px;">|</span> <span style="color:#2980b9;">Deposits:</span> <b>${dFiat}</b> Fiat</div>
+          <div class="status-item" style="width:100%;"><span style="color:#000;">Withdrawals:</span> <b>${wCrypto}</b> Crypto / <b>${wFiat}</b> Fiat <span style="color:#bbb; margin:0 8px;">|</span> <span style="color:#000;">Deposits:</span> <b>${dFiat}</b> Fiat</div>
           <div class="status-item" style="width:100%;"><span style="color:#8e44ad;">Trades:</span> <b>${tradesFiatToCrypto}</b> fiat&gt;crypto / <b>${tradesCryptoToFiat}</b> crypto&gt;fiat / <b>${tradesFiatToFiat}</b> fiat&gt;fiat</div>
         </div>
       `;
@@ -1499,7 +1505,7 @@
           </div>
 
           <!-- Col 4: Statement Report -->
-          <div style="display:flex; flex-direction:column; align-items:flex-start; line-height:1.2; color:#2980b9;">
+          <div style="display:flex; flex-direction:column; align-items:flex-start; line-height:1.2; color:#000;">
             <span>Statement</span>
             <span>Report</span>
             <span style="font-weight:bold;">${bankCount}</span>
@@ -3846,7 +3852,7 @@ if (item.fees) {
       html += '<div onclick="toggleSummaryReport()" style="cursor:pointer; background:#2980b9; color:#fff; padding:8px 15px; font-size:0.8rem; font-weight:bold; display:flex; justify-content:space-between; align-items:center;" title="Click to close report">';
       html += '<span>Statement Summary</span>';
       if (!isEmpty) {
-        html += '<button onclick="event.stopPropagation(); copySummaryReport()" title="Copy Table" style="padding:2px 8px; background:#fff; color:#2980b9; border:none; border-radius:3px; font-size:0.65rem; font-weight:600; cursor:pointer;">&#x2398; Copy Tables</button>';
+        html += '<button onclick="event.stopPropagation(); copySummaryReport()" title="Copy Table" style="padding:2px 8px; background:#fff; color:#000; border:none; border-radius:3px; font-size:0.65rem; font-weight:600; cursor:pointer;">&#x2398; Copy Tables</button>';
       }
       html += '</div>';
 
@@ -3880,9 +3886,9 @@ if (item.fees) {
           html += '<tr>';
           html += `<td style="padding:5px; border:1px solid #ddd; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="${escHtml(r.recipient)}">${escHtml(r.recipient)}</td>`;
           html += `<td style="padding:5px; border:1px solid #ddd; text-align:right;">${r.USDT > 0 ? r.USDT.toFixed(4) : "-"}</td>`;
-          html += `<td style="padding:5px; border:1px solid #ddd; text-align:right; color:#2980b9;">${r.USDT_GBP > 0 ? r.USDT_GBP.toFixed(2) : "-"}</td>`;
+          html += `<td style="padding:5px; border:1px solid #ddd; text-align:right; color:#000;">${r.USDT_GBP > 0 ? r.USDT_GBP.toFixed(2) : "-"}</td>`;
           html += `<td style="padding:5px; border:1px solid #ddd; text-align:right;">${r.XRP > 0 ? r.XRP.toFixed(4) : "-"}</td>`;
-          html += `<td style="padding:5px; border:1px solid #ddd; text-align:right; color:#2980b9;">${r.XRP_GBP > 0 ? r.XRP_GBP.toFixed(2) : "-"}</td>`;
+          html += `<td style="padding:5px; border:1px solid #ddd; text-align:right; color:#000;">${r.XRP_GBP > 0 ? r.XRP_GBP.toFixed(2) : "-"}</td>`;
           html += '</tr>';
         }
       } else {
@@ -3929,7 +3935,12 @@ if (item.fees) {
       html += '<th style="padding:4px; border:1px solid #ddd; text-align:left;">Currency</th>';
       html += '<th style="padding:4px; border:1px solid #ddd; text-align:right;">Total Amount</th><th style="padding:4px; border:1px solid #ddd; text-align:right;">GBP Equivalent</th>';
       html += '</tr></thead><tbody>';
-for (const r of summaryRecords.deposits) {
+const _hasDeposits = (summaryRecords.deposits || []).some(r => (Number(r.total) || 0) !== 0);
+if (!_hasDeposits) {
+  html += '<tr><td colspan="3" style="padding:8px; border:1px solid #ddd; text-align:center; color:#666; font-style:italic;">No deposits found for this period.</td></tr>';
+}
+for (const r of (summaryRecords.deposits || [])) {
+  if (!_hasDeposits) break;
   const asset = r.asset;
   const total = parseFloat(r.total || 0);
   const totalShow = total.toFixed(2);
@@ -3994,7 +4005,7 @@ const renderFeeGbpEq = (asset, gbpEq, total) => {
   }
   if (!activity && total === 0) return "-";
 
-  if (!gbpEq) return "0.00";
+  if (gbpEq == null) return "-";
   return gbpEq.toFixed(2);
 };
 
@@ -4031,11 +4042,43 @@ const renderFeeGbpEq = (asset, gbpEq, total) => {
         } catch(e) { return null; }
       })();
 
+      // Ensure end-date FX rates exist (closing balances need end-date conversion)
+      if (endDateStr && cacheData && cacheData.ratesCache && !cacheData.ratesCache[endDateStr]) {
+        const [usdtEnd, xrpEnd, usdEnd] = await Promise.all([
+          getKrakenRate('USDT', endDate.getTime()),
+          getKrakenRate('XRP',  endDate.getTime()),
+          getKrakenRate('USD',  endDate.getTime())
+        ]);
+        cacheData.ratesCache[endDateStr] = {
+          USDTGBP: (usdtEnd && typeof usdtEnd.gbpRate === 'number') ? usdtEnd.gbpRate : null,
+          XRPGBP:  (xrpEnd  && typeof xrpEnd.gbpRate  === 'number') ? xrpEnd.gbpRate  : null,
+          USDTEUR: (usdEnd  && typeof usdEnd.eurRate  === 'number') ? usdEnd.eurRate  : null
+        };
+        saveCacheToLocalStorage();
+      }
+
       const endRates = (endDateStr && cacheData && cacheData.ratesCache) ? cacheData.ratesCache[endDateStr] : null;
       const endUSDTGBP = endRates && endRates.USDTGBP ? endRates.USDTGBP : null;
       const endUSDTEUR = endRates && endRates.USDTEUR ? endRates.USDTEUR : null;
       const endXRPGBP  = endRates && endRates.XRPGBP  ? endRates.XRPGBP  : null;
-      const endEURGBP  = (endUSDTGBP && endUSDTEUR) ? (endUSDTGBP / endUSDTEUR) : null;
+      const endUnix = Math.floor(new Date(endDateStr + "T12:00:00Z").getTime() / 1000);
+
+      // Prefer cached end-rate EUR->GBP if present, otherwise compute at end date
+      let endEURGBP  = endRates.EURGBP ? endRates.EURGBP : null;
+      if (!endEURGBP) {
+        const r = await getKrakenRate("EUR", endUnix);
+        endEURGBP = (r && r.gbpRate) ? r.gbpRate : null;
+      }
+
+      // Compute missing crypto end-rates (used by Closing Balances GBP equivalents)
+      if (!endUSDTGBP) {
+        const r = await getKrakenRate("USDT", endUnix);
+        endUSDTGBP = (r && r.gbpRate) ? r.gbpRate : endUSDTGBP;
+      }
+      if (!endXRPGBP) {
+        const r = await getKrakenRate("XRP", endUnix);
+        endXRPGBP = (r && r.gbpRate) ? r.gbpRate : endXRPGBP;
+      }
 
       const fmtBal = (asset, v) => {
         if (v === null || v === undefined) return "-";
@@ -4066,9 +4109,20 @@ const renderFeeGbpEq = (asset, gbpEq, total) => {
         const bal = (closingBalances && closingBalances[a] !== undefined) ? closingBalances[a] : null;
 
         let gbpEq = null;
-        if (a === "EUR" && endEURGBP) gbpEq = (bal !== null ? (parseFloat(bal) * endEURGBP) : null);
-        if (a === "USDT" && endUSDTGBP) gbpEq = (bal !== null ? (parseFloat(bal) * endUSDTGBP) : null);
-        if (a === "XRP" && endXRPGBP) gbpEq = (bal !== null ? (parseFloat(bal) * endXRPGBP) : null);
+        if (a === "GBP") {
+          gbpEq = "n/a";
+        } else if (bal !== null) {
+          const balNum = parseFloat(bal);
+          if (balNum === 0) {
+            gbpEq = 0;
+          } else if (a === "EUR") {
+            gbpEq = endEURGBP ? (balNum * endEURGBP) : null;
+          } else if (a === "USDT") {
+            gbpEq = endUSDTGBP ? (balNum * endUSDTGBP) : null;
+          } else if (a === "XRP") {
+            gbpEq = endXRPGBP ? (balNum * endXRPGBP) : null;
+          }
+        }
 
         html += '<tr>';
         html += `<td style="padding:4px; border:1px solid #ddd; text-align:left;">${a}</td>`;
@@ -4172,7 +4226,7 @@ html += '</div></div>'; // Close padding div, Close container div
 
             // Ensure individual cells aren't bold unless row is
             html += `<td class="w-bank-val section-border-left" style="padding:4px; border-bottom:1px solid #eee; color:#c0392b;">${showDeb}</td>`;
-            html += `<td class="w-bank-val" style="padding:4px; border-bottom:1px solid #eee; color:#27ae60;">${showCred}</td>`;
+            html += `<td class="w-bank-val" style="padding:4px; border-bottom:1px solid #eee; color:#000;">${showCred}</td>`;
             html += `<td class="w-bank-val" style="padding:4px; border-bottom:1px solid #eee; color:#7f8c8d;">${showFee}</td>`;
             html += `<td class="w-bank-bal" style="padding:4px; border-bottom:1px solid #eee;">${showBal}</td>`;
           });
