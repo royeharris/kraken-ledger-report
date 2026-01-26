@@ -474,7 +474,7 @@
 
 
 <script>
-const APP_VERSION = "v3.042-2";
+const APP_VERSION = "v3.043-1";
 </script>
 
 
@@ -734,7 +734,7 @@ document.addEventListener("DOMContentLoaded", () => {
     <button id="log_btn" onclick="toggleLog()"
       style="width:100%; padding:8px; margin-top:10px; background:#8e44ad; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Display
       Progress Log</button>
-    <div id="trace_log" onclick="toggleLog()">Trace: v3.042-2 Kraken Withdrawals Report initialized.</div>
+    <div id="trace_log" onclick="toggleLog()">Trace: v3.043-1 Kraken Withdrawals Report initialized.</div>
   </div>
 
   <script>
@@ -789,7 +789,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const now = new Date().toLocaleTimeString();
       const base = log.textContent && log.textContent.trim().length
         ? log.textContent
-        : "Trace: v3.042-2 Kraken Ledger Report initialized.";
+        : "Trace: v3.043-1 Kraken Ledger Report initialized.";
       log.textContent = base + "\n[" + now + "] " + msg;
       log.scrollTop = log.scrollHeight;
       console.log(msg);
@@ -831,7 +831,7 @@ document.addEventListener("DOMContentLoaded", () => {
     function copyTraceToClipboard() {
       const log = document.getElementById("trace_log");
       const text = log.textContent || "";
-      if (!text.trim() || text.trim() === "Trace: v3.042-2 Kraken Ledger Report initialized.") {
+      if (!text.trim() || text.trim() === "Trace: v3.043-1 Kraken Ledger Report initialized.") {
         alert("There are no trace log records to copy.");
         return;
       }
@@ -1180,7 +1180,7 @@ function saveCacheToLocalStorage() {
       localStorage.setItem("kraken_private_key", privateKey);
       localStorage.setItem("kraken_withdraw_api_key", withdrawKey);
       localStorage.setItem("kraken_withdraw_private_key", withdrawPrivate);
-      localStorage.setItem("kraken_sheet_id", sheetId);
+      if (sheetId && sheetId.trim()) localStorage.setItem("kraken_sheet_id", sheetId.trim());
       localStorage.setItem("kraken_cors_proxy", proxy);
       localStorage.setItem("kraken_cors_proxy_type", document.getElementById("corsProxySelect").value);
 
@@ -2133,6 +2133,7 @@ function saveCacheToLocalStorage() {
       const savedProxy = localStorage.getItem("kraken_cors_proxy");
       const savedWithdrawKey = localStorage.getItem("kraken_withdraw_api_key");
       const savedWithdrawPrivate = localStorage.getItem("kraken_withdraw_private_key");
+      const savedSheetId = localStorage.getItem("kraken_sheet_id");
 
       if (savedKey) document.getElementById("krakenApiKey").value = savedKey;
       if (savedPrivate) document.getElementById("krakenPrivateKey").value = savedPrivate;
@@ -2146,6 +2147,7 @@ function saveCacheToLocalStorage() {
       }
       if (savedWithdrawKey) document.getElementById("withdrawApiKey").value = savedWithdrawKey;
       if (savedWithdrawPrivate) document.getElementById("withdrawPrivateKey").value = savedWithdrawPrivate;
+      if (savedSheetId) document.getElementById("googleSheetId").value = savedSheetId;
 
       logTrace("Credentials loaded from storage.");
     }
@@ -2159,6 +2161,7 @@ function saveCacheToLocalStorage() {
       const savedProxy = localStorage.getItem("kraken_cors_proxy");
       const savedWithdrawKey = localStorage.getItem("kraken_withdraw_api_key");
       const savedWithdrawPrivate = localStorage.getItem("kraken_withdraw_private_key");
+      const savedSheetId = localStorage.getItem("kraken_sheet_id");
 
       if (savedKey) document.getElementById("krakenApiKey").value = savedKey;
       if (savedPrivate) document.getElementById("krakenPrivateKey").value = savedPrivate;
@@ -2172,6 +2175,7 @@ function saveCacheToLocalStorage() {
       }
       if (savedWithdrawKey) document.getElementById("withdrawApiKey").value = savedWithdrawKey;
       if (savedWithdrawPrivate) document.getElementById("withdrawPrivateKey").value = savedWithdrawPrivate;
+      if (savedSheetId) document.getElementById("googleSheetId").value = savedSheetId;
 
       logTrace("Credentials loaded from storage.");
     }
@@ -4517,6 +4521,7 @@ html += '</div></div>'; // Close padding div, Close container div
       const savedProxy = localStorage.getItem("kraken_cors_proxy");
       const savedWithdrawKey = localStorage.getItem("kraken_withdraw_api_key");
       const savedWithdrawPrivate = localStorage.getItem("kraken_withdraw_private_key");
+      const savedSheetId = localStorage.getItem("kraken_sheet_id");
 
       // Force update of date-dependent buttons on boot (in case of browser autofill)
       setTimeout(() => updateBankButtonLabel(), 500);
@@ -4531,6 +4536,7 @@ html += '</div></div>'; // Close padding div, Close container div
       }
       if (savedWithdrawKey) document.getElementById("withdrawApiKey").value = savedWithdrawKey;
       if (savedWithdrawPrivate) document.getElementById("withdrawPrivateKey").value = savedWithdrawPrivate;
+      if (savedSheetId) document.getElementById("googleSheetId").value = savedSheetId;
 
       try {
         await waitFor(() => typeof gapi !== "undefined", 8000);
