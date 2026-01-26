@@ -431,6 +431,38 @@
 #summaryReport table td .gbp-amt, #summaryReport table td .gbp-eq, #summaryReport table td .gbpEq { font-weight: 700 !important; }
 #summaryReport table td .na { color: #000 !important; font-weight: 400 !important; }
 </style>
+
+<script>
+(function(){
+  function getDateRangeKey(){
+    const s = document.getElementById('startDate')?.value || '';
+    const e = document.getElementById('endDate')?.value || '';
+    return s + '|' + e;
+  }
+
+  function resetStatementDerivedState(){
+    window.statementSummaryTotals = {};
+    window.feesByAsset = {};
+    window.closingBalances = {};
+    window.fxRateCache = {};
+    window.summaryAlreadyBuilt = false;
+    if (window.logTrace) logTrace("Statement Summary state reset due to date-range change.");
+  }
+
+  window.__checkAndResetSummaryState = function(){
+    const key = getDateRangeKey();
+    const lastKey = localStorage.getItem('kraken_last_date_range');
+    if (lastKey !== key){
+      resetStatementDerivedState();
+      localStorage.setItem('kraken_last_date_range', key);
+      if (window.logTrace) logTrace("Date range changed → recomputing Statement Summary.");
+    } else {
+      if (window.logTrace) logTrace("Date range unchanged → reusing Statement Summary.");
+    }
+  };
+})();
+</script>
+
 </head>
 
 <body>
@@ -674,7 +706,7 @@
     <button id="log_btn" onclick="toggleLog()"
       style="width:100%; padding:8px; margin-top:10px; background:#8e44ad; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Display
       Progress Log</button>
-    <div id="trace_log" onclick="toggleLog()">Trace: v3.041 Kraken Withdrawals Report initialized.</div>
+    <div id="trace_log" onclick="toggleLog()">Trace: v3.042-1 Kraken Withdrawals Report initialized.</div>
   </div>
 
   <script>
@@ -3451,7 +3483,8 @@ function saveCacheToLocalStorage() {
         if (typeof bankRecords !== "undefined" && bankRecords.length > 0) {
           generateStatementSummary(bankRecords);
         } else {
-          generateStatementSummary();
+          __checkAndResetSummaryState();
+    generateStatementSummary();
         }
       } else {
         div.style.display = "none";
@@ -4311,7 +4344,7 @@ html += '</div></div>'; // Close padding div, Close container div
       const content = tmp.querySelector('div[style*="padding:15px"]');
       const tablesHtml = content ? content.innerHTML : tmp.innerHTML;
 
-      const titleLine = "Kraken Reports v3.041";
+      const titleLine = "Kraken Reports v3.042-1";
       const subtitleLine = "GBP | EUR | USDT | XRP transactions in Date range";
 
       const w = window.open("", "_blank");
