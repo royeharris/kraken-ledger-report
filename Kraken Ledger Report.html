@@ -7,7 +7,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-  <title>Kraken Ledger Report v3.041</title>
+  <title>Kraken Ledger Report v3.043-2</title>
   <script async defer src="https://accounts.google.com/gsi/client"></script>
   <script async defer src="https://apis.google.com/js/api.js"></script>
   <style>
@@ -450,12 +450,11 @@
     // Cached FX rates + cached withdrawal rows used by summary/trade matching
     try {
       if (typeof cacheData !== "undefined" && cacheData){
-        cacheData.ratesCache = {};
-        cacheData.withdrawalCache = [];
+        cacheData.ratesCache = cacheData.ratesCache || {};
+        cacheData.withdrawalCache = cacheData.withdrawalCache || [];
       }
     } catch(e) {}
-
-    if (window.logTrace) logTrace("Statement Summary + rates cache reset due to date-range change.");
+if (window.logTrace) logTrace("Statement Summary state reset due to date-range change.");
 }
 
   window.__checkAndResetSummaryState = function(){
@@ -474,7 +473,7 @@
 
 
 <script>
-const APP_VERSION = "v3.043-1";
+const APP_VERSION = "v3.043-2";
 </script>
 
 
@@ -734,7 +733,7 @@ document.addEventListener("DOMContentLoaded", () => {
     <button id="log_btn" onclick="toggleLog()"
       style="width:100%; padding:8px; margin-top:10px; background:#8e44ad; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Display
       Progress Log</button>
-    <div id="trace_log" onclick="toggleLog()">Trace: v3.043-1 Kraken Withdrawals Report initialized.</div>
+    <div id="trace_log" onclick="toggleLog()">Trace: v3.043-2 Kraken Withdrawals Report initialized.</div>
   </div>
 
   <script>
@@ -760,7 +759,7 @@ document.addEventListener("DOMContentLoaded", () => {
   <script>
 
     const SHEET_ID = "1Vf0iqthwHv0kFqTRJkYShH_RBpbokLmiEDWGJN3Q_E";
-    const VER = "Kraken Withdrawals Report (v3.041)";
+    const VER = "Kraken Withdrawals Report (v3.043-2)";
     const KRAKEN_API_URL = "https://api.kraken.com";
 
     // Default API credentials (enter your own in API Config)
@@ -789,7 +788,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const now = new Date().toLocaleTimeString();
       const base = log.textContent && log.textContent.trim().length
         ? log.textContent
-        : "Trace: v3.043-1 Kraken Ledger Report initialized.";
+        : "Trace: v3.043-2 Kraken Ledger Report initialized.";
       log.textContent = base + "\n[" + now + "] " + msg;
       log.scrollTop = log.scrollHeight;
       console.log(msg);
@@ -831,7 +830,7 @@ document.addEventListener("DOMContentLoaded", () => {
     function copyTraceToClipboard() {
       const log = document.getElementById("trace_log");
       const text = log.textContent || "";
-      if (!text.trim() || text.trim() === "Trace: v3.043-1 Kraken Ledger Report initialized.") {
+      if (!text.trim() || text.trim() === "Trace: v3.043-2 Kraken Ledger Report initialized.") {
         alert("There are no trace log records to copy.");
         return;
       }
@@ -1119,7 +1118,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // ---------- Local Save/Load (v2.0) ----------
 
-// v3.041: Internal cache saver used by Summary/Closing Balances (silent, no alerts)
+// v3.043-2: Internal cache saver used by Summary/Closing Balances (silent, no alerts)
 function saveCacheToLocalStorage() {
   try {
     localStorage.setItem("kraken_v2_withdrawals", JSON.stringify(cacheData.withdrawals || []));
@@ -4350,7 +4349,7 @@ html += '</div></div>'; // Close padding div, Close container div
     }
 
 
-    // v3.041: Print / Save Statement Summary as PDF (browser print-to-PDF)
+    // v3.043-2: Print / Save Statement Summary as PDF (browser print-to-PDF)
     function printStatementSummary() {
       const src = document.getElementById("summaryReportArea");
       if (!src || src.style.display === "none") { alert("Statement Summary is not displayed."); return; }
