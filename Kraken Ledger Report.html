@@ -7,7 +7,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-  <title>Kraken Ledger Report v3.039</title>
+  <title>Kraken Ledger Report v3.040</title>
   <script async defer src="https://accounts.google.com/gsi/client"></script>
   <script async defer src="https://apis.google.com/js/api.js"></script>
   <style>
@@ -439,7 +439,7 @@
       <div
         style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; position:relative;">
         <div class="branding-row" style="margin-bottom:0; line-height:1.2;">
-          <div><b>Kraken Reports</b> <span style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v3.039</span></div>
+          <div><b>Kraken Reports</b> <span style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v3.040</span></div>
           <div style="font-size:0.65rem; color:#b0b0b0; font-weight:400;">GBP | EUR | USDT | XRP transactions in Date
             range</div>
         </div>
@@ -674,7 +674,7 @@
     <button id="log_btn" onclick="toggleLog()"
       style="width:100%; padding:8px; margin-top:10px; background:#8e44ad; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Display
       Progress Log</button>
-    <div id="trace_log" onclick="toggleLog()">Trace: v3.039 Kraken Withdrawals Report initialized.</div>
+    <div id="trace_log" onclick="toggleLog()">Trace: v3.040 Kraken Withdrawals Report initialized.</div>
   </div>
 
   <script>
@@ -700,7 +700,7 @@
   <script>
 
     const SHEET_ID = "1Vf0iqthwHv0kFqTRJkYShH_RBpbokLmiEDWGJN3Q_E";
-    const VER = "Kraken Withdrawals Report (v3.039)";
+    const VER = "Kraken Withdrawals Report (v3.040)";
     const KRAKEN_API_URL = "https://api.kraken.com";
 
     // Default API credentials (enter your own in API Config)
@@ -1058,6 +1058,26 @@
     }
 
     // ---------- Local Save/Load (v2.0) ----------
+
+// v3.040: Internal cache saver used by Summary/Closing Balances (silent, no alerts)
+function saveCacheToLocalStorage() {
+  try {
+    localStorage.setItem("kraken_v2_withdrawals", JSON.stringify(cacheData.withdrawals || []));
+    localStorage.setItem("kraken_v2_history", JSON.stringify(cacheData.withdrawalHistory || []));
+    localStorage.setItem("kraken_v2_addresses", JSON.stringify(cacheData.krakenAddresses || []));
+    localStorage.setItem("kraken_v2_rates", JSON.stringify(cacheData.ratesCache || {}));
+    // Optional: store computed withdrawalCache (used for GBP fallbacks)
+    if (cacheData && Array.isArray(cacheData.withdrawalCache)) {
+      localStorage.setItem("kraken_v3_withdrawal_cache", JSON.stringify(cacheData.withdrawalCache));
+    }
+    return true;
+  } catch (e) {
+    // Never fail app flow due to storage issues (quota/private mode)
+    try { if (typeof logTrace === "function") logTrace("WARN: saveCacheToLocalStorage failed: " + (e && e.message ? e.message : e)); } catch(_) {}
+    return false;
+  }
+}
+
     function saveLocalData() {
       if (cacheData.withdrawals.length === 0) {
         alert("Fetch data first before saving.");
