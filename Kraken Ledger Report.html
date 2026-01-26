@@ -473,7 +473,7 @@ if (window.logTrace) logTrace("Statement Summary state reset due to date-range c
 
 
 <script>
-const APP_VERSION = "v3.043-2";
+const APP_VERSION = "v3.044";
 </script>
 
 
@@ -3945,7 +3945,7 @@ if (item.fees) {
       html += '<div onclick="toggleSummaryReport()" style="cursor:pointer; background:#2980b9; color:#fff; padding:8px 15px; font-size:0.8rem; font-weight:bold; display:flex; justify-content:space-between; align-items:center;" title="Click to close report">';
       html += '<span>Statement Summary</span>';
       if (!isEmpty) {
-        html += '<span style="display:flex; gap:6px; align-items:center;"><button onclick="event.stopPropagation(); printStatementSummary()" title="Print / Save PDF" style="padding:2px 8px; background:#fff; color:#000; border:none; border-radius:3px; font-size:0.65rem; font-weight:600; cursor:pointer;">&#x1F5B6; Print PDF</button><button onclick="event.stopPropagation(); copySummaryReport()" title="Copy Table" style="padding:2px 8px; background:#fff; color:#000; border:none; border-radius:3px; font-size:0.65rem; font-weight:600; cursor:pointer;">&#x2398; Copy Tables</button></span>';
+        html += '<span style="display:flex; gap:6px; align-items:center;"><button onclick="event.stopPropagation(); printStatementSummary()" title="Print / Save PDF" style="padding:2px 8px; background:#fff; color:#000; border:none; border-radius:3px; font-size:0.65rem; font-weight:600; cursor:pointer;">&#x1F5B6; Print PDF</button><button onclick="event.stopPropagation(); printKrakenStatement()" title="Print / Save Kraken Statement PDF" style="padding:2px 8px; background:#fff; color:#000; border:none; border-radius:3px; font-size:0.65rem; font-weight:600; cursor:pointer;">&#x1F5B6; Statement PDF</button><button onclick="event.stopPropagation(); copySummaryReport()" title="Copy Table" style="padding:2px 8px; background:#fff; color:#000; border:none; border-radius:3px; font-size:0.65rem; font-weight:600; cursor:pointer;">&#x2398; Copy Tables</button></span>';
       }
       html += '</div>';
 
@@ -4375,7 +4375,7 @@ html += '</div></div>'; // Close padding div, Close container div
       const content = tmp.querySelector('div[style*="padding:15px"]');
       const tablesHtml = content ? content.innerHTML : tmp.innerHTML;
 
-      const titleLine = "Kraken Reports v3.042-1";
+      const titleLine = `Kraken Reports ${APP_VERSION}`;
       const subtitleLine = "GBP | EUR | USDT | XRP transactions in Date range";
 
       const w = window.open("", "_blank");
@@ -4417,6 +4417,73 @@ html += '</div></div>'; // Close padding div, Close container div
       w.focus();
       setTimeout(() => { w.print(); }, 250);
     }
+
+function printKrakenStatement() {
+  // Ensure the bank statement report is generated for the current date range
+  try {
+    if (typeof generateBankReport === "function") {
+      generateBankReport();
+    }
+  } catch (e) {
+    // proceed to print whatever is present
+  }
+
+  const src = document.querySelector("#bankReportArea");
+  if (!src || !src.innerHTML || src.innerHTML.trim().length < 20) {
+    alert("Kraken Statement is empty. Click 'Kraken Statement (Select Dates)' first, then try again.");
+    return;
+  }
+
+  const clone = src.cloneNode(true);
+
+  // Force the statement section to be expanded in the clone (if collapsed by CSS)
+  clone.style.display = "block";
+
+  const start = document.getElementById("startDate")?.value || "";
+  const end = document.getElementById("endDate")?.value || "";
+  const stmtLabel = `Kraken Statement ${start} to ${end}`;
+  const titleLine = `Kraken Reports ${APP_VERSION}`;
+
+  const w = window.open("", "_blank");
+  w.document.open();
+  w.document.write(`
+    <html>
+      <head>
+        <title>${stmtLabel}</title>
+        <style>
+          body { font-family: Arial, sans-serif; margin: 18px; }
+          .pdf-title { font-size: 16px; font-weight: 700; margin: 0 0 6px 0; }
+          .pdf-subtitle { font-size: 13px; font-weight: 700; margin: 0 0 14px 0; }
+          table { width: 100%; border-collapse: collapse; margin: 10px 0 18px 0; }
+          th, td { border: 1px solid #ddd; padding: 6px 8px; font-size: 12px; vertical-align: top; }
+          th { background: #f2f2f2; }
+          .section-title { margin: 16px 0 8px 0; font-weight: 700; }
+          /* Page breaking helpers for long tables */
+          thead { display: table-header-group; }
+          tfoot { display: table-footer-group; }
+          tr { page-break-inside: avoid; }
+          .page-break { page-break-before: always; }
+          @media print {
+            button { display: none; }
+            a { color: inherit; text-decoration: none; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="pdf-title">${titleLine}</div>
+        <div class="pdf-subtitle">${stmtLabel}</div>
+      </body>
+    </html>
+  `);
+  w.document.body.appendChild(clone);
+  w.document.close();
+  w.focus();
+  setTimeout(() => {
+    w.print();
+    setTimeout(() => w.close(), 250);
+  }, 150);
+}
+
 
     function filterDetails(query) {
       const filter = query.toUpperCase();
