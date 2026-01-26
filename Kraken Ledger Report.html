@@ -7,7 +7,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-  <title>Kraken Ledger Report v3.038</title>
+  <title>Kraken Ledger Report v3.039</title>
   <script async defer src="https://accounts.google.com/gsi/client"></script>
   <script async defer src="https://apis.google.com/js/api.js"></script>
   <style>
@@ -439,7 +439,7 @@
       <div
         style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; position:relative;">
         <div class="branding-row" style="margin-bottom:0; line-height:1.2;">
-          <div><b>Kraken Reports</b> <span style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v3.038</span></div>
+          <div><b>Kraken Reports</b> <span style="font-size:0.7rem; color:#7f8c8d; font-weight:600;">v3.039</span></div>
           <div style="font-size:0.65rem; color:#b0b0b0; font-weight:400;">GBP | EUR | USDT | XRP transactions in Date
             range</div>
         </div>
@@ -674,24 +674,33 @@
     <button id="log_btn" onclick="toggleLog()"
       style="width:100%; padding:8px; margin-top:10px; background:#8e44ad; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Display
       Progress Log</button>
-    <div id="trace_log" onclick="toggleLog()">Trace: v3.038 Kraken Withdrawals Report initialized.</div>
+    <div id="trace_log" onclick="toggleLog()">Trace: v3.039 Kraken Withdrawals Report initialized.</div>
   </div>
 
   <script>
+    // Ensure error handlers never crash before the in-app logger exists.
+    function _safeTrace(msg) {
+      try {
+        if (typeof window.logTrace === "function") window.logTrace(msg);
+        else console.error(msg);
+      } catch (e) {
+        console.error(msg);
+      }
+    }
     window.onerror = function (message, source, lineno, colno) {
-      logTrace("FATAL: " + message + " @ " + (source || "") + ":" + lineno + ":" + colno);
-      updateStatus("Error Occurred", "error");
+      _safeTrace("FATAL: " + message + " @ " + (source || "") + ":" + lineno + ":" + colno);
+      try { updateStatus("Error Occurred", "error"); } catch (e) {}
     };
     window.onunhandledrejection = function (ev) {
-      logTrace("FATAL PROMISE: " + (ev && ev.reason ? (ev.reason.message || ev.reason) : "unknown"));
-      updateStatus("Error Occurred", "error");
+      _safeTrace("FATAL PROMISE: " + (ev && ev.reason ? (ev.reason.message || ev.reason) : "unknown"));
+      try { updateStatus("Error Occurred", "error"); } catch (e) {}
     };
   </script>
 
   <script>
 
     const SHEET_ID = "1Vf0iqthwHv0kFqTRJkYShH_RBpbokLmiEDWGJN3Q_E";
-    const VER = "Kraken Withdrawals Report (v3.038)";
+    const VER = "Kraken Withdrawals Report (v3.039)";
     const KRAKEN_API_URL = "https://api.kraken.com";
 
     // Default API credentials (enter your own in API Config)
@@ -3833,10 +3842,10 @@ if (item.fees) {
       summaryRecords = { crypto: cryptoRows, fiat: fiatRows, deposits: depositRows, fees: feeRows };
       localStorage.setItem("kraken_summary_staging", JSON.stringify(summaryRecords));
 
-      renderSummaryTable();
+      await renderSummaryTable();
     }
 
-    function renderSummaryTable() {
+    async function renderSummaryTable() {
       const div = document.getElementById("summaryReportArea");
       div.style.display = "block";
 
@@ -4042,42 +4051,42 @@ const renderFeeGbpEq = (asset, gbpEq, total) => {
         } catch(e) { return null; }
       })();
 
+      const endUnix = endDateStr ? Math.floor(new Date(endDateStr + "T12:00:00Z").getTime() / 1000) : null;
+
       // Ensure end-date FX rates exist (closing balances need end-date conversion)
-      if (endDateStr && cacheData && cacheData.ratesCache && !cacheData.ratesCache[endDateStr]) {
-        const [usdtEnd, xrpEnd, usdEnd] = await Promise.all([
-          getKrakenRate('USDT', endDate.getTime()),
-          getKrakenRate('XRP',  endDate.getTime()),
-          getKrakenRate('USD',  endDate.getTime())
+      if (endDateStr && endUnix && cacheData && cacheData.ratesCache && !cacheData.ratesCache[endDateStr]) {
+        const [usdtEnd, xrpEnd, eurEnd] = await Promise.all([
+          getKrakenRate('USDT', endUnix),
+          getKrakenRate('XRP',  endUnix),
+          getKrakenRate('EUR',  endUnix)
         ]);
         cacheData.ratesCache[endDateStr] = {
           USDTGBP: (usdtEnd && typeof usdtEnd.gbpRate === 'number') ? usdtEnd.gbpRate : null,
           XRPGBP:  (xrpEnd  && typeof xrpEnd.gbpRate  === 'number') ? xrpEnd.gbpRate  : null,
-          USDTEUR: (usdEnd  && typeof usdEnd.eurRate  === 'number') ? usdEnd.eurRate  : null
+          EURGBP:  (eurEnd  && typeof eurEnd.gbpRate  === 'number') ? eurEnd.gbpRate  : null
         };
         saveCacheToLocalStorage();
       }
 
-      const endRates = (endDateStr && cacheData && cacheData.ratesCache) ? cacheData.ratesCache[endDateStr] : null;
-      const endUSDTGBP = endRates && endRates.USDTGBP ? endRates.USDTGBP : null;
-      const endUSDTEUR = endRates && endRates.USDTEUR ? endRates.USDTEUR : null;
-      const endXRPGBP  = endRates && endRates.XRPGBP  ? endRates.XRPGBP  : null;
-      const endUnix = Math.floor(new Date(endDateStr + "T12:00:00Z").getTime() / 1000);
+      const endRates = (endDateStr && cacheData && cacheData.ratesCache) ? (cacheData.ratesCache[endDateStr] || {}) : {};
+      let endUSDTGBP = (endRates && typeof endRates.USDTGBP === "number") ? endRates.USDTGBP : null;
+      let endXRPGBP  = (endRates && typeof endRates.XRPGBP  === "number") ? endRates.XRPGBP  : null;
+      let endEURGBP  = (endRates && typeof endRates.EURGBP  === "number") ? endRates.EURGBP  : null;
 
-      // Prefer cached end-rate EUR->GBP if present, otherwise compute at end date
-      let endEURGBP  = endRates.EURGBP ? endRates.EURGBP : null;
-      if (!endEURGBP) {
-        const r = await getKrakenRate("EUR", endUnix);
-        endEURGBP = (r && r.gbpRate) ? r.gbpRate : null;
-      }
-
-      // Compute missing crypto end-rates (used by Closing Balances GBP equivalents)
-      if (!endUSDTGBP) {
-        const r = await getKrakenRate("USDT", endUnix);
-        endUSDTGBP = (r && r.gbpRate) ? r.gbpRate : endUSDTGBP;
-      }
-      if (!endXRPGBP) {
-        const r = await getKrakenRate("XRP", endUnix);
-        endXRPGBP = (r && r.gbpRate) ? r.gbpRate : endXRPGBP;
+      // Compute missing end-rates (closing balances should rarely show '-')
+      if (endUnix) {
+        if (!endEURGBP) {
+          const r = await getKrakenRate("EUR", endUnix);
+          endEURGBP = (r && typeof r.gbpRate === "number") ? r.gbpRate : null;
+        }
+        if (!endUSDTGBP) {
+          const r = await getKrakenRate("USDT", endUnix);
+          endUSDTGBP = (r && typeof r.gbpRate === "number") ? r.gbpRate : null;
+        }
+        if (!endXRPGBP) {
+          const r = await getKrakenRate("XRP", endUnix);
+          endXRPGBP = (r && typeof r.gbpRate === "number") ? r.gbpRate : null;
+        }
       }
 
       const fmtBal = (asset, v) => {
