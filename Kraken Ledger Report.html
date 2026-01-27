@@ -473,7 +473,7 @@ if (window.logTrace) logTrace("Statement Summary state reset due to date-range c
 
 
 <script>
-const APP_VERSION = "v3.045-6";
+const APP_VERSION = "v3.045-7";
 </script>
 
 
@@ -4039,12 +4039,23 @@ if (item.fees) {
       }
       html += '</tbody></table>';
 
+      // Also capture Statement "Opening Balance" snapshot for reconciliation inputs (uses early-declared locals)
+
+      if (Array.isArray(bankRecords) && bankRecords.length > 0) {
+        for (let i = 0; i < bankRecords.length; i++) {
+          const r = bankRecords[i];
+          if (r && (r.details === "Opening Balance" || r.type === "Balance")) {
+            if (r.details === "Opening Balance" && r.balances) { openingBalances = r.balances; break; }
+          }
+        }
+      }
 
 
-      // --- OPENING BALANCES (Statement Snapshot) ---
-      html += '<div style="margin-top:12px;">';
-      html += '<div style="background:#2980b9; color:#fff; padding:6px 10px; font-weight:bold; font-size:0.75rem; border-radius:3px;">Opening Balances (Statement Snapshot)</div>';
-      html += '<table style="width:100%; border-collapse:collapse; font-size:0.7rem; margin-top:4px;">';
+
+
+      // --- OPENING BALANCES ---
+      html += '<div style="background:#2980b9; color:#fff; padding:5px 10px; font-size:0.7rem; font-weight:bold; border-radius:4px 4px 0 0; margin-top:14px; margin-bottom:0;">Opening Balances  GBP | EUR | USDT | XRP</div>';
+      html += '<table style="width:100%; border-collapse:collapse; margin-bottom:0; border:1px solid #ddd;">';
       html += '<thead><tr style="background:#f2f2f2;">';
       html += '<th style="padding:4px; border:1px solid #ddd; text-align:left;">Asset</th>';
       html += '<th style="padding:4px; border:1px solid #ddd; text-align:right;">Balance</th>';
@@ -4080,7 +4091,6 @@ if (item.fees) {
       _addOBRow('XRP',  _obXRP,  _obXRPgbp,  false);
 
       html += '</tbody></table>';
-      html += '</div>';
 
 
       // -- RE-IMPLEMENTING DEPOSITS SECTION TO BE ALWAYS VISIBLE --
@@ -4178,17 +4188,6 @@ const renderFeeGbpEq = (asset, gbpEq, total) => {
       
       // --- 5. CLOSING BALANCES (GBP | EUR | USDT | XRP) ---
       // Uses the Statement row "Closing Balance" as source of truth (same data used to render the statement table)
-      // Also capture Statement "Opening Balance" snapshot for reconciliation inputs (uses early-declared locals)
-
-      if (Array.isArray(bankRecords) && bankRecords.length > 0) {
-        for (let i = 0; i < bankRecords.length; i++) {
-          const r = bankRecords[i];
-          if (r && (r.details === "Opening Balance" || r.type === "Balance")) {
-            if (r.details === "Opening Balance" && r.balances) { openingBalances = r.balances; break; }
-          }
-        }
-      }
-
       let closingBalances = null;
       if (Array.isArray(bankRecords) && bankRecords.length > 0) {
         for (let i = bankRecords.length - 1; i >= 0; i--) {
