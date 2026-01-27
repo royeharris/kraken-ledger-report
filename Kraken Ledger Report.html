@@ -473,7 +473,7 @@ if (window.logTrace) logTrace("Statement Summary state reset due to date-range c
 
 
 <script>
-const APP_VERSION = "v3.045";
+const APP_VERSION = "v3.045-2";
 </script>
 
 
@@ -4153,6 +4153,7 @@ const renderFeeGbpEq = (asset, gbpEq, total) => {
       }
 
       const endRates = (endDateStr && cacheData && cacheData.ratesCache) ? (cacheData.ratesCache[endDateStr] || {}) : {};
+      const closingEndRates = endRates; // alias for compatibility (used by closing-balance GBP-equivalent logic)
       let endUSDTGBP = (endRates && typeof endRates.USDTGBP === "number") ? endRates.USDTGBP : null;
       let endXRPGBP  = (endRates && typeof endRates.XRPGBP  === "number") ? endRates.XRPGBP  : null;
       let endEURGBP  = (endRates && typeof endRates.EURGBP  === "number") ? endRates.EURGBP  : null;
