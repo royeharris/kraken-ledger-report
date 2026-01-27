@@ -473,7 +473,7 @@ if (window.logTrace) logTrace("Statement Summary state reset due to date-range c
 
 
 <script>
-const APP_VERSION = "v3.045-2";
+const APP_VERSION = "v3.045-3";
 </script>
 
 
@@ -4117,6 +4117,17 @@ const renderFeeGbpEq = (asset, gbpEq, total) => {
       
       // --- 5. CLOSING BALANCES (GBP | EUR | USDT | XRP) ---
       // Uses the Statement row "Closing Balance" as source of truth (same data used to render the statement table)
+      // Also capture Statement "Opening Balance" snapshot for reconciliation inputs
+      let openingBalances = null;
+      if (Array.isArray(bankRecords) && bankRecords.length > 0) {
+        for (let i = 0; i < bankRecords.length; i++) {
+          const r = bankRecords[i];
+          if (r && (r.details === "Opening Balance" || r.type === "Balance")) {
+            if (r.details === "Opening Balance" && r.balances) { openingBalances = r.balances; break; }
+          }
+        }
+      }
+
       let closingBalances = null;
       if (Array.isArray(bankRecords) && bankRecords.length > 0) {
         for (let i = bankRecords.length - 1; i >= 0; i--) {
@@ -4157,6 +4168,20 @@ const renderFeeGbpEq = (asset, gbpEq, total) => {
       let endUSDTGBP = (endRates && typeof endRates.USDTGBP === "number") ? endRates.USDTGBP : null;
       let endXRPGBP  = (endRates && typeof endRates.XRPGBP  === "number") ? endRates.XRPGBP  : null;
       let endEURGBP  = (endRates && typeof endRates.EURGBP  === "number") ? endRates.EURGBP  : null;
+
+      // Populate opening balances (GBP basis) using opening snapshot + end-of-period FX rates (consistent with closing balance GBP equivalents)
+      if (openingBalances) {
+        const obGBP  = (openingBalances.GBP  != null) ? Number(openingBalances.GBP)  : 0;
+        const obEUR  = (openingBalances.EUR  != null) ? Number(openingBalances.EUR)  : 0;
+        const obUSDT = (openingBalances.USDT != null) ? Number(openingBalances.USDT) : 0;
+        const obXRP  = (openingBalances.XRP  != null) ? Number(openingBalances.XRP)  : 0;
+
+        openGBP  = (isFinite(obGBP)  ? obGBP  : 0);
+        openEUR  = (isFinite(obEUR)  && endEURGBP  != null ? (obEUR  * endEURGBP)  : 0);
+        openUSDT = (isFinite(obUSDT) && endUSDTGBP != null ? (obUSDT * endUSDTGBP) : 0);
+        openXRP  = (isFinite(obXRP)  && endXRPGBP  != null ? (obXRP  * endXRPGBP)  : 0);
+      }
+
 
       // Compute missing end-rates (closing balances should rarely show '-')
       if (endUnix) {
@@ -4268,11 +4293,11 @@ const renderFeeGbpEq = (asset, gbpEq, total) => {
         return v.toFixed(2);
       };
 
-      // A) Opening balance (not present in v3.044 summary logic, treated as 0 but shown)
-      const openGBP = 0;
-      const openEUR = 0;
-      const openUSDT = 0;
-      const openXRP = 0;
+      // A) Opening balance (from statement "Opening Balance" snapshot if available; otherwise 0)
+      let openGBP = 0;
+      let openEUR = 0;
+      let openUSDT = 0;
+      let openXRP = 0;
 
       // B) Deposits from Haricom Bank Accounts (GBP + EUR->GBP equivalent)
       let depGBP = 0;
@@ -4384,9 +4409,9 @@ const renderFeeGbpEq = (asset, gbpEq, total) => {
       _addReconRow('Withdrawals (Recipients)', 0, 0, wRecUSDT, wRecXRP, false);
       _addReconRow('Withdrawals (Haricom Bank Accounts)', wBankGBP, wBankEUR, 0, 0, false);
       _addReconRow('Fees', feeGBP, feeEUR, feeUSDT, feeXRP, false);
-      _addReconRow('Expected Closing (calculated)', expGBP, expEUR, expUSDT, expXRP, true);
+      _addReconRow('Calculated Closing', expGBP, expEUR, expUSDT, expXRP, true);
       _addReconRow('Actual Closing (from Closing Balances)', actGBP, actEUR, actUSDT, actXRP, true);
-      _addReconRow('Reconciliation Difference (Expected - Actual)', diffGBP, diffEUR, diffUSDT, diffXRP, true);
+      _addReconRow('Reconciliation Difference (Calculated - Actual)', diffGBP, diffEUR, diffUSDT, diffXRP, true);
 
       html += '</tbody></table>';
       html += '<div style="padding:6px 2px 0 2px; font-size:0.65rem; color:#444; line-height:1.25;">';
