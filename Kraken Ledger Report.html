@@ -473,7 +473,7 @@ if (window.logTrace) logTrace("Statement Summary state reset due to date-range c
 
 
 <script>
-const APP_VERSION = "v3.045-7";
+const APP_VERSION = "v3.045-8";
 </script>
 
 
@@ -4435,8 +4435,8 @@ const renderFeeGbpEq = (asset, gbpEq, total) => {
 
       const _rowTotal = (a,b,c,d) => _n2(a)+_n2(b)+_n2(c)+_n2(d);
 
-      html += '<div style="background:#2980b9; color:#fff; padding:5px 10px; font-size:0.7rem; font-weight:bold; border-radius:4px 4px 0 0; margin-top:14px; margin-bottom:0;">Reconciliation Difference  GBP | EUR | USDT | XRP</div>';
-      html += '<table style="width:100%; border-collapse:collapse; margin-bottom:0; border:1px solid #ddd;">';
+      html += '<div style="background:#2980b9; color:#fff; padding:5px 10px; font-size:0.7rem; font-weight:bold; border-radius:4px 4px 0 0; margin-top:14px; margin-bottom:0; page-break-before:always; break-before:page;">Reconciliation Difference  GBP | EUR | USDT | XRP</div>';
+      html += '<table style="width:100%; border-collapse:collapse; margin-bottom:0; border:1px solid #ddd; page-break-inside:avoid; break-inside:avoid;">';
       html += '<thead><tr style="background:#f2f2f2;">';
       html += '<th style="padding:4px; border:1px solid #ddd; text-align:left;">Item</th>';
       html += '<th style="padding:4px; border:1px solid #ddd; text-align:right;">GBP</th>';
