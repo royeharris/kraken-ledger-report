@@ -473,7 +473,7 @@ if (window.logTrace) logTrace("Statement Summary state reset due to date-range c
 
 
 <script>
-const APP_VERSION = "v3.045-5";
+const APP_VERSION = "v3.045-6";
 </script>
 
 
@@ -3945,6 +3945,16 @@ if (item.fees) {
       let openEUR = 0;
       let openUSDT = 0;
       let openXRP = 0;
+
+      // Local amount formatters for Statement Summary sections (avoid undefined global refs)
+      const fmtGBPAmount = (n) => {
+        const v = (n == null || n === "" || isNaN(n)) ? 0 : Number(n);
+        return v.toFixed(2);
+      };
+      const fmtAmount = (n, decimals = 4) => {
+        const v = (n == null || n === "" || isNaN(n)) ? 0 : Number(n);
+        return v.toFixed(decimals);
+      };
 
       // --- Container (Centered) ---
       let html = '<div style="max-width:1000px; margin:0 auto; box-shadow:0 1px 4px rgba(0,0,0,0.1); background:#fff; border-radius:4px; overflow:hidden; border:1px solid #ddd;">';
