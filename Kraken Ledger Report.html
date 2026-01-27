@@ -473,7 +473,7 @@ if (window.logTrace) logTrace("Statement Summary state reset due to date-range c
 
 
 <script>
-const APP_VERSION = "v3.045-2";
+const APP_VERSION = "v3.045-3";
 </script>
 
 
@@ -4153,7 +4153,6 @@ const renderFeeGbpEq = (asset, gbpEq, total) => {
       }
 
       const endRates = (endDateStr && cacheData && cacheData.ratesCache) ? (cacheData.ratesCache[endDateStr] || {}) : {};
-      const closingEndRates = endRates; // alias for compatibility (used by closing-balance GBP-equivalent logic)
       let endUSDTGBP = (endRates && typeof endRates.USDTGBP === "number") ? endRates.USDTGBP : null;
       let endXRPGBP  = (endRates && typeof endRates.XRPGBP  === "number") ? endRates.XRPGBP  : null;
       let endEURGBP  = (endRates && typeof endRates.EURGBP  === "number") ? endRates.EURGBP  : null;
@@ -4227,81 +4226,75 @@ const renderFeeGbpEq = (asset, gbpEq, total) => {
 
       html += '</tbody></table>';
 
-      // BEGIN: Reconciliation Difference (GBP basis)
-      html += '<div style="margin-top:12px; background:#ffffff; border-radius:6px; overflow:hidden; border:1px solid #d9e2ef;">';
-      html += '<div style="background:#2b6da6; color:#fff; padding:8px 10px; font-weight:bold;">Reconciliation Difference</div>';
-      html += '<div style="padding:10px;">';
+      // BEGIN: Reconciliation Difference
+      // Reconciliation is GBP-basis only:
+      //   - GBP actual amounts where asset is GBP
+      //   - GBP equivalents where asset is USDT
+      // EUR/XRP units are ignored for reconciliation (except where already expressed as GBP equiv, but not used here).
+      try {
+        // Ensure end-date rates object exists for any other logic that references it
+        const closingEndRates = { EURGBP: endEURGBP, USDTGBP: endUSDTGBP, XRPGBP: endXRPGBP };
 
-      // GBP-basis reconciliation (intentionally simple, accountant-focused).
-      function safeNum(x){ return (typeof x === "number" && isFinite(x)) ? x : 0; }
+        // 1) GBP inflows (deposits)
+        const depositsGBP = summaryRecords.deposits
+          .filter(r => r.Currency === "GBP")
+          .reduce((sum, r) => sum + (Number(r.TotalAmount) || 0), 0);
 
-      // Inflows: deposits (GBP + GBP-equivalents for non-GBP when present)
-      const depRows = summaryRecords.deposits || [];
-      let inflowGBP = 0;
-      for (const r of depRows){
-        inflowGBP += safeNum(r.GBP);
-        inflowGBP += safeNum(r.EUR_GBP);
-        inflowGBP += safeNum(r.USDT_GBP);
-        inflowGBP += safeNum(r.XRP_GBP);
+        // 2) GBP outflows (USDT withdrawals expressed as GBP equivalents)
+        const usdtWithdrawalsGBP = summaryRecords.crypto
+          .filter(r => r.Type === "withdrawal" && r.Asset === "USDT")
+          .reduce((sum, r) => sum + (Number(r.GBP) || 0), 0);
+
+        // 3) Fees (GBP actual + USDT fees expressed as GBP equivalents)
+        const feesGBP = summaryRecords.fees
+          .filter(r => r.Currency === "GBP")
+          .reduce((sum, r) => sum + (Number(r.TotalAmount) || 0), 0);
+
+        const feesUSDT_GBP = summaryRecords.fees
+          .filter(r => r.Currency === "USDT")
+          .reduce((sum, r) => sum + (Number(r.GbpEquivalent) || 0), 0);
+
+        const totalFeesGBP = feesGBP + feesUSDT_GBP;
+
+        // 4) Expected closing (GBP basis)
+        const expectedClosingGBP = depositsGBP - usdtWithdrawalsGBP - totalFeesGBP;
+
+        // 5) Reported closing (GBP basis): GBP closing + USDT closing (GBP equivalent)
+        const closingGBP = Number(closingBalances?.GBP ?? 0) || 0;
+        const closingUSDT = Number(closingBalances?.USDT ?? 0) || 0;
+        const closingUSDT_GBP = closingUSDT * (Number(endUSDTGBP) || 0);
+        const reportedClosingGBP = closingGBP + closingUSDT_GBP;
+
+        // 6) Difference
+        const reconciliationDiff = expectedClosingGBP - reportedClosingGBP;
+
+        // Display (always two decimals)
+        const diffDisplay = Number.isFinite(reconciliationDiff) ? reconciliationDiff.toFixed(2) : "-";
+        const diffAbsText = Number.isFinite(reconciliationDiff) ? Math.abs(reconciliationDiff).toFixed(2) : "—";
+
+        html += '<div class="card mt-4">';
+        html += '  <div class="card-header bg-primary text-white"><h5 class="mb-0">Reconciliation Difference</h5></div>';
+        html += '  <div class="card-body">';
+        html += '    <div class="table-responsive">';
+        html += '      <table class="table table-bordered table-sm mb-2">';
+        html += '        <thead><tr><th>Item</th><th class="text-end">GBP</th></tr></thead>';
+        html += '        <tbody>';
+        html += '          <tr><td>Reconciliation Difference</td><td class="text-end fw-bold">' + diffDisplay + '</td></tr>';
+        html += '        </tbody>';
+        html += '      </table>';
+        html += '    </div>';
+        html += '    <div class="small text-muted">';
+        html += '      A reconciliation difference of GBP ' + diffAbsText + ' exists because GBP equivalents in the summary are computed using average/available rates for the period and may involve rounding and fallback pricing sources.';
+        html += '    </div>';
+        html += '  </div>';
+        html += '</div>';
+      } catch (e) {
+        // Never block summary rendering if reconciliation fails
+        html += '<div class="card mt-4">';
+        html += '  <div class="card-header bg-primary text-white"><h5 class="mb-0">Reconciliation Difference</h5></div>';
+        html += '  <div class="card-body"><div class="small text-muted">Reconciliation not available.</div></div>';
+        html += '</div>';
       }
-
-      // Outflows: fiat withdrawals + fees + crypto withdrawals (GBP-equivalents)
-      let outflowGBP = 0;
-
-      const fiatRows = summaryRecords.fiat || [];
-      for (const r of fiatRows){
-        outflowGBP += safeNum(r.GBP);
-        outflowGBP += safeNum(r.EUR_GBP);
-      }
-
-      const feeRows = summaryRecords.fees || [];
-      for (const r of feeRows){
-        outflowGBP += safeNum(r.GBP);
-        outflowGBP += safeNum(r.EUR_GBP);
-        outflowGBP += safeNum(r.USDT_GBP);
-        outflowGBP += safeNum(r.XRP_GBP);
-      }
-
-      const crypto = summaryRecords.crypto || {};
-      const usdtRecips = crypto.USDT || [];
-      const xrpRecips  = crypto.XRP  || [];
-      // In these recipient arrays, the GBP-equivalent is stored in r.GBP
-      for (const r of usdtRecips){ outflowGBP += safeNum(r.GBP); }
-      for (const r of xrpRecips){ outflowGBP += safeNum(r.GBP); }
-
-      const expectedClosingGBP = inflowGBP - outflowGBP;
-
-      // Reported closing: GBP balance + GBP-equivalents for non-GBP closing balances.
-      let reportedClosingGBP = safeNum(closingBalances.GBP);
-
-      const eurBal = safeNum(closingBalances.EUR);
-      if (eurBal !== 0 && closingEndRates && typeof closingEndRates.EURGBP === "number" && isFinite(closingEndRates.EURGBP)){
-        reportedClosingGBP += eurBal * closingEndRates.EURGBP;
-      }
-      const usdtBal = safeNum(closingBalances.USDT);
-      if (usdtBal !== 0 && closingEndRates && typeof closingEndRates.USDTGBP === "number" && isFinite(closingEndRates.USDTGBP)){
-        reportedClosingGBP += usdtBal * closingEndRates.USDTGBP;
-      }
-      const xrpBal = safeNum(closingBalances.XRP);
-      if (xrpBal !== 0 && closingEndRates && typeof closingEndRates.XRPGBP === "number" && isFinite(closingEndRates.XRPGBP)){
-        reportedClosingGBP += xrpBal * closingEndRates.XRPGBP;
-      }
-
-      let diffGBP = expectedClosingGBP - reportedClosingGBP;
-      diffGBP = Math.round(diffGBP * 100) / 100;
-      const diffShow = isFinite(diffGBP) ? diffGBP.toFixed(2) : '-';
-
-      html += '<table style="width:100%; border-collapse:collapse; font-size:13px;">';
-      html += '<thead><tr>';
-      html += '<th style="padding:4px; border:1px solid #ddd; text-align:left;">Item</th>';
-      html += '<th style="padding:4px; border:1px solid #ddd; text-align:right;">GBP</th>';
-      html += '</tr></thead><tbody>';
-
-      html += `<tr><td style="padding:4px; border:1px solid #ddd;">Reconciliation Difference</td><td style="padding:4px; border:1px solid #ddd; text-align:right; font-weight:bold; color:#000;">${diffShow}</td></tr>`;
-      html += '</tbody></table>';
-
-      html += '<div style="margin-top:8px; font-size:12px; color:#333;">A reconciliation difference of GBP 74.62 exists because GBP equivalents in the summary are computed using average/available rates for the period and may involve rounding and fallback pricing sources.</div>';
-      html += '</div></div>';
       // END: Reconciliation Difference
 
 
