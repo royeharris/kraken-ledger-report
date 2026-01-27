@@ -473,7 +473,7 @@ if (window.logTrace) logTrace("Statement Summary state reset due to date-range c
 
 
 <script>
-const APP_VERSION = "v3.045-14";
+const APP_VERSION = "v3.045-15";
 </script>
 
 
@@ -3736,17 +3736,24 @@ function saveCacheToLocalStorage() {
 // GBP Equivalent for EUR deposits (table-mode) using same day-rate cache as withdrawals/fees
 if (asset === "EUR" && val > 0) {
   let gbpEq = 0;
-  if (item.gbpValues && item.gbpValues.EUR) {
-    gbpEq = item.gbpValues.EUR;
-  } else if (item._raw && item._raw.time) {
+
+  // Prefer transaction-date day-rate conversion (prevents drift from other gbpValues computations)
+  if (item._raw && item._raw.time) {
     const dObj = new Date(item._raw.time * 1000);
     const dStr = dObj.toISOString().split("T")[0];
     const dayRates = cacheData && cacheData.ratesCache ? cacheData.ratesCache[dStr] : null;
-    if (dayRates && dayRates.USDTGBP && dayRates.USDTEUR) {
-      const eurGbp = dayRates.USDTGBP / dayRates.USDTEUR;
-      gbpEq = val * eurGbp;
+
+    // USDTEUR is EUR per USDT, so EUR->GBP = (EUR * (1/USDTEUR)) * USDTGBP
+    if (dayRates && typeof dayRates.USDTGBP === "number" && typeof dayRates.USDTEUR === "number" && dayRates.USDTEUR !== 0) {
+      gbpEq = (val / dayRates.USDTEUR) * dayRates.USDTGBP;
     }
   }
+
+  // Fallback to any precomputed GBP value (only if day-rate conversion not available)
+  if (!gbpEq && item.gbpValues && typeof item.gbpValues.EUR === "number" && item.gbpValues.EUR) {
+    gbpEq = item.gbpValues.EUR;
+  }
+
   if (gbpEq) depositGbpTotals.EUR += gbpEq;
 }
                 }
