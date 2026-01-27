@@ -473,7 +473,7 @@ if (window.logTrace) logTrace("Statement Summary state reset due to date-range c
 
 
 <script>
-const APP_VERSION = "v3.045-15";
+const APP_VERSION = "v3.045-16";
 </script>
 
 
@@ -952,8 +952,8 @@ document.addEventListener("DOMContentLoaded", () => {
       // Clear LocalStorage
       localStorage.removeItem("kraken_staging");
       localStorage.removeItem("kraken_v2_withdrawals");
-      localStorage.removeItem("kraken_v2_rates");
-      localStorage.removeItem("kraken_summary_staging");
+      localStorage.removeItem("kraken_v2_rates_v3.045-16");
+      localStorage.removeItem("kraken_summary_staging_v3.045-16");
 
       // Clear Views
       renderPreview();
@@ -1124,7 +1124,7 @@ function saveCacheToLocalStorage() {
     localStorage.setItem("kraken_v2_withdrawals", JSON.stringify(cacheData.withdrawals || []));
     localStorage.setItem("kraken_v2_history", JSON.stringify(cacheData.withdrawalHistory || []));
     localStorage.setItem("kraken_v2_addresses", JSON.stringify(cacheData.krakenAddresses || []));
-    localStorage.setItem("kraken_v2_rates", JSON.stringify(cacheData.ratesCache || {}));
+    localStorage.setItem("kraken_v2_rates_v3.045-16", JSON.stringify(cacheData.ratesCache || {}));
     // Optional: store computed withdrawalCache (used for GBP fallbacks)
     if (cacheData && Array.isArray(cacheData.withdrawalCache)) {
       localStorage.setItem("kraken_v3_withdrawal_cache", JSON.stringify(cacheData.withdrawalCache));
@@ -1145,7 +1145,7 @@ function saveCacheToLocalStorage() {
       localStorage.setItem("kraken_v2_withdrawals", JSON.stringify(cacheData.withdrawals));
       localStorage.setItem("kraken_v2_history", JSON.stringify(cacheData.withdrawalHistory));
       localStorage.setItem("kraken_v2_addresses", JSON.stringify(cacheData.krakenAddresses));
-      localStorage.setItem("kraken_v2_rates", JSON.stringify(cacheData.ratesCache));
+      localStorage.setItem("kraken_v2_rates_v3.045-16", JSON.stringify(cacheData.ratesCache));
       logTrace("Data saved to localStorage.");
       alert("Data saved to local storage.");
     }
@@ -1159,7 +1159,7 @@ function saveCacheToLocalStorage() {
       cacheData.withdrawals = JSON.parse(cached || "[]");
       cacheData.withdrawalHistory = JSON.parse(localStorage.getItem("kraken_v2_history") || "[]");
       cacheData.krakenAddresses = JSON.parse(localStorage.getItem("kraken_v2_addresses") || "[]");
-      cacheData.ratesCache = JSON.parse(localStorage.getItem("kraken_v2_rates") || "{}");
+      cacheData.ratesCache = JSON.parse(localStorage.getItem("kraken_v2_rates_v3.045-16") || "{}");
       updateStatusCounts();
       logTrace("Loaded from localStorage. Withdrawals=" + cacheData.withdrawals.length);
 
@@ -1410,7 +1410,7 @@ function saveCacheToLocalStorage() {
       bankRecords = [];
       summaryRecords = { withdrawals: [], deposits: [] };
       localStorage.removeItem("kraken_bank_staging");
-      localStorage.removeItem("kraken_summary_staging");
+      localStorage.removeItem("kraken_summary_staging_v3.045-16");
 
       const bankArea = document.getElementById("bankReportArea");
       if (bankArea) bankArea.style.display = "none";
@@ -1979,6 +1979,17 @@ function saveCacheToLocalStorage() {
               s2Rows = summaryRecords.fiat.map(r => [r.recipient, fmt(r.GBP, 2), fmt(r.EUR, 2)]);
             } else {
               s2Rows = [["", "-", "-"]];
+            }
+
+            if (typeof logTrace === "function") {
+              try {
+                const eurDep = (depositTotals && typeof depositTotals.EUR === "number") ? depositTotals.EUR : 0;
+                const eurDepGbp = (depositGbpTotals && typeof depositGbpTotals.EUR === "number") ? depositGbpTotals.EUR : 0;
+                const eurFee = (feeTotals && typeof feeTotals.EUR === "number") ? feeTotals.EUR : 0;
+                const eurFeeGbp = (feeGbpTotals && typeof feeGbpTotals.EUR === "number") ? feeGbpTotals.EUR : 0;
+                logTrace("Summary FX check: Deposits EUR=" + eurDep.toFixed(2) + " -> GBP=" + eurDepGbp.toFixed(2) + " (EURGBP day-rate)");
+                if (eurFee) logTrace("Summary FX check: Fees EUR=" + eurFee.toFixed(2) + " -> GBP=" + eurFeeGbp.toFixed(2) + " (EURGBP day-rate)");
+              } catch (e) {}
             }
 
             let s3Headers = ["Deposits from Haricom Bank Accounts  GBP | EUR", ""];
@@ -2897,10 +2908,27 @@ function saveCacheToLocalStorage() {
           const usdtRates = await getKrakenRate("USDT", timestamp);
           const xrpRates = await getKrakenRate("XRP", timestamp);
 
+          // Direct EUR/GBP day-rate for fiat GBP-equivalents (avoids USDT cross-rate ambiguity)
+          let eurGbpRate = null;
+          try {
+            const fxUrl = `https://api.frankfurter.app/${dateStr}?from=EUR&to=GBP`;
+            const fxResp = await fetch(fxUrl);
+            if (fxResp && fxResp.ok) {
+              const fxData = await fxResp.json();
+              if (fxData && fxData.rates && typeof fxData.rates.GBP === "number") {
+                eurGbpRate = fxData.rates.GBP;
+              }
+            }
+          } catch (e) {
+            // Keep eurGbpRate as null; do not block report generation
+          }
+
           cacheData.ratesCache[dateStr] = {
             USDTGBP: usdtRates.gbpRate,
             USDTEUR: usdtRates.eurRate,
+            EURGBP: eurGbpRate,
             USDTSource: usdtRates.rateSource || "Kraken day rate",
+            EURGBPSource: eurGbpRate !== null ? "frankfurter" : null,
             XRPGBP: xrpRates.gbpRate,
             XRPEUR: xrpRates.eurRate,
             XRPSource: xrpRates.rateSource || "Kraken day rate"
@@ -2908,7 +2936,7 @@ function saveCacheToLocalStorage() {
 
 
 
-          logTrace("Rates for " + dateStr + ": USDTGBP=" + usdtRates.gbpRate + ", XRPGBP=" + xrpRates.gbpRate);
+          logTrace("Rates for " + dateStr + ": USDTGBP=" + usdtRates.gbpRate + ", XRPGBP=" + xrpRates.gbpRate + (eurGbpRate !== null ? ", EURGBP=" + eurGbpRate : ""));
 
           // Small delay to avoid API rate limiting
           await new Promise(r => setTimeout(r, 200));
@@ -3716,8 +3744,8 @@ function saveCacheToLocalStorage() {
                     const dObj = new Date(item._raw.time * 1000);
                     const dStr = dObj.toISOString().split("T")[0];
                     const dayRates = cacheData && cacheData.ratesCache ? cacheData.ratesCache[dStr] : null;
-                    if (dayRates && dayRates.USDTGBP && dayRates.USDTEUR) {
-                      const eurGbp = dayRates.USDTGBP / dayRates.USDTEUR;
+                    if (dayRates && dayRates.EURGBP) {
+                      const eurGbp = dayRates.EURGBP;
                       gbpVal = amount * eurGbp;
                     }
                   }
@@ -3733,24 +3761,22 @@ function saveCacheToLocalStorage() {
                 if (item.type && item.type.toLowerCase().includes("deposit")) {
                   depositTotals[asset] += val;
 
-// GBP Equivalent for EUR deposits (table-mode) using same day-rate cache as withdrawals/fees
+// GBP Equivalent for EUR deposits (table-mode) using transaction-date EUR/GBP
 if (asset === "EUR" && val > 0) {
   let gbpEq = 0;
 
-  // Prefer transaction-date day-rate conversion (prevents drift from other gbpValues computations)
+  // Prefer transaction-date EUR/GBP when available (primary source of truth)
   if (item._raw && item._raw.time) {
     const dObj = new Date(item._raw.time * 1000);
     const dStr = dObj.toISOString().split("T")[0];
     const dayRates = cacheData && cacheData.ratesCache ? cacheData.ratesCache[dStr] : null;
-
-    // USDTEUR is EUR per USDT, so EUR->GBP = (EUR * (1/USDTEUR)) * USDTGBP
-    if (dayRates && typeof dayRates.USDTGBP === "number" && typeof dayRates.USDTEUR === "number" && dayRates.USDTEUR !== 0) {
-      gbpEq = (val / dayRates.USDTEUR) * dayRates.USDTGBP;
+    if (dayRates && dayRates.EURGBP) {
+      gbpEq = val * dayRates.EURGBP;
     }
   }
 
-  // Fallback to any precomputed GBP value (only if day-rate conversion not available)
-  if (!gbpEq && item.gbpValues && typeof item.gbpValues.EUR === "number" && item.gbpValues.EUR) {
+  // Fallback to any precomputed GBP equivalent if day-rate is unavailable
+  if (!gbpEq && item.gbpValues && item.gbpValues.EUR) {
     gbpEq = item.gbpValues.EUR;
   }
 
@@ -3789,8 +3815,8 @@ if (item.fees) {
           if (dayRates) {
             if (fAsset === "USDT" && dayRates.USDTGBP) {
               gbpFeeVal = fAmt * dayRates.USDTGBP;
-            } else if (fAsset === "EUR" && dayRates.USDTGBP && dayRates.USDTEUR) {
-              const eurGbp = dayRates.USDTGBP / dayRates.USDTEUR;
+            } else if (fAsset === "EUR" && dayRates.EURGBP) {
+              const eurGbp = dayRates.EURGBP;
               gbpFeeVal = fAmt * eurGbp;
             }
           }
@@ -3874,29 +3900,26 @@ if (item.fees) {
             // if asset is EUR, calculate its GBP value
             if (assetKey === "EUR") {
               let eurGbpVal = 0;
-              if (item.gbpValues && item.gbpValues.EUR) {
-                eurGbpVal = item.gbpValues.EUR;
-              } else if (item._raw) {
-                // Fallback logic
-                eurGbpVal = calculateGbpValue(item._raw, amount, "EUR");
-                // If calculateGbpValue doesn't handle EUR well (it might expect USDT/XRP), check cache
-                if ((!eurGbpVal || eurGbpVal === 0) && cacheData.ratesCache) {
-                  const dStr = new Date(item._raw.time * 1000).toISOString().split('T')[0];
-                  const dayRates = cacheData.ratesCache[dStr];
-                  if (dayRates && dayRates.USDTEUR && dayRates.USDTGBP) {
-                    // Cross rate: EUR -> USDT -> GBP ? Or direct?
-                    // We usually don't have EURGBP in cache directly unless we fetch it.
-                    // But we do fetch it! See line 2420 (fetchOHLC("GBPEUR")).
-                    // Wait, ratesCache structure (Line 2710) only stores USDTGBP, USDTEUR, XRPGBP, XRPEUR.
-                    // It does NOT store GBPEUR directly in the final cache object usually?
-                    // Let's check line 2710.
-                    // Providing a decent estimate: EUR / USDTEUR * USDTGBP ??
-                    if (dayRates.USDTEUR > 0) {
-                      eurGbpVal = amount / dayRates.USDTEUR * dayRates.USDTGBP;
-                    }
-                  }
+
+              // Prefer transaction-date direct EUR/GBP if present in day-rate cache
+              if (item._raw && item._raw.time && cacheData && cacheData.ratesCache) {
+                const dStr = new Date(item._raw.time * 1000).toISOString().split('T')[0];
+                const dayRates = cacheData.ratesCache[dStr];
+                if (dayRates && dayRates.EURGBP) {
+                  eurGbpVal = amount * dayRates.EURGBP;
                 }
               }
+
+              // Fallback to any precomputed GBP equivalent if day-rate is unavailable
+              if (!eurGbpVal && item.gbpValues && item.gbpValues.EUR) {
+                eurGbpVal = item.gbpValues.EUR;
+              }
+
+              // Last-resort: preserve existing calculateGbpValue behavior (may be 0 for EUR)
+              if (!eurGbpVal && item._raw) {
+                eurGbpVal = calculateGbpValue(item._raw, amount, "EUR") || 0;
+              }
+
               fMap[recipient].EUR_GBP += eurGbpVal;
             }
           }
@@ -3932,7 +3955,7 @@ if (item.fees) {
       ];
 
       summaryRecords = { crypto: cryptoRows, fiat: fiatRows, deposits: depositRows, fees: feeRows };
-      localStorage.setItem("kraken_summary_staging", JSON.stringify(summaryRecords));
+      localStorage.setItem("kraken_summary_staging_v3.045-16", JSON.stringify(summaryRecords));
 
       await renderSummaryTable();
     }
@@ -4861,7 +4884,7 @@ function printKrakenStatement() {
       }
 
       // Load saved Summary Staging
-      const savedSummary = localStorage.getItem("kraken_summary_staging");
+      const savedSummary = localStorage.getItem("kraken_summary_staging_v3.045-16");
       if (savedSummary) {
         try {
           summaryRecords = JSON.parse(savedSummary);
@@ -4872,7 +4895,7 @@ function printKrakenStatement() {
       const savedWithdrawals = localStorage.getItem("kraken_v2_withdrawals");
       const savedAddresses = localStorage.getItem("kraken_v2_addresses");
       const savedHistory = localStorage.getItem("kraken_v2_history");
-      const savedRates = localStorage.getItem("kraken_v2_rates");
+      const savedRates = localStorage.getItem("kraken_v2_rates_v3.045-16");
       if (savedWithdrawals) cacheData.withdrawals = JSON.parse(savedWithdrawals);
       if (savedAddresses) cacheData.krakenAddresses = JSON.parse(savedAddresses);
       if (savedHistory) cacheData.withdrawalHistory = JSON.parse(savedHistory);
