@@ -473,7 +473,7 @@ if (window.logTrace) logTrace("Statement Summary state reset due to date-range c
 
 
 <script>
-const APP_VERSION = "v3.045-16";
+const APP_VERSION = "v3.045-17";
 </script>
 
 
@@ -733,7 +733,7 @@ document.addEventListener("DOMContentLoaded", () => {
     <button id="log_btn" onclick="toggleLog()"
       style="width:100%; padding:8px; margin-top:10px; background:#8e44ad; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Display
       Progress Log</button>
-    <div id="trace_log" onclick="toggleLog()">Trace: v3.043-2 Kraken Withdrawals Report initialized.</div>
+    <div id="trace_log" onclick="toggleLog()">Trace: v3.045-17 Kraken Withdrawals Report initialized.</div>
   </div>
 
   <script>
@@ -788,7 +788,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const now = new Date().toLocaleTimeString();
       const base = log.textContent && log.textContent.trim().length
         ? log.textContent
-        : "Trace: v3.043-2 Kraken Ledger Report initialized.";
+        : "Trace: v3.045-17 Kraken Ledger Report initialized.";
       log.textContent = base + "\n[" + now + "] " + msg;
       log.scrollTop = log.scrollHeight;
       console.log(msg);
@@ -830,7 +830,7 @@ document.addEventListener("DOMContentLoaded", () => {
     function copyTraceToClipboard() {
       const log = document.getElementById("trace_log");
       const text = log.textContent || "";
-      if (!text.trim() || text.trim() === "Trace: v3.043-2 Kraken Ledger Report initialized.") {
+      if (!text.trim() || text.trim() === "Trace: v3.045-17 Kraken Ledger Report initialized.") {
         alert("There are no trace log records to copy.");
         return;
       }
@@ -952,8 +952,8 @@ document.addEventListener("DOMContentLoaded", () => {
       // Clear LocalStorage
       localStorage.removeItem("kraken_staging");
       localStorage.removeItem("kraken_v2_withdrawals");
-      localStorage.removeItem("kraken_v2_rates_v3.045-16");
-      localStorage.removeItem("kraken_summary_staging_v3.045-16");
+      localStorage.removeItem("kraken_v2_rates_v3.045-17");
+      localStorage.removeItem("kraken_summary_staging_v3.045-17");
 
       // Clear Views
       renderPreview();
@@ -1124,7 +1124,7 @@ function saveCacheToLocalStorage() {
     localStorage.setItem("kraken_v2_withdrawals", JSON.stringify(cacheData.withdrawals || []));
     localStorage.setItem("kraken_v2_history", JSON.stringify(cacheData.withdrawalHistory || []));
     localStorage.setItem("kraken_v2_addresses", JSON.stringify(cacheData.krakenAddresses || []));
-    localStorage.setItem("kraken_v2_rates_v3.045-16", JSON.stringify(cacheData.ratesCache || {}));
+    localStorage.setItem("kraken_v2_rates_v3.045-17", JSON.stringify(cacheData.ratesCache || {}));
     // Optional: store computed withdrawalCache (used for GBP fallbacks)
     if (cacheData && Array.isArray(cacheData.withdrawalCache)) {
       localStorage.setItem("kraken_v3_withdrawal_cache", JSON.stringify(cacheData.withdrawalCache));
@@ -1145,7 +1145,7 @@ function saveCacheToLocalStorage() {
       localStorage.setItem("kraken_v2_withdrawals", JSON.stringify(cacheData.withdrawals));
       localStorage.setItem("kraken_v2_history", JSON.stringify(cacheData.withdrawalHistory));
       localStorage.setItem("kraken_v2_addresses", JSON.stringify(cacheData.krakenAddresses));
-      localStorage.setItem("kraken_v2_rates_v3.045-16", JSON.stringify(cacheData.ratesCache));
+      localStorage.setItem("kraken_v2_rates_v3.045-17", JSON.stringify(cacheData.ratesCache));
       logTrace("Data saved to localStorage.");
       alert("Data saved to local storage.");
     }
@@ -1159,7 +1159,7 @@ function saveCacheToLocalStorage() {
       cacheData.withdrawals = JSON.parse(cached || "[]");
       cacheData.withdrawalHistory = JSON.parse(localStorage.getItem("kraken_v2_history") || "[]");
       cacheData.krakenAddresses = JSON.parse(localStorage.getItem("kraken_v2_addresses") || "[]");
-      cacheData.ratesCache = JSON.parse(localStorage.getItem("kraken_v2_rates_v3.045-16") || "{}");
+      cacheData.ratesCache = JSON.parse(localStorage.getItem("kraken_v2_rates_v3.045-17") || "{}");
       updateStatusCounts();
       logTrace("Loaded from localStorage. Withdrawals=" + cacheData.withdrawals.length);
 
@@ -1410,7 +1410,7 @@ function saveCacheToLocalStorage() {
       bankRecords = [];
       summaryRecords = { withdrawals: [], deposits: [] };
       localStorage.removeItem("kraken_bank_staging");
-      localStorage.removeItem("kraken_summary_staging_v3.045-16");
+      localStorage.removeItem("kraken_summary_staging_v3.045-17");
 
       const bankArea = document.getElementById("bankReportArea");
       if (bankArea) bankArea.style.display = "none";
@@ -3955,7 +3955,7 @@ if (item.fees) {
       ];
 
       summaryRecords = { crypto: cryptoRows, fiat: fiatRows, deposits: depositRows, fees: feeRows };
-      localStorage.setItem("kraken_summary_staging_v3.045-16", JSON.stringify(summaryRecords));
+      localStorage.setItem("kraken_summary_staging_v3.045-17", JSON.stringify(summaryRecords));
 
       await renderSummaryTable();
     }
@@ -4491,9 +4491,9 @@ const renderFeeGbpEq = (asset, gbpEq, total) => {
       const actUSDT = _n2(closingUSDTGbpEq);
       const actXRP  = _n2(closingXRPGbpEq);
 
-      // Expected closing (GBP) = Opening + Deposits - Withdrawals - Fees
+      // Calculated closing (GBP basis) = sum of signed rows (deposits positive; withdrawals/fees negative)
       // Using signed rows (withdrawals/fees already negative) => sum all rows
-      const expGBP  = openGBP + depGBP + wRecUSDT*0 + wRecXRP*0 + wBankGBP + feeGBP;
+      const expGBP  = openGBP + depGBP + wBankGBP + feeGBP;
       const expEUR  = openEUR + depEUR + wBankEUR + feeEUR;
       const expUSDT = openUSDT + wRecUSDT + feeUSDT;
       const expXRP  = openXRP + wRecXRP + feeXRP;
@@ -4884,7 +4884,7 @@ function printKrakenStatement() {
       }
 
       // Load saved Summary Staging
-      const savedSummary = localStorage.getItem("kraken_summary_staging_v3.045-16");
+      const savedSummary = localStorage.getItem("kraken_summary_staging_v3.045-17");
       if (savedSummary) {
         try {
           summaryRecords = JSON.parse(savedSummary);
@@ -4895,7 +4895,7 @@ function printKrakenStatement() {
       const savedWithdrawals = localStorage.getItem("kraken_v2_withdrawals");
       const savedAddresses = localStorage.getItem("kraken_v2_addresses");
       const savedHistory = localStorage.getItem("kraken_v2_history");
-      const savedRates = localStorage.getItem("kraken_v2_rates_v3.045-16");
+      const savedRates = localStorage.getItem("kraken_v2_rates_v3.045-17");
       if (savedWithdrawals) cacheData.withdrawals = JSON.parse(savedWithdrawals);
       if (savedAddresses) cacheData.krakenAddresses = JSON.parse(savedAddresses);
       if (savedHistory) cacheData.withdrawalHistory = JSON.parse(savedHistory);
