@@ -473,7 +473,7 @@ if (window.logTrace) logTrace("Statement Summary state reset due to date-range c
 
 
 <script>
-const APP_VERSION = "v3.045-8";
+const APP_VERSION = "v3.045-9";
 </script>
 
 
@@ -4053,7 +4053,14 @@ if (item.fees) {
 
 
 
-      // --- OPENING BALANCES ---
+      // 
+      // End-of-period rates (used for GBP equivalents in Opening/Closing sections)
+      let endRates = (endDateStr && cacheData && cacheData.ratesCache) ? (cacheData.ratesCache[endDateStr] || {}) : {};
+      let endUSDTGBP = (endRates && typeof endRates.USDTGBP === "number") ? endRates.USDTGBP : null;
+      let endXRPGBP  = (endRates && typeof endRates.XRPGBP  === "number") ? endRates.XRPGBP  : null;
+      let endEURGBP  = (endRates && typeof endRates.EURGBP  === "number") ? endRates.EURGBP  : null;
+
+--- OPENING BALANCES ---
       html += '<div style="background:#2980b9; color:#fff; padding:5px 10px; font-size:0.7rem; font-weight:bold; border-radius:4px 4px 0 0; margin-top:14px; margin-bottom:0;">Opening Balances  GBP | EUR | USDT | XRP</div>';
       html += '<table style="width:100%; border-collapse:collapse; margin-bottom:0; border:1px solid #ddd;">';
       html += '<thead><tr style="background:#f2f2f2;">';
@@ -4224,10 +4231,10 @@ const renderFeeGbpEq = (asset, gbpEq, total) => {
         saveCacheToLocalStorage();
       }
 
-      const endRates = (endDateStr && cacheData && cacheData.ratesCache) ? (cacheData.ratesCache[endDateStr] || {}) : {};
-      let endUSDTGBP = (endRates && typeof endRates.USDTGBP === "number") ? endRates.USDTGBP : null;
-      let endXRPGBP  = (endRates && typeof endRates.XRPGBP  === "number") ? endRates.XRPGBP  : null;
-      let endEURGBP  = (endRates && typeof endRates.EURGBP  === "number") ? endRates.EURGBP  : null;
+      endRates = (endDateStr && cacheData && cacheData.ratesCache) ? (cacheData.ratesCache[endDateStr] || {}) : {};
+      endUSDTGBP = (endRates && typeof endRates.USDTGBP === "number") ? endRates.USDTGBP : null;
+      endXRPGBP  = (endRates && typeof endRates.XRPGBP  === "number") ? endRates.XRPGBP  : null;
+      endEURGBP  = (endRates && typeof endRates.EURGBP  === "number") ? endRates.EURGBP  : null;
 
       // Populate opening balances (GBP basis) using opening snapshot + end-of-period FX rates (consistent with closing balance GBP equivalents)
       if (openingBalances) {
