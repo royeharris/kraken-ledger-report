@@ -473,7 +473,7 @@ if (window.logTrace) logTrace("Statement Summary state reset due to date-range c
 
 
 <script>
-const APP_VERSION = "v3.045-3";
+const APP_VERSION = "v3.045-4";
 </script>
 
 
@@ -4022,6 +4022,50 @@ if (item.fees) {
       }
       html += '</tbody></table>';
 
+
+
+      // --- OPENING BALANCES (Statement Snapshot) ---
+      html += '<div style="margin-top:12px;">';
+      html += '<div style="background:#2980b9; color:#fff; padding:6px 10px; font-weight:bold; font-size:0.75rem; border-radius:3px;">Opening Balances (Statement Snapshot)</div>';
+      html += '<table style="width:100%; border-collapse:collapse; font-size:0.7rem; margin-top:4px;">';
+      html += '<thead><tr style="background:#f2f2f2;">';
+      html += '<th style="padding:4px; border:1px solid #ddd; text-align:left;">Asset</th>';
+      html += '<th style="padding:4px; border:1px solid #ddd; text-align:right;">Balance</th>';
+      html += '<th style="padding:4px; border:1px solid #ddd; text-align:right;">GBP Equivalent</th>';
+      html += '</tr></thead><tbody>';
+
+      // Use statement snapshot balances if present; otherwise show zeros
+      const _ob = (openingBalances && typeof openingBalances === "object") ? openingBalances : {};
+      const _obGBP  = (isFinite(Number(_ob.GBP))  ? Number(_ob.GBP)  : 0);
+      const _obEUR  = (isFinite(Number(_ob.EUR))  ? Number(_ob.EUR)  : 0);
+      const _obUSDT = (isFinite(Number(_ob.USDT)) ? Number(_ob.USDT) : 0);
+      const _obXRP  = (isFinite(Number(_ob.XRP))  ? Number(_ob.XRP)  : 0);
+
+      // GBP equivalents use end-of-period rates (same convention as Closing Balances section)
+      const _obEURgbp  = (_obEUR  && endEURGBP  != null) ? (_obEUR  * endEURGBP)  : 0;
+      const _obUSDTgbp = (_obUSDT && endUSDTGBP != null) ? (_obUSDT * endUSDTGBP) : 0;
+      const _obXRPgbp  = (_obXRP  && endXRPGBP  != null) ? (_obXRP  * endXRPGBP)  : 0;
+
+      const _addOBRow = (asset, bal, gbpEq, isGBPRow) => {
+        const balShow = (isGBPRow ? fmtGBPAmount(bal) : fmtAmount(bal));
+        const eqShow  = fmtGBPAmount(gbpEq);
+        const eqStyle = (gbpEq && Math.abs(gbpEq) > 0) ? "font-weight:bold; color:#000;" : "color:#7f8c8d;";
+        html += '<tr>';
+        html += `<td style="padding:4px; border:1px solid #ddd; text-align:left;">${asset}</td>`;
+        html += `<td style="padding:4px; border:1px solid #ddd; text-align:right;">${balShow}</td>`;
+        html += `<td style="padding:4px; border:1px solid #ddd; text-align:right; ${eqStyle}">${eqShow}</td>`;
+        html += '</tr>';
+      };
+
+      _addOBRow('GBP',  _obGBP,  _obGBP,     true);
+      _addOBRow('EUR',  _obEUR,  _obEURgbp,  false);
+      _addOBRow('USDT', _obUSDT, _obUSDTgbp, false);
+      _addOBRow('XRP',  _obXRP,  _obXRPgbp,  false);
+
+      html += '</tbody></table>';
+      html += '</div>';
+
+
       // -- RE-IMPLEMENTING DEPOSITS SECTION TO BE ALWAYS VISIBLE --
       html += '<div style="background:#27ae60; color:#fff; padding:5px 10px; font-size:0.7rem; font-weight:bold; border-radius:4px 4px 0 0; margin-bottom:0; margin-top:20px;">Deposits from Haricom Bank Accounts  GBP | EUR</div>';
       html += '<table style="width:100%; border-collapse:collapse; margin-bottom:20px; border:1px solid #ddd;">';
@@ -4119,6 +4163,12 @@ const renderFeeGbpEq = (asset, gbpEq, total) => {
       // Uses the Statement row "Closing Balance" as source of truth (same data used to render the statement table)
       // Also capture Statement "Opening Balance" snapshot for reconciliation inputs
       let openingBalances = null;
+      // Opening balance GBP-basis values for reconciliation + Opening Balances section (initialized early to avoid TDZ)
+      let openGBP = 0;
+      let openEUR = 0;
+      let openUSDT = 0;
+      let openXRP = 0;
+
       if (Array.isArray(bankRecords) && bankRecords.length > 0) {
         for (let i = 0; i < bankRecords.length; i++) {
           const r = bankRecords[i];
@@ -4293,11 +4343,7 @@ const renderFeeGbpEq = (asset, gbpEq, total) => {
         return v.toFixed(2);
       };
 
-      // A) Opening balance (from statement "Opening Balance" snapshot if available; otherwise 0)
-      let openGBP = 0;
-      let openEUR = 0;
-      let openUSDT = 0;
-      let openXRP = 0;
+      // A) Opening balance (from statement "Opening Balance" snapshot section if available; otherwise 0)
 
       // B) Deposits from Haricom Bank Accounts (GBP + EUR->GBP equivalent)
       let depGBP = 0;
@@ -4416,7 +4462,7 @@ const renderFeeGbpEq = (asset, gbpEq, total) => {
       html += '</tbody></table>';
       html += '<div style="padding:6px 2px 0 2px; font-size:0.65rem; color:#444; line-height:1.25;">';
       html += `A reconciliation difference of GBP ${_fmt2(diffTotal)} exists because GBP equivalents in the summary are computed using average/available rates for the period and may involve rounding and fallback pricing sources.`;
-      html += '<br/><span style="color:#666;">Note: a plus value means expected &gt; actual; a minus value means expected &lt; actual.</span>';
+      html += '<br/><span style="color:#666;">Note: a plus value means calculated &gt; actual; a minus value means calculated &lt; actual.</span>';
       html += '</div>';
 
 
