@@ -473,7 +473,7 @@ if (window.logTrace) logTrace("Statement Summary state reset due to date-range c
 
 
 <script>
-const APP_VERSION = "v3.045-11";
+const APP_VERSION = "v3.045-12";
 </script>
 
 
@@ -4055,6 +4055,13 @@ if (item.fees) {
 
       // 
       // Start-of-period rates (used for GBP equivalents in Opening Balances section)
+      let startDateStr = (() => {
+        try {
+          const v = document.getElementById("startDate").value;
+          if (!v) return null;
+          return v;
+        } catch (e) { return null; }
+      })();
       const _rateKeys = (cacheData && cacheData.ratesCache) ? Object.keys(cacheData.ratesCache).filter(k => /^\d{4}-\d{2}-\d{2}$/.test(k)).sort() : [];
       let startRateKey = null;
       if (startDateStr && _rateKeys.length) {
@@ -4219,7 +4226,8 @@ const renderFeeGbpEq = (asset, gbpEq, total) => {
       }
 
       // Determine start-of-period FX rates for Opening Balance GBP equivalent conversions
-      const startDateStr = (() => {
+
+      startDateStr = (() => {
         try {
           const v = document.getElementById("startDate").value;
           if (!v) return null;
