@@ -473,7 +473,7 @@ if (window.logTrace) logTrace("Statement Summary state reset due to date-range c
 
 
 <script>
-const APP_VERSION = "v3.045-1";
+const APP_VERSION = "v3.045-2";
 </script>
 
 
@@ -1640,14 +1640,6 @@ function saveCacheToLocalStorage() {
       html += '</tr></thead><tbody>';
 
       for (const r of stagingRecords) {
-
-        // Accumulate GBP-basis closing totals for reconciliation (local to renderSummaryTable)
-        const _balNumTot = (bal !== null && bal !== undefined && isFinite(parseFloat(bal))) ? parseFloat(bal) : 0;
-        const _gbpEqNumTot = (gbpEq !== null && gbpEq !== undefined && gbpEq !== "n/a" && isFinite(parseFloat(gbpEq))) ? parseFloat(gbpEq) : 0;
-        if (a === "GBP") closingGBPVal = _balNumTot;
-        else if (a === "EUR") closingEURGbpEq = _gbpEqNumTot;
-        else if (a === "USDT") closingUSDTGbpEq = _gbpEqNumTot;
-        else if (a === "XRP") closingXRPGbpEq = _gbpEqNumTot;
 
         html += '<tr>';
         html += '<td class="w-date">' + escHtml(r.dateSent) + '</td>';
@@ -4237,6 +4229,21 @@ const renderFeeGbpEq = (asset, gbpEq, total) => {
           } else if (a === "XRP") {
             gbpEq = endXRPGBP ? (balNum * endXRPGBP) : null;
           }
+        }
+
+        // Accumulate GBP-basis closing totals for reconciliation (local to renderSummaryTable)
+        if (a === "GBP") {
+          const _n = parseFloat(bal);
+          closingGBPVal = (bal !== null && bal !== undefined && isFinite(_n)) ? _n : 0;
+        } else if (a === "EUR") {
+          const _n = parseFloat(gbpEq);
+          closingEURGbpEq = (gbpEq !== null && gbpEq !== undefined && gbpEq !== "n/a" && isFinite(_n)) ? _n : 0;
+        } else if (a === "USDT") {
+          const _n = parseFloat(gbpEq);
+          closingUSDTGbpEq = (gbpEq !== null && gbpEq !== undefined && gbpEq !== "n/a" && isFinite(_n)) ? _n : 0;
+        } else if (a === "XRP") {
+          const _n = parseFloat(gbpEq);
+          closingXRPGbpEq = (gbpEq !== null && gbpEq !== undefined && gbpEq !== "n/a" && isFinite(_n)) ? _n : 0;
         }
 
         html += '<tr>';
