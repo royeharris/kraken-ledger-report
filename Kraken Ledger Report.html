@@ -473,7 +473,7 @@ if (window.logTrace) logTrace("Statement Summary state reset due to date-range c
 
 
 <script>
-const APP_VERSION = "v3.045-4";
+const APP_VERSION = "v3.045-5";
 </script>
 
 
@@ -3939,6 +3939,13 @@ if (item.fees) {
       // Show Always
       const isEmpty = false;
 
+      // Opening Balance snapshot + GBP-basis equivalents (initialized early to avoid TDZ)
+      let openingBalances = null;
+      let openGBP = 0;
+      let openEUR = 0;
+      let openUSDT = 0;
+      let openXRP = 0;
+
       // --- Container (Centered) ---
       let html = '<div style="max-width:1000px; margin:0 auto; box-shadow:0 1px 4px rgba(0,0,0,0.1); background:#fff; border-radius:4px; overflow:hidden; border:1px solid #ddd;">';
 
@@ -4161,13 +4168,7 @@ const renderFeeGbpEq = (asset, gbpEq, total) => {
       
       // --- 5. CLOSING BALANCES (GBP | EUR | USDT | XRP) ---
       // Uses the Statement row "Closing Balance" as source of truth (same data used to render the statement table)
-      // Also capture Statement "Opening Balance" snapshot for reconciliation inputs
-      let openingBalances = null;
-      // Opening balance GBP-basis values for reconciliation + Opening Balances section (initialized early to avoid TDZ)
-      let openGBP = 0;
-      let openEUR = 0;
-      let openUSDT = 0;
-      let openXRP = 0;
+      // Also capture Statement "Opening Balance" snapshot for reconciliation inputs (uses early-declared locals)
 
       if (Array.isArray(bankRecords) && bankRecords.length > 0) {
         for (let i = 0; i < bankRecords.length; i++) {
