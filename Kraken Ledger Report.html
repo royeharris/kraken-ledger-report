@@ -473,7 +473,7 @@ if (window.logTrace) logTrace("Statement Summary state reset due to date-range c
 
 
 <script>
-const APP_VERSION = "v3.045-12";
+const APP_VERSION = "v3.045-13";
 </script>
 
 
@@ -4062,6 +4062,13 @@ if (item.fees) {
           return v;
         } catch (e) { return null; }
       })();
+      let endDateStr = (() => {
+        try {
+          const v = document.getElementById("endDate").value;
+          if (!v) return null;
+          return v;
+        } catch (e) { return null; }
+      })();
       const _rateKeys = (cacheData && cacheData.ratesCache) ? Object.keys(cacheData.ratesCache).filter(k => /^\d{4}-\d{2}-\d{2}$/.test(k)).sort() : [];
       let startRateKey = null;
       if (startDateStr && _rateKeys.length) {
@@ -4236,7 +4243,7 @@ const renderFeeGbpEq = (asset, gbpEq, total) => {
       })();
 
 // Determine end-of-period FX rates for GBP equivalent conversions
-      const endDateStr = (() => {
+      endDateStr = (() => {
         try {
           const v = document.getElementById("endDate").value;
           if (!v) return null;
