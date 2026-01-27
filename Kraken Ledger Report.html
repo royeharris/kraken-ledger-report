@@ -473,7 +473,7 @@ if (window.logTrace) logTrace("Statement Summary state reset due to date-range c
 
 
 <script>
-const APP_VERSION = "v3.045-9";
+const APP_VERSION = "v3.045-10";
 </script>
 
 
@@ -4054,7 +4054,20 @@ if (item.fees) {
 
 
       // 
-      // End-of-period rates (used for GBP equivalents in Opening/Closing sections)
+      // Start-of-period rates (used for GBP equivalents in Opening Balances section)
+      const _rateKeys = (cacheData && cacheData.ratesCache) ? Object.keys(cacheData.ratesCache).filter(k => /^\d{4}-\d{2}-\d{2}$/.test(k)).sort() : [];
+      let startRateKey = null;
+      if (startDateStr && _rateKeys.length) {
+        for (let i = 0; i < _rateKeys.length; i++) { if (_rateKeys[i] >= startDateStr) { startRateKey = _rateKeys[i]; break; } }
+        if (!startRateKey) { for (let i = _rateKeys.length - 1; i >= 0; i--) { if (_rateKeys[i] <= startDateStr) { startRateKey = _rateKeys[i]; break; } } }
+      }
+      if (!startRateKey) startRateKey = startDateStr || null;
+      let startRates = (startRateKey && cacheData && cacheData.ratesCache) ? (cacheData.ratesCache[startRateKey] || {}) : {};
+      let startUSDTGBP = (startRates && typeof startRates.USDTGBP === "number") ? startRates.USDTGBP : null;
+      let startXRPGBP  = (startRates && typeof startRates.XRPGBP  === "number") ? startRates.XRPGBP  : null;
+      let startEURGBP  = (startRates && typeof startRates.EURGBP  === "number") ? startRates.EURGBP  : null;
+
+      // End-of-period rates (used for GBP equivalents in Closing Balances section)
       let endRates = (endDateStr && cacheData && cacheData.ratesCache) ? (cacheData.ratesCache[endDateStr] || {}) : {};
       let endUSDTGBP = (endRates && typeof endRates.USDTGBP === "number") ? endRates.USDTGBP : null;
       let endXRPGBP  = (endRates && typeof endRates.XRPGBP  === "number") ? endRates.XRPGBP  : null;
@@ -4076,10 +4089,10 @@ if (item.fees) {
       const _obUSDT = (isFinite(Number(_ob.USDT)) ? Number(_ob.USDT) : 0);
       const _obXRP  = (isFinite(Number(_ob.XRP))  ? Number(_ob.XRP)  : 0);
 
-      // GBP equivalents use end-of-period rates (same convention as Closing Balances section)
-      const _obEURgbp  = (_obEUR  && endEURGBP  != null) ? (_obEUR  * endEURGBP)  : 0;
-      const _obUSDTgbp = (_obUSDT && endUSDTGBP != null) ? (_obUSDT * endUSDTGBP) : 0;
-      const _obXRPgbp  = (_obXRP  && endXRPGBP  != null) ? (_obXRP  * endXRPGBP)  : 0;
+      // GBP equivalents use start-of-period rates (closest available at/after start date)
+      const _obEURgbp  = (_obEUR  && startEURGBP  != null) ? (_obEUR  * startEURGBP)  : 0;
+      const _obUSDTgbp = (_obUSDT && startUSDTGBP != null) ? (_obUSDT * startUSDTGBP) : 0;
+      const _obXRPgbp  = (_obXRP  && startXRPGBP  != null) ? (_obXRP  * startXRPGBP)  : 0;
 
       const _addOBRow = (asset, bal, gbpEq, isGBPRow) => {
         const balShow = (isGBPRow ? fmtGBPAmount(bal) : fmtAmount(bal));
@@ -4205,7 +4218,16 @@ const renderFeeGbpEq = (asset, gbpEq, total) => {
         }
       }
 
-      // Determine end-of-period FX rates for GBP equivalent conversions
+      // Determine start-of-period FX rates for Opening Balance GBP equivalent conversions
+      const startDateStr = (() => {
+        try {
+          const v = document.getElementById("startDate").value;
+          if (!v) return null;
+          return v;
+        } catch (e) { return null; }
+      })();
+
+// Determine end-of-period FX rates for GBP equivalent conversions
       const endDateStr = (() => {
         try {
           const v = document.getElementById("endDate").value;
@@ -4244,9 +4266,9 @@ const renderFeeGbpEq = (asset, gbpEq, total) => {
         const obXRP  = (openingBalances.XRP  != null) ? Number(openingBalances.XRP)  : 0;
 
         openGBP  = (isFinite(obGBP)  ? obGBP  : 0);
-        openEUR  = (isFinite(obEUR)  && endEURGBP  != null ? (obEUR  * endEURGBP)  : 0);
-        openUSDT = (isFinite(obUSDT) && endUSDTGBP != null ? (obUSDT * endUSDTGBP) : 0);
-        openXRP  = (isFinite(obXRP)  && endXRPGBP  != null ? (obXRP  * endXRPGBP)  : 0);
+        openEUR  = (isFinite(obEUR)  && startEURGBP  != null ? (obEUR  * startEURGBP)  : 0);
+        openUSDT = (isFinite(obUSDT) && startUSDTGBP != null ? (obUSDT * startUSDTGBP) : 0);
+        openXRP  = (isFinite(obXRP)  && startXRPGBP  != null ? (obXRP  * startXRPGBP)  : 0);
       }
 
 
@@ -4477,7 +4499,7 @@ const renderFeeGbpEq = (asset, gbpEq, total) => {
       _addReconRow('Reconciliation Difference (Calculated - Actual)', diffGBP, diffEUR, diffUSDT, diffXRP, true);
 
       html += '</tbody></table>';
-      html += '<div style="padding:6px 2px 0 2px; font-size:0.65rem; color:#444; line-height:1.25;">';
+      html += '<div style="padding:6px 2px 0 2px; font-size:0.65rem; color:#444; line-height:1.25; page-break-inside:avoid; break-inside:avoid;">';
       html += `A reconciliation difference of GBP ${_fmt2(diffTotal)} exists because GBP equivalents in the summary are computed using average/available rates for the period and may involve rounding and fallback pricing sources.`;
       html += '<br/><span style="color:#666;">Note: a plus value means calculated &gt; actual; a minus value means calculated &lt; actual.</span>';
       html += '</div>';
