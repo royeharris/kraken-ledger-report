@@ -473,7 +473,7 @@ if (window.logTrace) logTrace("Statement Summary state reset due to date-range c
 
 
 <script>
-const APP_VERSION = "v3.045-13";
+const APP_VERSION = "v3.045-14";
 </script>
 
 
@@ -4079,13 +4079,13 @@ if (item.fees) {
       let startRates = (startRateKey && cacheData && cacheData.ratesCache) ? (cacheData.ratesCache[startRateKey] || {}) : {};
       let startUSDTGBP = (startRates && typeof startRates.USDTGBP === "number") ? startRates.USDTGBP : null;
       let startXRPGBP  = (startRates && typeof startRates.XRPGBP  === "number") ? startRates.XRPGBP  : null;
-      let startEURGBP  = (startRates && typeof startRates.EURGBP  === "number") ? startRates.EURGBP  : null;
+      let startEURGBP  = (startRates && typeof startRates.EURGBP  === "number") ? startRates.EURGBP  : ((startRates && typeof startRates.USDTGBP === "number" && typeof startRates.USDTEUR === "number" && startRates.USDTEUR !== 0) ? (startRates.USDTGBP / startRates.USDTEUR) : null);
 
       // End-of-period rates (used for GBP equivalents in Closing Balances section)
       let endRates = (endDateStr && cacheData && cacheData.ratesCache) ? (cacheData.ratesCache[endDateStr] || {}) : {};
       let endUSDTGBP = (endRates && typeof endRates.USDTGBP === "number") ? endRates.USDTGBP : null;
       let endXRPGBP  = (endRates && typeof endRates.XRPGBP  === "number") ? endRates.XRPGBP  : null;
-      let endEURGBP  = (endRates && typeof endRates.EURGBP  === "number") ? endRates.EURGBP  : null;
+      let endEURGBP  = (endRates && typeof endRates.EURGBP  === "number") ? endRates.EURGBP  : ((endRates && typeof endRates.USDTGBP === "number" && typeof endRates.USDTEUR === "number" && endRates.USDTEUR !== 0) ? (endRates.USDTGBP / endRates.USDTEUR) : null);
 
 // --- OPENING BALANCES ---
       html += '<div style="background:#2980b9; color:#fff; padding:5px 10px; font-size:0.7rem; font-weight:bold; border-radius:4px 4px 0 0; margin-top:14px; margin-bottom:0;">Opening Balances  GBP | EUR | USDT | XRP</div>';
