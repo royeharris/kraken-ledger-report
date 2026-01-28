@@ -488,7 +488,7 @@
 
 
   <script>
-    const APP_VERSION = "v3.045-18.4";
+    const APP_VERSION = "v3.045-18.5";
   </script>
 
 
@@ -2021,59 +2021,136 @@
               (r.asset === "GBP") ? "n/a" : fmt(r.gbpEq || 0, 2)
             ]);
 
-            // S5: Reconciliation (New Phase II Requirement)
+            // S5: Reconciliation (Full Export)
             let s5Headers = ["Reconciliation Difference  GBP | EUR | USDT | XRP", "", "", "", "", ""];
             let s5ColHeaders = ["Item", "GBP", "EUR (GBP Eq)", "USDT (GBP Eq)", "XRP (GBP Eq)", "Total (GBP)"];
             let s5Rows = [];
 
-            // Calculate Reconciliations
-            // 1. Get Opening/Closing from bankRecords if available
+            // Helper to sum up values from summaryRecords arrays
+            const _sumAsset = (arr, assetName, field) => {
+              if (!arr) return 0;
+              return arr.reduce((acc, r) => {
+                if (r.asset === assetName) return acc + (Number(r[field]) || 0);
+                return acc;
+              }, 0);
+            };
+
+            // 1. Calculate Flow Totals (GBP Eq where appropriate for columns)
+            // Deposits (Haricom Bank Accounts)
+            const depGBP = _sumAsset(summaryRecords.deposits, "GBP", "total");
+            const depEUR = _sumAsset(summaryRecords.deposits, "EUR", "gbpEq");
+
+            // Withdrawals (Recipients) - USDT/XRP
+            const wRecUSDT = -Math.abs(_sumAsset(summaryRecords.crypto, "USDT", "USDT_GBP"));
+            const wRecXRP = -Math.abs(_sumAsset(summaryRecords.crypto, "XRP", "XRP_GBP"));
+
+            // Withdrawals (Haricom Bank Accounts) - GBP/EUR
+            let wBankGBP = -Math.abs(_sumAsset(summaryRecords.fiat, "GBP", "GBP")); // raw GBP
+            let wBankEUR = -Math.abs(_sumAsset(summaryRecords.fiat, "EUR", "EUR_GBP")); // gbp eq
+
+            // Fees
+            let feeGBP = 0, feeEUR = 0, feeUSDT = 0, feeXRP = 0;
+            if (summaryRecords.fees) {
+              summaryRecords.fees.forEach(r => {
+                if (r.asset === "GBP") feeGBP += Number(r.total || 0);
+                else if (r.asset === "EUR") feeEUR += Number(r.gbpEq || 0);
+                else if (r.asset === "USDT") feeUSDT += Number(r.gbpEq || 0);
+                else if (r.asset === "XRP") feeXRP += Number(r.gbpEq || 0);
+              });
+            }
+            feeGBP = -Math.abs(feeGBP);
+            feeEUR = -Math.abs(feeEUR);
+            feeUSDT = -Math.abs(feeUSDT);
+            feeXRP = -Math.abs(feeXRP);
+
+            // Net Trade Activity
+            let tradeGBP = 0, tradeEUR = 0, tradeUSDT = 0, tradeXRP = 0;
+            if (summaryRecords.trades) {
+              summaryRecords.trades.forEach(r => {
+                if (r.asset === "GBP") tradeGBP += Number(r.total || 0);
+                else if (r.asset === "EUR") tradeEUR += Number(r.gbpEq || 0);
+                else if (r.asset === "USDT") tradeUSDT += Number(r.gbpEq || 0);
+                else if (r.asset === "XRP") tradeXRP += Number(r.gbpEq || 0);
+              });
+            }
+
+            // 2. Calculate Opening/Closing Balances (using ratesCache if needed)
             let openGBP = 0, openEUR = 0, openUSDT = 0, openXRP = 0;
             let actGBP = 0, actEUR = 0, actUSDT = 0, actXRP = 0;
 
-            if (bankRecords && bankRecords.length > 1) {
+            const _getRate = (asset, dateStr) => {
+              if (!cacheData || !cacheData.ratesCache || !dateStr) return null;
+              const dr = cacheData.ratesCache[dateStr];
+              if (!dr) return null;
+              if (asset === "EUR") return dr.EURGBP;
+              if (asset === "USDT") return dr.USDTGBP;
+              if (asset === "XRP") return dr.XRPGBP;
+              return null;
+            };
+
+            if (bankRecords && bankRecords.length > 0) {
               const first = bankRecords[0];
               const last = bankRecords[bankRecords.length - 1];
 
-              // Helper for snapshot rate (approximate or 0 if not available in export context, 
-              // but we only need GBP equivalents. In Render, we fetched rates. 
-              // Here, we might lack rates if not cached. 
-              // But we can try to use open/close balance GBP values if stored, or 0.)
-              // Actually, the simplest is to export the raw balances and let the Sheet do math?
-              // No, user wants the "Difference" value.
-              // We'll trust the summary totals for flow, but for Open/Close GBP equivs, we need rates.
-              // If we can't get rates easily here without async, we might skip precise Open/Close GBP?
-              // Wait, renderSummaryTable fetched rates. We can't fetch here easily in sync block.
-              // We'll output the raw native amounts for reference in separate cols? 
-              // No, the table expects GBP equivalents.
-              // We will assume 0 for GBP equivs of Open/Close if we can't get them, 
-              // OR we can try to read from the HTML if it's rendered? No, that's messy.
-              // Allow simplification: The Sheet Export is a "Snapshot". 
-              // We'll export 0 for the GBP equivs of Open/Close if we don't have rates, 
-              // keeping the "Difference" calculation consistent with what we CAN calculate.
-              if (first.balances && first.balances.GBP) openGBP = first.balances.GBP;
-              // ... for others, we need rates. We'll skip complex rate fetching here and show 0 fallback.
+              // Opening
+              if (first.balances) {
+                openGBP = first.balances.GBP || 0;
+                // For others, convert using start date rate
+                const d = first.date; // YYYY-MM-DD
+                const rEUR = _getRate("EUR", d) || 0;
+                const rUSDT = _getRate("USDT", d) || 0;
+                const rXRP = _getRate("XRP", d) || 0; // Likely 0 opening
+
+                openEUR = (first.balances.EUR || 0) * rEUR;
+                openUSDT = (first.balances.USDT || 0) * rUSDT;
+                openXRP = (first.balances.XRP || 0) * rXRP;
+              }
+
+              // Closing (Actual)
+              if (last.balances) {
+                actGBP = last.balances.GBP || 0;
+                const d = last.date;
+                const rEUR = _getRate("EUR", d) || 0;
+                const rUSDT = _getRate("USDT", d) || 0;
+                const rXRP = _getRate("XRP", d) || 0;
+
+                actEUR = (last.balances.EUR || 0) * rEUR;
+                actUSDT = (last.balances.USDT || 0) * rUSDT;
+                actXRP = (last.balances.XRP || 0) * rXRP;
+              }
             }
 
-            // To avoid "0" entries ruining the sheet, we'll placeholder them or omit if complex.
-            // But checklist says "Sheets outputs match exactly".
-            // Implementation: We'll add the S5 table structure but fill with "See HTML Report" for complex calc?
-            // No, user wants data.
-            // Let's rely on the flows which ARE calculated (Dep, W/D, Fees).
-            // The Difference depends on Open/Close.
+            // 3. Calculated Closing
+            const expGBP = openGBP + depGBP + wBankGBP + feeGBP + tradeGBP;
+            const expEUR = openEUR + depEUR + wBankEUR + feeEUR + tradeEUR;
+            const expUSDT = openUSDT + wRecUSDT + feeUSDT + tradeUSDT;
+            const expXRP = openXRP + wRecXRP + feeXRP + tradeXRP;
 
-            // Simplified Approach for S5 in Sheets:
-            // Just export the Flow Totals (Calculated Change). 
-            // Calculated Closing = Opening + Flows.
-            s5Rows = [["(Reconciliation details available in PDF/HTML Report)", "", "", "", "", ""]];
+            // 4. Differences
+            const diffGBP = expGBP - actGBP;
+            const diffEUR = expEUR - actEUR;
+            const diffUSDT = expUSDT - actUSDT;
+            const diffXRP = expXRP - actXRP;
+            const diffTotal = (expGBP + expEUR + expUSDT + expXRP) - (actGBP + actEUR + actUSDT + actXRP);
 
-            // Re-evaluating: The user wants "Sheets outputs use the single Summary object".
-            // Providing the flows (S1-S4) ensures the data is there.
-            // S5 is a "Nice to have" visual check. 
-            // I will execute the write without S5 full calc to avoid complexity/bugs, 
-            // but ensuring S1-S4 are perfect.
+            const _rowTotal = (a, b, c, d) => (a || 0) + (b || 0) + (c || 0) + (d || 0);
 
-            // Actually, I'll add the header for S5 but leave it empty/note.
+            // Build Rows
+            const _mkRow = (label, g, e, u, x, isTotal) => [
+              label,
+              fmt(g, 2), fmt(e, 2), fmt(u, 2), fmt(x, 2),
+              fmt(_rowTotal(g, e, u, x), 2)
+            ];
+
+            s5Rows.push(_mkRow("Opening Balance", openGBP, openEUR, openUSDT, openXRP));
+            s5Rows.push(_mkRow("Deposits (Haricom Bank Accounts)", depGBP, depEUR, 0, 0));
+            s5Rows.push(_mkRow("Withdrawals (Recipients)", 0, 0, wRecUSDT, wRecXRP));
+            s5Rows.push(_mkRow("Withdrawals (Haricom Bank Accounts)", wBankGBP, wBankEUR, 0, 0));
+            s5Rows.push(_mkRow("Fees", feeGBP, feeEUR, feeUSDT, feeXRP));
+            s5Rows.push(_mkRow("Net Trade Activity", tradeGBP, tradeEUR, tradeUSDT, tradeXRP));
+            s5Rows.push(_mkRow("Calculated Closing", expGBP, expEUR, expUSDT, expXRP, true));
+            s5Rows.push(_mkRow("Actual Closing", actGBP, actEUR, actUSDT, actXRP, true));
+            s5Rows.push(_mkRow("Reconciliation Difference", diffGBP, diffEUR, diffUSDT, diffXRP, true));
 
             const rangeReq = "'KrakenStatementSummary'!A:Z";
             await gapi.client.sheets.spreadsheets.values.clear({ spreadsheetId: targetSheetId, range: rangeReq });
