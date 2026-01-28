@@ -488,7 +488,7 @@
 
 
   <script>
-    const APP_VERSION = "v3.045-18.6";
+    const APP_VERSION = "v3.045-18.7";
   </script>
 
 
@@ -4628,10 +4628,25 @@
       _addReconRow('Reconciliation Difference (Calculated - Actual)', diffGBP, diffEUR, diffUSDT, diffXRP, true);
 
       html += '</tbody></table>';
-      html += '<div style="padding:6px 2px 0 2px; font-size:0.65rem; color:#444; line-height:1.25; page-break-inside:avoid; break-inside:avoid;">';
-      html += `A reconciliation difference of GBP ${_fmt2(diffTotal)} exists because GBP equivalents in the summary are computed using average/available rates for the period and may involve rounding and fallback pricing sources.`;
-      html += '<br/><span style="color:#666;">Note: a plus value means calculated &gt; actual; a minus value means calculated &lt; actual.</span>';
-      html += '</div>';
+
+      // v3.045-18.7: Calculate Total Volume for FX Variance Context
+      // Volume = Sum of absolute values of all flows (Deposits + Withdrawals + Fees + Trades)
+      // We use the GBP equivalents we calculated for the table.
+      const volDep = Math.abs(depGBP) + Math.abs(depEUR);
+      const volWRec = Math.abs(wRecUSDT) + Math.abs(wRecXRP);
+      const volWBank = Math.abs(wBankGBP) + Math.abs(wBankEUR);
+      const volFees = Math.abs(feeGBP) + Math.abs(feeEUR) + Math.abs(feeUSDT) + Math.abs(feeXRP);
+      const volTrades = Math.abs(tradeGBP) + Math.abs(tradeEUR) + Math.abs(tradeUSDT) + Math.abs(tradeXRP);
+
+      const totalVolume = volDep + volWRec + volWBank + volFees + volTrades;
+      const diffAbs = Math.abs(diffTotal);
+      const diffPct = totalVolume > 0 ? ((diffAbs / totalVolume) * 100).toFixed(3) : "0.000";
+
+      html += `<div style="font-size:0.75rem; color:#555; margin-top:5px;">
+        A reconciliation difference of GBP ${_fmt2(diffTotal)} exists. 
+        This represents <b>${diffPct}%</b> of the total transaction volume (GBP ${_fmt2(totalVolume)}) and is attributed to FX variance, exchange rate fluctuations, and spreads over the reporting period.
+        <br>Note: A positive value means calculated > actual; a negative value means calculated < actual.
+      </div>`;
 
 
       html += '</div></div>'; // Close padding div, Close container div
