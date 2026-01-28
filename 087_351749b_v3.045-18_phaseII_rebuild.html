@@ -488,7 +488,7 @@
 
 
   <script>
-    const APP_VERSION = "v3.045-18.3";
+    const APP_VERSION = "v3.045-18.4";
   </script>
 
 
@@ -3831,32 +3831,19 @@
         // --- 3. PROCESS FEES ---
         // Fees are positive in bankRecords (extracted from ledger fee).
         // They represent a cost.
-        // v3.045-18.3: Now we process fees for ALL types, including Trades.
-        for (const [fAsset, fVal] of Object.entries(item.fees)) {
+        // v3.045-18.4: Normalize fee assets (ZEUR->EUR, ZGBP->GBP)
+        for (const [rawFAsset, fVal] of Object.entries(item.fees)) {
           if (!fVal || fVal <= 0) continue;
 
-          // Accumulate
-          if (feeTotals[fAsset] !== undefined) {
-            feeTotals[fAsset] += fVal;
-
-            // GBP Equivalent for Fee
-            if (fAsset !== "GBP") {
-              let gbpEq = 0;
-              // Fees might not have explicit gbpValues in the row object (usually amounts do).
-              // So reliable fallback is daily rate.
-              const r = getDailyRate(fAsset, rawTime);
-              if (r) gbpEq = fVal * r;
-
-              if (gbpEq) feeGbpTotals[fAsset] += gbpEq;
-            }
-          }
-        }
-
-        // --- 3. PROCESS FEES ---
-        // Fees are positive in bankRecords (extracted from ledger fee).
-        // They represent a cost.
-        for (const [fAsset, fVal] of Object.entries(item.fees)) {
-          if (!fVal || fVal <= 0) continue;
+          let fAsset = rawFAsset;
+          // Normalization
+          if (fAsset === "ZEUR" || fAsset === "EUR.HOLD") fAsset = "EUR";
+          else if (fAsset === "ZGBP" || fAsset === "GBP.HOLD") fAsset = "GBP";
+          else if (fAsset === "ZUSD" || fAsset === "USD.HOLD") fAsset = "USDT"; // Or USD? Summary uses USDT for USD-peg usually, but let's stick to base. 
+          // Actually, feeTotals are initialized for GBP, EUR, USDT, XRP.
+          // If fee is in XXRP, map to XRP.
+          if (fAsset === "XXRP") fAsset = "XRP";
+          if (fAsset === "USDT") fAsset = "USDT"; // already correct
 
           // Accumulate
           if (feeTotals[fAsset] !== undefined) {
@@ -4592,55 +4579,8 @@
 
           TRACKED_ASSETS.forEach(asset => {
             const amt = r.amounts[asset];
-            const feeGBP = -feeTotals.GBP; // fees are costs (negative effect on balance)
-            const feeEUR = -feeTotals.EUR;
-            const feeUSDT = -feeTotals.USDT;
-            const feeXRP = -feeTotals.XRP;
-
-            // Net Trade Activity (new v3.045-18.3)
-            // These are signed flows (e.g. +USDT bought, -EUR sold)
-            // If we add this to the reconciliation, it bridges the gap between Deposits/Withdrawals and Closing Balance.
-            const tradeGBP = tradeTotals ? (tradeTotals.GBP || 0) : 0;
-            const tradeEUR = tradeTotals ? (tradeTotals.EUR || 0) : 0;
-            const tradeUSDT = tradeTotals ? (tradeTotals.USDT || 0) : 0;
-            const tradeXRP = tradeTotals ? (tradeTotals.XRP || 0) : 0;
-
-            // Note: For GBP Equivalents of trades, we do simple sum (approx). 
-            // Since specific trade GBP equivalents were calculated in the loop, we use them.
-            // But for base assets, we have exact amounts.
-
-            // For Reconciliation Table Columns (GBP Eq):
-            // We need to display the GBP equivalent effect of the activity.
-            // Since we calculated `tradeGbpTotals` in the loop, let's use it.
-            // But `tradeGbpTotals` is not global... wait, `generateStatementSummary` scope variables 
-            // are NOT available in `renderSummaryTable` because they are local to the function.
-            // MAJOR BUG: `renderSummaryTable` uses global variables like `depositTotals` which ARE initialized in `generateStatementSummary`?
-            // Checking `generateStatementSummary`: `depositTotals` IS declared global (or outer scope) at line 3611.
-            // `feeTotals` is NOT declared global. It's local const at 3689.
-            // `renderSummaryTable` at line 3782 must be accessing them?
-            // Wait, `renderSummaryTable` is called AT THE END OF `generateStatementSummary`. 
-            // BUT `renderSummaryTable` is defined as a separate function. 
-            // If `feeTotals` is const inside `generateStatementSummary`, `renderSummaryTable` CANNOT SEE IT unless passed or global.
-            // Line 3611: `let depositTotals = ...` (Outer scope, line 3610).
-            // Line 3611: `let depositTotals = ...` (Outer scope).
-            // Line 3689: `const feeTotals = ...` (Inner scope!)
-
-            // ERROR DETECTED: `renderSummaryTable` assumes access to these totals.
-            // Actually `renderSummaryTable` logic relies on `summaryRecords.fees` array to summing them up LOCALLY inside render?
-            // Let's check `renderSummaryTable` implementation again.
-            // StartLine 4323 (old view).
-            // It accesses `depositTotals.GBP`? Or does it calculate them from `summaryRecords`?
-            // "const depGBP = summaryRecords.deposits.find(d=>d.asset==='GBP')?.total || 0;"
-            // It recalculates from the `summaryRecords` object! Excellent. 
-            // So we don't need global variables.
-
-            // WE MUST SAVE TRADE TOTALS TO `summaryRecords` TO PASS THEM TO `renderSummaryTable`.
-
-            // Backtrack: Update `generateStatementSummary` to add `trades` to `summaryRecords`.
-
-            return;
-            // Use MultiReplace to fix both.
-            s[asset];
+            const fee = r.fees[asset];
+            const bal = r.balances[asset];
 
             const dec = (asset === "USDT" || asset === "XRP") ? 4 : 2;
 
