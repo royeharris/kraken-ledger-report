@@ -488,7 +488,7 @@
 
 
   <script>
-    const APP_VERSION = "v3.045-18.11";
+    const APP_VERSION = "v3.045-18.12";
   </script>
 
 
@@ -2182,11 +2182,17 @@
               resource: { values: [s4Headers, s4ColHeaders, ...s4Rows] }
             });
 
-            // S5 (Reconciliation Note)
+            // S5 (Reconciliation Table)
             currentRow = currentRow + 2 + s4Rows.length + 2;
+
+            // Add the new Footer Note as the last row
+            s5Rows.push(["", "", "", "", "", ""]); // Spacer
+            const footerNote = "A reconciliation difference of GBP " + (_fmt2(diffTotal)) + " exists. This is attributed to FX variance and exchange rate fluctuations over the reporting period. Note: A positive value means calculated > actual; a negative value means calculated < actual.";
+            s5Rows.push([footerNote]);
+
             await gapi.client.sheets.spreadsheets.values.update({
               spreadsheetId: targetSheetId, range: `'KrakenStatementSummary'!A${currentRow}`, valueInputOption: "USER_ENTERED",
-              resource: { values: [["Reconciliation Check"], ["See PDF Report for full Reconciliation logic"]] }
+              resource: { values: [s5Headers, s5ColHeaders, ...s5Rows] }
             });
 
             logTrace("KrakenStatementSummary exported.");
