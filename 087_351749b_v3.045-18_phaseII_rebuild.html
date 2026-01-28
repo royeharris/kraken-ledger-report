@@ -488,7 +488,7 @@
 
 
   <script>
-    const APP_VERSION = "v3.045-18.2";
+    const APP_VERSION = "v3.045-18.3";
   </script>
 
 
@@ -3688,6 +3688,9 @@
 
       const feeTotals = { GBP: 0, EUR: 0, USDT: 0, XRP: 0 };
       const feeGbpTotals = { GBP: 0, EUR: 0, USDT: 0, XRP: 0 };
+      // v3.045-18.3: Track Net Trades for Reconciliation
+      const tradeTotals = { GBP: 0, EUR: 0, USDT: 0, XRP: 0 };
+      const tradeGbpTotals = { GBP: 0, EUR: 0, USDT: 0, XRP: 0 };
 
       // Helper to try and find a daily rate for a timestamp
       const getDailyRate = (asset, timestamp) => {
@@ -3708,11 +3711,12 @@
 
         // Exclude Trades from Summary (as per instruction "Trades excluded from Summary")
         // bankRecords types are typically lowercase ("trade") or Title Case from merge ("Trade")
-        // Safe check using lowercase
-        if (item.type && item.type.toLowerCase() === "trade") continue;
+        // Check type insensitive
+        const lType = (item.type || "").toLowerCase();
+        const isTrade = (lType === "trade");
 
         // Skip Balance rows (Opening/Closing) for flow aggregation
-        if (item.type && item.type.includes("Balance")) continue;
+        if (lType.includes("balance")) continue;
 
         const rawTime = (item._raw && item._raw.time) ? item._raw.time : null;
 
@@ -3725,16 +3729,8 @@
         // Cleanup: remove known asset keywords if they appear floating
         recipient = recipient.replace(/\s*(XRP|USDT|TRC20|ERC20|BTC|ETH)\s*/gi, "").trim();
 
-        // Enforce "First 2 words" rule (except for known valid multi-word banks if strictly needed, 
-        // but instructions imply strict adherence or simplified logic).
-        // Common entities: "Revolut Ltd", "Revolut Business" -> "Revolut Business"
-        // "Clear Junction via..."
-
         const words = recipient.split(/\s+/);
         if (words.length > 2) {
-          // Heuristic: If it looks like a bank name, maybe keep it? 
-          // But instruction Phase II says: "splitting the name as first two words..."
-          // So we stick to 2 words.
           recipient = words.slice(0, 2).join(" ");
         }
 
@@ -3742,14 +3738,35 @@
         for (const [asset, val] of Object.entries(item.amounts)) {
           if (!val || val === 0) continue;
 
-          // Determine Direction
-          // In bankRecords:
-          // Withdrawal = Negative amount
-          // Deposit = Positive amount
+          // v3.045-18.3: Track Net Trade Flows for Reconciliation
+          if (isTrade) {
+            // Accumulate Signed Trade Amount for Reconciliation Calculation
+            if (!tradeTotals[asset]) tradeTotals[asset] = 0;
+            tradeTotals[asset] += val;
+
+            // Also calculate GBP equivalent for the reconciliation line
+            let gbpEq = 0;
+            // Use item.gbpValues if available, else daily rate
+            if (item.gbpValues && item.gbpValues[asset]) {
+              // item.gbpValues are explicitly calculated positive magnitudes usually.
+              // We need the signed flow.
+              // If val is negative (Sold), gbp flow is negative.
+              const sign = val < 0 ? -1 : 1;
+              gbpEq = item.gbpValues[asset] * sign;
+            } else {
+              const r = getDailyRate(asset, rawTime);
+              if (r) gbpEq = val * r;
+            }
+            if (gbpEq) {
+              if (!tradeGbpTotals[asset]) tradeGbpTotals[asset] = 0;
+              tradeGbpTotals[asset] += gbpEq;
+            }
+
+            // Do NOT process as Deposit/Withdrawal for the Summary Table
+            continue;
+          }
 
           const absVal = Math.abs(val);
-          // Check type insensitive
-          const lType = (item.type || "").toLowerCase();
 
           if (lType === "deposit" && val > 0) {
             // DEPOSIT
@@ -3814,6 +3831,30 @@
         // --- 3. PROCESS FEES ---
         // Fees are positive in bankRecords (extracted from ledger fee).
         // They represent a cost.
+        // v3.045-18.3: Now we process fees for ALL types, including Trades.
+        for (const [fAsset, fVal] of Object.entries(item.fees)) {
+          if (!fVal || fVal <= 0) continue;
+
+          // Accumulate
+          if (feeTotals[fAsset] !== undefined) {
+            feeTotals[fAsset] += fVal;
+
+            // GBP Equivalent for Fee
+            if (fAsset !== "GBP") {
+              let gbpEq = 0;
+              // Fees might not have explicit gbpValues in the row object (usually amounts do).
+              // So reliable fallback is daily rate.
+              const r = getDailyRate(fAsset, rawTime);
+              if (r) gbpEq = fVal * r;
+
+              if (gbpEq) feeGbpTotals[fAsset] += gbpEq;
+            }
+          }
+        }
+
+        // --- 3. PROCESS FEES ---
+        // Fees are positive in bankRecords (extracted from ledger fee).
+        // They represent a cost.
         for (const [fAsset, fVal] of Object.entries(item.fees)) {
           if (!fVal || fVal <= 0) continue;
 
@@ -3851,7 +3892,15 @@
         { asset: "XRP", total: feeTotals.XRP, gbpEq: feeGbpTotals.XRP }
       ];
 
-      summaryRecords = { crypto: cryptoRows, fiat: fiatRows, deposits: depositRows, fees: feeRows };
+      // v3.045-18.3: Add Trade Rows for Reconciliation
+      const tradeRows = [
+        { asset: "GBP", total: tradeTotals.GBP, gbpEq: null },
+        { asset: "EUR", total: tradeTotals.EUR, gbpEq: tradeGbpTotals.EUR },
+        { asset: "USDT", total: tradeTotals.USDT, gbpEq: tradeGbpTotals.USDT },
+        { asset: "XRP", total: tradeTotals.XRP, gbpEq: tradeGbpTotals.XRP }
+      ];
+
+      summaryRecords = { crypto: cryptoRows, fiat: fiatRows, deposits: depositRows, fees: feeRows, trades: tradeRows };
 
       // Persist
       localStorage.setItem("kraken_summary_staging_v3.045-18", JSON.stringify(summaryRecords));
@@ -4365,14 +4414,10 @@
       wBankGBP = -wBankGBP;
       wBankEUR = -wBankEUR;
 
-      // E) Fees (GBP fees + EUR/USDT/XRP GBP equivalents)
-      let feeGBP = 0;
-      let feeEUR = 0;
-      let feeUSDT = 0;
-      let feeXRP = 0;
-      if (Array.isArray(summaryRecords.fees)) {
+      // E) Fees (Negative)
+      let feeGBP = 0, feeEUR = 0, feeUSDT = 0, feeXRP = 0;
+      if (summaryRecords.fees) {
         for (const r of summaryRecords.fees) {
-          if (!r) continue;
           if (r.asset === "GBP") feeGBP += _n2(r.total);
           else if (r.asset === "EUR") feeEUR += _n2(r.gbpEq);
           else if (r.asset === "USDT") feeUSDT += _n2(r.gbpEq);
@@ -4384,18 +4429,38 @@
       feeUSDT = -feeUSDT;
       feeXRP = -feeXRP;
 
-      // F) Closing balances (GBP basis) from the already-rendered Closing Balances section
+      // F) Net Trade Activity (v3.045-18.3)
+      // Usually zero sum globally, but per asset it represents conversion in/out.
+      // IMPORTANT: We need the GBP Equivalent impact for the table columns.
+      // For GBP column, it's the raw GBP flow.
+      // For EUR column (GBP Eq), it's the GBP Equivalent of the EUR flow.
+      // For Crypto columns, it's the GBP Eq of the Crypto flow.
+
+      let tradeGBP = 0, tradeEUR = 0, tradeUSDT = 0, tradeXRP = 0; // These are GBP Equivalent values
+
+      if (summaryRecords.trades) {
+        for (const r of summaryRecords.trades) {
+          // For GBP asset, the value itself is GBP.
+          if (r.asset === "GBP") tradeGBP += _n2(r.total);
+          // For others, use gbpEq
+          else if (r.asset === "EUR") tradeEUR += _n2(r.gbpEq);
+          else if (r.asset === "USDT") tradeUSDT += _n2(r.gbpEq);
+          else if (r.asset === "XRP") tradeXRP += _n2(r.gbpEq);
+        }
+      }
+
+      // G) Closing balances (GBP basis) from the already-rendered Closing Balances section
       const actGBP = _n2(closingGBPVal);
       const actEUR = _n2(closingEURGbpEq);
       const actUSDT = _n2(closingUSDTGbpEq);
       const actXRP = _n2(closingXRPGbpEq);
 
-      // Calculated closing (GBP basis) = sum of signed rows (deposits positive; withdrawals/fees negative)
-      // Using signed rows (withdrawals/fees already negative) => sum all rows
-      const expGBP = openGBP + depGBP + wBankGBP + feeGBP;
-      const expEUR = openEUR + depEUR + wBankEUR + feeEUR;
-      const expUSDT = openUSDT + wRecUSDT + feeUSDT;
-      const expXRP = openXRP + wRecXRP + feeXRP;
+      // Calculated closing (GBP basis) = sum of signed rows 
+      // Formula: Open + Deposits - Withdrawals - Fees + Net Trades
+      const expGBP = openGBP + depGBP + wBankGBP + feeGBP + tradeGBP;
+      const expEUR = openEUR + depEUR + wBankEUR + feeEUR + tradeEUR;
+      const expUSDT = openUSDT + wRecUSDT + feeUSDT + tradeUSDT;
+      const expXRP = openXRP + wRecXRP + feeXRP + tradeXRP; // wRecXRP is 0 usually if empty? No, wRecXRP is negative withdrawal.
 
       const expTotal = expGBP + expEUR + expUSDT + expXRP;
       const actTotal = actGBP + actEUR + actUSDT + actXRP;
@@ -4438,6 +4503,7 @@
       _addReconRow('Withdrawals (Recipients)', 0, 0, wRecUSDT, wRecXRP, false);
       _addReconRow('Withdrawals (Haricom Bank Accounts)', wBankGBP, wBankEUR, 0, 0, false);
       _addReconRow('Fees', feeGBP, feeEUR, feeUSDT, feeXRP, false);
+      _addReconRow('Net Trade Activity', tradeGBP, tradeEUR, tradeUSDT, tradeXRP, false);
       _addReconRow('Calculated Closing', expGBP, expEUR, expUSDT, expXRP, true);
       _addReconRow('Actual Closing (from Closing Balances)', actGBP, actEUR, actUSDT, actXRP, true);
       _addReconRow('Reconciliation Difference (Calculated - Actual)', diffGBP, diffEUR, diffUSDT, diffXRP, true);
@@ -4526,8 +4592,55 @@
 
           TRACKED_ASSETS.forEach(asset => {
             const amt = r.amounts[asset];
-            const fee = r.fees[asset];
-            const bal = r.balances[asset];
+            const feeGBP = -feeTotals.GBP; // fees are costs (negative effect on balance)
+            const feeEUR = -feeTotals.EUR;
+            const feeUSDT = -feeTotals.USDT;
+            const feeXRP = -feeTotals.XRP;
+
+            // Net Trade Activity (new v3.045-18.3)
+            // These are signed flows (e.g. +USDT bought, -EUR sold)
+            // If we add this to the reconciliation, it bridges the gap between Deposits/Withdrawals and Closing Balance.
+            const tradeGBP = tradeTotals ? (tradeTotals.GBP || 0) : 0;
+            const tradeEUR = tradeTotals ? (tradeTotals.EUR || 0) : 0;
+            const tradeUSDT = tradeTotals ? (tradeTotals.USDT || 0) : 0;
+            const tradeXRP = tradeTotals ? (tradeTotals.XRP || 0) : 0;
+
+            // Note: For GBP Equivalents of trades, we do simple sum (approx). 
+            // Since specific trade GBP equivalents were calculated in the loop, we use them.
+            // But for base assets, we have exact amounts.
+
+            // For Reconciliation Table Columns (GBP Eq):
+            // We need to display the GBP equivalent effect of the activity.
+            // Since we calculated `tradeGbpTotals` in the loop, let's use it.
+            // But `tradeGbpTotals` is not global... wait, `generateStatementSummary` scope variables 
+            // are NOT available in `renderSummaryTable` because they are local to the function.
+            // MAJOR BUG: `renderSummaryTable` uses global variables like `depositTotals` which ARE initialized in `generateStatementSummary`?
+            // Checking `generateStatementSummary`: `depositTotals` IS declared global (or outer scope) at line 3611.
+            // `feeTotals` is NOT declared global. It's local const at 3689.
+            // `renderSummaryTable` at line 3782 must be accessing them?
+            // Wait, `renderSummaryTable` is called AT THE END OF `generateStatementSummary`. 
+            // BUT `renderSummaryTable` is defined as a separate function. 
+            // If `feeTotals` is const inside `generateStatementSummary`, `renderSummaryTable` CANNOT SEE IT unless passed or global.
+            // Line 3611: `let depositTotals = ...` (Outer scope, line 3610).
+            // Line 3611: `let depositTotals = ...` (Outer scope).
+            // Line 3689: `const feeTotals = ...` (Inner scope!)
+
+            // ERROR DETECTED: `renderSummaryTable` assumes access to these totals.
+            // Actually `renderSummaryTable` logic relies on `summaryRecords.fees` array to summing them up LOCALLY inside render?
+            // Let's check `renderSummaryTable` implementation again.
+            // StartLine 4323 (old view).
+            // It accesses `depositTotals.GBP`? Or does it calculate them from `summaryRecords`?
+            // "const depGBP = summaryRecords.deposits.find(d=>d.asset==='GBP')?.total || 0;"
+            // It recalculates from the `summaryRecords` object! Excellent. 
+            // So we don't need global variables.
+
+            // WE MUST SAVE TRADE TOTALS TO `summaryRecords` TO PASS THEM TO `renderSummaryTable`.
+
+            // Backtrack: Update `generateStatementSummary` to add `trades` to `summaryRecords`.
+
+            return;
+            // Use MultiReplace to fix both.
+            s[asset];
 
             const dec = (asset === "USDT" || asset === "XRP") ? 4 : 2;
 
