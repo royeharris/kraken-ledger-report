@@ -488,7 +488,7 @@
 
 
   <script>
-    const APP_VERSION = "v3.045-18.13";
+    const APP_VERSION = "v3.045-18.14";
   </script>
 
 
@@ -2056,17 +2056,26 @@
             };
 
             // 1. Calculate Flow Totals (GBP Eq where appropriate for columns)
-            // Deposits (Haricom Bank Accounts)
+            // 1. Calculate Flow Totals (GBP Eq where appropriate for columns)
+            // Deposits (Haricom Bank Accounts) - These HAVE r.asset
             const depGBP = _sumAsset(summaryRecords.deposits, "GBP", "total");
             const depEUR = _sumAsset(summaryRecords.deposits, "EUR", "gbpEq");
 
-            // Withdrawals (Recipients) - USDT/XRP
-            const wRecUSDT = -Math.abs(_sumAsset(summaryRecords.crypto, "USDT", "USDT_GBP"));
-            const wRecXRP = -Math.abs(_sumAsset(summaryRecords.crypto, "XRP", "XRP_GBP"));
+            // Withdrawals (Recipients) - USDT/XRP (No r.asset, sum fields directly from crypto rows)
+            const sumCryptoField = (arr, field) => {
+              if (!arr) return 0;
+              return arr.reduce((acc, r) => acc + (Number(r[field]) || 0), 0);
+            };
+            const wRecUSDT = -Math.abs(sumCryptoField(summaryRecords.crypto, "USDT_GBP"));
+            const wRecXRP = -Math.abs(sumCryptoField(summaryRecords.crypto, "XRP_GBP"));
 
-            // Withdrawals (Haricom Bank Accounts) - GBP/EUR
-            let wBankGBP = -Math.abs(_sumAsset(summaryRecords.fiat, "GBP", "GBP")); // raw GBP
-            let wBankEUR = -Math.abs(_sumAsset(summaryRecords.fiat, "EUR", "EUR_GBP")); // gbp eq
+            // Withdrawals (Haricom Bank Accounts) - GBP/EUR (No r.asset, sum fields directly from fiat rows)
+            const sumFiatField = (arr, field) => {
+              if (!arr) return 0;
+              return arr.reduce((acc, r) => acc + (Number(r[field]) || 0), 0);
+            };
+            let wBankGBP = -Math.abs(sumFiatField(summaryRecords.fiat, "GBP")); // raw GBP
+            let wBankEUR = -Math.abs(sumFiatField(summaryRecords.fiat, "EUR_GBP")); // gbp eq
 
             // Fees
             let feeGBP = 0, feeEUR = 0, feeUSDT = 0, feeXRP = 0;
