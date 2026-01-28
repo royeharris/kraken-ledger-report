@@ -488,7 +488,7 @@
 
 
   <script>
-    const APP_VERSION = "v3.045-18.12";
+    const APP_VERSION = "v3.045-18.13";
   </script>
 
 
@@ -1853,9 +1853,29 @@
         return;
       }
 
+      // UI Feedback: Disable button and show "Sending..."
+      const btn = document.querySelector('button[onclick="handleSync()"]');
+      let originalText = "Send Reports<br/>to Sheets";
+      if (btn) {
+        originalText = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = "Sending...";
+        btn.style.opacity = "0.7";
+        btn.style.cursor = "wait";
+      }
+
       updateStatus("Syncing...", "sync");
       logTrace(`Sync started. Target Sheet=${targetSheetId.substr(0, 10)}...`);
       logTrace(`Records: Staging=${stagingRecords.length}, Bank=${hasBank ? bankRecords.length : 0}, Summary=${hasSummary ? "yes" : "no"}`);
+
+      // Helper for formatting logic (copied from renderSummaryTable to fix ReferenceError)
+      const _fmt2 = (v) => {
+        if (v === null || v === undefined) return "-";
+        const n = parseFloat(v);
+        if (isNaN(n)) return "-";
+        if (n === 0) return "-";
+        return n.toFixed(2);
+      };
 
       ensureTokenThen(async () => {
         try {
@@ -2200,6 +2220,12 @@
 
           updateStatus("Synced All", "active");
           // alert("Sync complete.\nReports exported to Google Sheets.");
+          if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+            btn.style.opacity = "1";
+            btn.style.cursor = "pointer";
+          }
 
         } catch (e) {
           let errMsg;
@@ -2227,6 +2253,12 @@
             updateStatus("Sync error", "error");
             logTrace("Sync error: " + errMsg);
             // alert("Sync failed. " + errMsg);
+          }
+          if (btn) {
+            btn.disabled = false;
+            btn.innerHTML = originalText;
+            btn.style.opacity = "1";
+            btn.style.cursor = "pointer";
           }
         }
       });
@@ -4066,7 +4098,7 @@
       html += '<div onclick="toggleSummaryReport()" style="cursor:pointer; background:#2980b9; color:#fff; padding:8px 15px; font-size:0.8rem; font-weight:bold; display:flex; justify-content:space-between; align-items:center;" title="Click to close report">';
       html += '<span>Statement Summary</span>';
       if (!isEmpty) {
-        html += '<span style="display:flex; gap:6px; align-items:center;"><button onclick="event.stopPropagation(); printStatementSummary()" title="Print / Save PDF" style="padding:2px 8px; background:#fff; color:#000; border:none; border-radius:3px; font-size:0.65rem; font-weight:600; cursor:pointer;">&#x1F5B6; Print PDF</button><button onclick="event.stopPropagation(); printKrakenStatement()" title="Print / Save Kraken Statement PDF" style="padding:2px 8px; background:#fff; color:#000; border:none; border-radius:3px; font-size:0.65rem; font-weight:600; cursor:pointer;">&#x1F5B6; Statement PDF</button><button onclick="event.stopPropagation(); copySummaryReport()" title="Copy Table" style="padding:2px 8px; background:#fff; color:#000; border:none; border-radius:3px; font-size:0.65rem; font-weight:600; cursor:pointer;">&#x2398; Copy Tables</button></span>';
+        html += '<span style="display:flex; gap:6px; align-items:center;"><button onclick="event.stopPropagation(); printStatementSummary()" title="Print / Save PDF" style="padding:2px 8px; background:#e74c3c; color:#fff; border:none; border-radius:3px; font-size:0.65rem; font-weight:600; cursor:pointer;">&#x1F5B6; Statement Summary PDF</button><button onclick="event.stopPropagation(); printKrakenStatement()" title="Print / Save Kraken Statement PDF" style="padding:2px 8px; background:#fff; color:#000; border:none; border-radius:3px; font-size:0.65rem; font-weight:600; cursor:pointer;">&#x1F5B6; Statement PDF</button><button onclick="event.stopPropagation(); copySummaryReport()" title="Copy Table" style="padding:2px 8px; background:#fff; color:#000; border:none; border-radius:3px; font-size:0.65rem; font-weight:600; cursor:pointer;">&#x2398; Copy Tables</button></span>';
       }
       html += '</div>';
 
@@ -4804,17 +4836,8 @@
       const src = document.getElementById("summaryReportArea");
       if (!src || src.style.display === "none") { alert("Statement Summary is not displayed."); return; }
 
-      // Derive statement range from the Kraken Statement button label
-      let stmtLabel = "";
-      const stmtBtn = document.getElementById("btn_bank_statement");
-      if (stmtBtn && stmtBtn.textContent) {
-        stmtLabel = stmtBtn.textContent.trim();
-      }
-      if (stmtLabel.startsWith("Kraken Statement")) {
-        stmtLabel = stmtLabel.replace(/^Kraken Statement\s*/, "Kraken Statement Summary ");
-      } else if (!stmtLabel) {
-        stmtLabel = "Kraken Statement Summary";
-      }
+      // Hardcoded title to avoid "Generating..." text leaking from buttons
+      stmtLabel = "Kraken Statement Summary";
 
       // Clone and strip interactive controls
       const tmp = document.createElement("div");
