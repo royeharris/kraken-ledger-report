@@ -488,7 +488,7 @@
 
 
   <script>
-    const APP_VERSION = "v3.045-18.5";
+    const APP_VERSION = "v3.045-18.6";
   </script>
 
 
@@ -3236,6 +3236,61 @@
         }
 
         // STEP B: Fall back to external rates if no trade match
+        if (!rateSource) {
+          // v3.045-18.6: If this is a TRADE row, try to find its counterpart to get exact value!
+          // Previously we only did this for Withdrawals.
+          if (w.type === 'trade') {
+            // Reuse the findFiatCounterpart logic, but we might be the crypto side OR the fiat side.
+            // Usually we care about the CRYPTO side being valued in GBP.
+            // If this row is USDT/XRP, we want to know what we got/paid in Fiat.
+
+            // WE ARE ITERATING `sortedLedger` via `idx`.
+            // If this row is USDT, finding counterpart means finding the other leg (EUR/GBP).
+            const fiatTrade = findFiatCounterpart(idx, w);
+            if (fiatTrade) {
+              const cryptoAmount = Math.abs(w.amount);
+              const fiatAmount = Math.abs(fiatTrade.amount);
+              const matchedRate = fiatAmount / cryptoAmount; // implied rate
+              const fiatAsset = (fiatTrade.asset || "").toUpperCase();
+
+              conversionCurrency = fiatAsset.includes("GBP") || fiatAsset === "ZGBP" ? "GBP" :
+                fiatAsset.includes("EUR") || fiatAsset === "ZEUR" ? "EUR" : fiatAsset;
+
+              conversionRate = matchedRate.toFixed(6);
+
+              let calculatedVal = Math.abs(w.amount) * matchedRate; // Net amount? Trades usually have fee separate or embedded. 
+              // Ledger "amount" is net of fee usually? No, fee is separate column.
+              // But for Trade Valuation: Value of the Trade = Fiat Amount Involved.
+              // So simple: Valuation = Fiat Amount.
+              // Wait, if I bought 100 USDT for 85 EUR. Value is 85 EUR.
+              calculatedVal = fiatAmount;
+
+              let calculatedFee = Math.abs(w.fee) * matchedRate;
+              // Fee is in USDT probably. So value of fee is fee * rate.
+
+              if (conversionCurrency === "EUR") {
+                if (rates && rates.EURGBP) {
+                  calculatedVal = calculatedVal * rates.EURGBP;
+                  calculatedFee = calculatedFee * rates.EURGBP;
+                  rateSource = "Exact rate (EUR-Trade) + EURGBP";
+                } else {
+                  rateSource = "Exact rate (EUR-Trade) [No GBP conv]";
+                }
+              } else {
+                rateSource = "Exact rate";
+              }
+
+              gbpSent = calculatedVal.toFixed(2);
+              gbpFee = calculatedFee.toFixed(2);
+
+              logTrace("Trade Valuation for " + w.refid + ": " + cryptoAmount.toFixed(2) + " " + w.asset +
+                " = " + fiatAmount.toFixed(2) + " " + conversionCurrency +
+                " (rate: " + conversionRate + ") -> GBP: " + gbpSent);
+            }
+          }
+        }
+
+        // Fallback to Daily Rate if still no source
         if (!rateSource) {
           if (w.asset.includes("USDT")) {
             if (rates.USDTGBP) {
