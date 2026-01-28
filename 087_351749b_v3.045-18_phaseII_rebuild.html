@@ -488,7 +488,7 @@
 
 
   <script>
-    const APP_VERSION = "v3.045-18.1";
+    const APP_VERSION = "v3.045-18.2";
   </script>
 
 
@@ -3127,14 +3127,34 @@
             conversionCurrency = fiatAsset.includes("GBP") || fiatAsset === "ZGBP" ? "GBP" :
               fiatAsset.includes("EUR") || fiatAsset === "ZEUR" ? "EUR" : fiatAsset;
             conversionRate = matchedRate.toFixed(6);
-            gbpSent = (netAmount * matchedRate).toFixed(2);
-            gbpFee = (absFee * matchedRate).toFixed(2);
-            // v3.014: "Trade" -> "Exact rate" via User Request
-            rateSource = "Exact rate";
+
+            let calculatedVal = netAmount * matchedRate;
+            let calculatedFee = absFee * matchedRate;
+
+            // v3.045-18.2 Fix: If matched trade is EUR, calculate GBP equivalent using daily EURGBP rate
+            if (conversionCurrency === "EUR") {
+              // We need the daily EUR/GBP rate. 'rates' object passed to this loop context?
+              // generateReportFromCache iterates entries and fetches rates first.
+              // 'rates' variable is available in this scope (it is the daily rate object).
+              if (rates && rates.EURGBP) {
+                calculatedVal = calculatedVal * rates.EURGBP;
+                calculatedFee = calculatedFee * rates.EURGBP;
+                // Update rate source info to reflect this double conversion
+                rateSource = "Exact rate (EUR-Trade) + EURGBP";
+              } else {
+                // Fallback if no EURGBP rate (shouldn't happen as we fetch it)
+                rateSource = "Exact rate (EUR-Trade) [No GBP conv]";
+              }
+            } else {
+              rateSource = "Exact rate";
+            }
+
+            gbpSent = calculatedVal.toFixed(2);
+            gbpFee = calculatedFee.toFixed(2);
 
             logTrace("Trade match for " + w.refid + ": " + cryptoAmount.toFixed(2) + " " + w.asset +
               " = " + fiatAmount.toFixed(2) + " " + conversionCurrency +
-              " (rate: " + conversionRate + ")");
+              " (rate: " + conversionRate + ")" + (conversionCurrency === "EUR" ? " -> Converted to GBP: " + gbpSent : ""));
           }
         }
 
