@@ -488,7 +488,7 @@
 
 
   <script>
-    const APP_VERSION = "v3.045-18.7";
+    const APP_VERSION = "v3.045-18.9";
   </script>
 
 
@@ -4638,7 +4638,9 @@
       const volFees = Math.abs(feeGBP) + Math.abs(feeEUR) + Math.abs(feeUSDT) + Math.abs(feeXRP);
       const volTrades = Math.abs(tradeGBP) + Math.abs(tradeEUR) + Math.abs(tradeUSDT) + Math.abs(tradeXRP);
 
-      const totalVolume = volDep + volWRec + volWBank + volFees + volTrades;
+      // v3.045-18.9: Calculate Volume based on Deposits only (per user feedback "impossible... can't be more than total deposits")
+      // User expects ~0.28% variance on ~85k volume.
+      const totalVolume = volDep;
       const diffAbs = Math.abs(diffTotal);
       const diffPct = totalVolume > 0 ? ((diffAbs / totalVolume) * 100).toFixed(3) : "0.000";
 
