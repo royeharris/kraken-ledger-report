@@ -3687,10 +3687,12 @@
         // item is a bankRecord { date, time, type, details, amounts: {}, fees: {}, balances: {}, _raw: e, gbpValues: {} }
 
         // Exclude Trades from Summary (as per instruction "Trades excluded from Summary")
-        if (item.type === "Trade") continue;
+        // bankRecords types are typically lowercase ("trade") or Title Case from merge ("Trade")
+        // Safe check using lowercase
+        if (item.type && item.type.toLowerCase() === "trade") continue;
 
         // Skip Balance rows (Opening/Closing) for flow aggregation
-        if (item.type.includes("Balance")) continue;
+        if (item.type && item.type.includes("Balance")) continue;
 
         const rawTime = (item._raw && item._raw.time) ? item._raw.time : null;
 
@@ -3726,12 +3728,10 @@
           // Deposit = Positive amount
 
           const absVal = Math.abs(val);
-          const isWithdrawal = (val < 0);
-          // Note: item.type might be "Withdrawal" or "Deposit". 
-          // Trust the sign of the amount for flow direction in aggregation?
-          // Actually, `item.type` is safer for categorization (e.g. valid deposit vs returned withdrawal).
+          // Check type insensitive
+          const lType = (item.type || "").toLowerCase();
 
-          if (item.type === "Deposit" && val > 0) {
+          if (lType === "deposit" && val > 0) {
             // DEPOSIT
             if (asset === "GBP" || asset === "EUR") {
               depositTotals[asset] += absVal;
@@ -3751,7 +3751,7 @@
               }
             }
 
-          } else if (item.type === "Withdrawal" && val < 0) {
+          } else if (lType === "withdrawal" && val < 0) {
             // WITHDRAWAL
             if (asset === "USDT" || asset === "XRP") {
               // CRYPTO EXPENSE
