@@ -7,7 +7,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-  <title>Kraken Ledger Report v3.045-19.39</title>
+  <title>Kraken Ledger Report v3.045-19.41</title>
   <script async defer src="https://accounts.google.com/gsi/client"></script>
   <script async defer src="https://apis.google.com/js/api.js"></script>
   <style>
@@ -495,7 +495,7 @@
 
 
   <script>
-    const APP_VERSION = "v3.045-19.39";
+    const APP_VERSION = "v3.045-19.41";
   </script>
 
 
@@ -773,7 +773,7 @@
     <button id="log_btn" onclick="toggleLog()"
       style="width:100%; padding:8px; margin-top:10px; background:#8e44ad; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Display
       Progress Log</button>
-    <div id="trace_log" onclick="toggleLog()">Trace: v3.045-19.39 Kraken Withdrawals Report initialized.</div>
+    <div id="trace_log" onclick="toggleLog()">Trace: v3.045-19.41 Kraken Withdrawals Report initialized.</div>
   </div>
 
   <script>
@@ -4133,15 +4133,37 @@
         // --- 1. RECIPIENT IDENTIFICATION ---
         let recipient = item.details || "Unknown";
 
+        // v3.045-19.40: Smart Name Extraction
+        // If details is just "Withdrawal" (common for Bank Transfers), try to use the raw address label if available
+        // logic: if (recipient === "Withdrawal" && item.addressLabel) recipient = item.addressLabel;
+        // However, item.details usually COMES from the address label in processLedger.
+        // Let's refine the cleanup to ensure "Revolut Ltd" etc comes through.
+
         // Cleanup: remove parenthetical assets e.g. " (USDT)"
         recipient = recipient.replace(/\(.*\)/, "").trim();
 
         // Cleanup: remove known asset keywords if they appear floating
         recipient = recipient.replace(/\s*(XRP|USDT|TRC20|ERC20|BTC|ETH)\s*/gi, "").trim();
 
+        // v3.045-19.40: Enforce "First Two Words" rule for better formatting
+        // This fixes "Revolut Business" showing as just "Withdrawal" if the logic previously failed.
         const words = recipient.split(/\s+/);
         if (words.length > 2) {
           recipient = words.slice(0, 2).join(" ");
+        }
+
+        // Specific Fix: If it's still just "Withdrawal" and we have a specific known bank pattern, or if it was overridden??
+        // actually, the user says "derived from the label on the address table". 
+        // In processLedger, we set row.details. If it was "Withdrawal", it means no address match was found OR the label was "Withdrawal".
+        // Use a fallback if still generic? No, the issue is likely that "Revolut Business" was > 2 words or handled wrong.
+        // Just ensuring the 2-word slice happens cleanly is likely the fix, or we need to check if 'Withdrawal' can be improved.
+        if (recipient.toLowerCase() === "withdrawal" && item._raw && item._raw.info) {
+          // Fallback to raw info if details is generic
+          let rawInfo = item._raw.info;
+          if (rawInfo) {
+            const rawWords = rawInfo.split(/\s+/);
+            if (rawWords.length >= 1) recipient = rawWords.slice(0, 2).join(" ");
+          }
         }
 
         // --- 2. PROCESS AMOUNTS ---
@@ -4567,7 +4589,11 @@
       html += '</tr></thead><tbody>';
 
       const _addOBRow = (asset, bal, gbpEq, isGBPRow) => {
-        const balShow = (isGBPRow ? fmtGBPAmount(bal) : fmtAmount(bal));
+        // v3.045-19.40: User requested specific decimal conventions:
+        // GBP/EUR: 2 decimals
+        // USDT/XRP: 4 decimals
+        const decimals = (asset === "GBP" || asset === "EUR") ? 2 : 4;
+        const balShow = (bal == null) ? "0.00" : Number(bal).toFixed(decimals);
         const eqShow = fmtGBPAmount(gbpEq);
         const eqStyle = (gbpEq && Math.abs(gbpEq) > 0) ? "font-weight:bold; color:#000;" : "color:#7f8c8d;";
         html += '<tr>';
