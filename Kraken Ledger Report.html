@@ -7,7 +7,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-  <title>Kraken Ledger Report v4.014</title>
+  <title>Kraken Ledger Report v4.015</title>
   <script async defer src="https://accounts.google.com/gsi/client"></script>
   <script async defer src="https://apis.google.com/js/api.js"></script>
   <style>
@@ -495,7 +495,7 @@
 
 
   <script>
-    const APP_VERSION = "v4.014";
+    const APP_VERSION = "v4.015";
   </script>
 
 
@@ -773,7 +773,7 @@
     <button id="log_btn" onclick="toggleLog()"
       style="width:100%; padding:8px; margin-top:10px; background:#8e44ad; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Display
       Progress Log</button>
-    <div id="trace_log" onclick="toggleLog()">Trace: v4.014 Kraken Ledger Report initialized.</div>
+    <div id="trace_log" onclick="toggleLog()">Trace: v4.015 Kraken Ledger Report initialized.</div>
   </div>
 
   <script>
@@ -3961,9 +3961,24 @@
               }
 
               // 3. Try Exact Info Match (Fiat)
-              // Match if History.info equals AddressBook.info exactly
               if (!addrMatch && addr) {
                 addrMatch = cacheData.krakenAddresses.find(a => a.info === addr);
+              }
+
+              // 4. Try Asset-Aware Smart Match (Restored & Refined)
+              // Necessary because Ledger says "Revolut Ltd" but Address Book says "Revolut Business".
+              // Without this, Linkage fails, fallback kicks in, names become identical, and Summary merges them.
+              if (!addrMatch && addr && (normalizedAsset === "GBP" || normalizedAsset === "EUR")) {
+                const assetAddresses = cacheData.krakenAddresses.filter(a => a.asset === normalizedAsset);
+                addrMatch = assetAddresses.find(a => {
+                  const infoSafe = addr.toLowerCase().trim();
+                  const keySafe = a.key.toLowerCase().trim();
+                  // Match if they share the first word (e.g. "Revolut") provided it's significant (>3 chars)
+                  const firstWordInfo = infoSafe.split(' ')[0];
+                  const firstWordKey = keySafe.split(' ')[0];
+                  if (firstWordInfo.length > 3 && firstWordInfo === firstWordKey) return true;
+                  return false;
+                });
               }
 
               if (addrMatch) {
