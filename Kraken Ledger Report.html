@@ -7,7 +7,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-  <title>Kraken Ledger Report v4.015</title>
+  <title>Kraken Ledger Report v4.016</title>
   <script async defer src="https://accounts.google.com/gsi/client"></script>
   <script async defer src="https://apis.google.com/js/api.js"></script>
   <style>
@@ -495,7 +495,7 @@
 
 
   <script>
-    const APP_VERSION = "v4.015";
+    const APP_VERSION = "v4.016";
   </script>
 
 
@@ -773,7 +773,7 @@
     <button id="log_btn" onclick="toggleLog()"
       style="width:100%; padding:8px; margin-top:10px; background:#8e44ad; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Display
       Progress Log</button>
-    <div id="trace_log" onclick="toggleLog()">Trace: v4.015 Kraken Ledger Report initialized.</div>
+    <div id="trace_log" onclick="toggleLog()">Trace: v4.016 Kraken Ledger Report initialized.</div>
   </div>
 
   <script>
@@ -3960,9 +3960,20 @@
               }
 
               const addr = historyMatch.info || historyMatch.address;
-              // v4.011: Strict Linkage & Asset Separation
+
+              // v4.016: Dynamic Transaction Key Priority
+              // If the history record ITSELF contains the key (e.g. "Revolut Business"), USE IT.
+              // This is the most direct, dynamic link to the specific address used.
+              if (historyMatch.key) {
+                recipient = historyMatch.key;
+              }
+
+              // v4.011: Strict Linkage & Asset Separation (Fallback if Key is missing)
               // 1. Try Exact Address Match (Crypto)
-              let addrMatch = cacheData.krakenAddresses.find(a => a.address === addr);
+              let addrMatch = null;
+              if (!recipient) {
+                addrMatch = cacheData.krakenAddresses.find(a => a.address === addr);
+              }
 
               // 2. Try Exact Key Match (Fiat)
               if (!addrMatch && addr) {
