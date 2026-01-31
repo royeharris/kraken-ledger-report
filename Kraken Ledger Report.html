@@ -495,7 +495,7 @@
 
 
   <script>
-    const APP_VERSION = "v3.045-19.22";
+    const APP_VERSION = "v3.045-19.23";
   </script>
 
 
@@ -724,7 +724,7 @@
 
     <!-- Status Bar -->
     <div class="status-row"
-      style="display:flex; align-items:center; justify-content:space-between; gap:20px; padding:6px 0;">
+      style="display:flex; align-items:center; justify-content:space-between; gap:20px; padding:6px 15px;">
       <!-- Left & Center Content (Addresses + Stats) -->
       <div id="statusSummary" style="flex:1; display:flex; font-size:0.7rem;">
         <div>Ref: <b id="withdrawalCount">0</b></div>
@@ -5085,6 +5085,17 @@
       copyNodeText(div);
     }
 
+    // Helper: Convert YYYY-MM-DD to "DD Month YYYY" (e.g. 01 September 2025)
+    function formatDateForPDF(isoDate) {
+      if (!isoDate) return "";
+      const d = new Date(isoDate);
+      if (isNaN(d.getTime())) return isoDate;
+      const day = d.getDate().toString().padStart(2, '0');
+      const month = d.toLocaleString('en-GB', { month: 'long' });
+      const year = d.getFullYear();
+      return `${day} ${month} ${year}`;
+    }
+
 
     // v3.043-2: Print / Save Statement Summary as PDF (browser print-to-PDF)
     function printStatementSummary() {
@@ -5092,7 +5103,9 @@
       if (!src || src.style.display === "none") { alert("Statement Summary is not displayed."); return; }
 
       // Hardcoded title to avoid "Generating..." text leaking from buttons
-      stmtLabel = "Kraken Statement Summary";
+      const start = document.getElementById("startDate")?.value || "";
+      const end = document.getElementById("endDate")?.value || "";
+      stmtLabel = `Kraken Statement Summary ${start} to ${end}`;
 
       // Clone and strip interactive controls
       const tmp = document.createElement("div");
@@ -5104,7 +5117,7 @@
       const tablesHtml = content ? content.innerHTML : tmp.innerHTML;
 
       const titleLine = `Kraken Reports ${APP_VERSION}`;
-      const subtitleLine = "GBP | EUR | USDT | XRP transactions in Date range";
+      const subtitleLine = `GBP | EUR | USDT | XRP transactions ${formatDateForPDF(start)} to ${formatDateForPDF(end)}`;
 
       const w = window.open("", "_blank");
       if (!w) { alert("Popup blocked. Allow popups to print."); return; }
@@ -5114,7 +5127,7 @@
 <html>
 <head>
 <meta charset="utf-8"/>
-<title>Kraken Statement Summary</title>
+<title>${stmtLabel}</title>
 <style>
   @page { margin: 12mm; }
   * { box-sizing: border-box; }
@@ -5169,7 +5182,10 @@
 
       const start = document.getElementById("startDate")?.value || "";
       const end = document.getElementById("endDate")?.value || "";
-      const stmtLabel = `Kraken Statement ${start} to ${end}`;
+
+      const pdfTitle = `Kraken Statement ${start} to ${end}`; // For filename
+      const pdfHeader = `Kraken Statement ${formatDateForPDF(start)} to ${formatDateForPDF(end)}`; // For header display
+
       const titleLine = `Kraken Reports ${APP_VERSION}`;
 
       const w = window.open("", "_blank");
@@ -5177,7 +5193,7 @@
       w.document.write(`
     <html>
       <head>
-        <title>${stmtLabel}</title>
+        <title>${pdfTitle}</title>
         <style>
           body { font-family: Arial, sans-serif; margin: 18px; }
           .pdf-title { font-size: 16px; font-weight: 700; margin: 0 0 6px 0; }
@@ -5199,7 +5215,7 @@
       </head>
       <body>
         <div class="pdf-title">${titleLine}</div>
-        <div class="pdf-subtitle">${stmtLabel}</div>
+        <div class="pdf-subtitle">${pdfHeader}</div>
       </body>
     </html>
   `);
