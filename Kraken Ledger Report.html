@@ -495,7 +495,7 @@
 
 
   <script>
-    const APP_VERSION = "v3.045-19.17";
+    const APP_VERSION = "v3.045-19.18";
   </script>
 
 
@@ -1135,10 +1135,30 @@
       const totalTrades = tradesFiatToCrypto + tradesCryptoToFiat;
 
       const summaryHtml = `
-        <div style="display:flex; flex-direction:column; gap:4px; align-items:flex-start;">
-          <div class="status-item" style="width:100%;"><span style="color:#d35400;">Addresses:</span> <b id="addressCount">${cacheData.krakenAddresses.length}</b></div>
-          <div class="status-item" style="width:100%;"><span style="color:#000;">Withdrawals:</span> <b>${wCrypto}</b> Crypto / <b>${wFiat}</b> Fiat <span style="color:#bbb; margin:0 8px;">|</span> <span style="color:#000;">Deposits:</span> <b>${dFiat}</b> Fiat</div>
-          <div class="status-item" style="width:100%;"><span style="color:#8e44ad;">Trades:</span> <b>${tradesFiatToCrypto}</b> fiat&gt;crypto / <b>${tradesCryptoToFiat}</b> crypto&gt;fiat / <b>${tradesFiatToFiat}</b> fiat&gt;fiat</div>
+        <div style="display:flex; flex-direction:row; align-items:center; gap:25px; height:100%;">
+          <!-- Block 1: Addresses (Centered Vertical) -->
+          <div style="display:flex; flex-direction:column; justify-content:center; align-items:center; height:100%;">
+             <span style="color:#d35400; font-weight:bold; font-size:0.8rem;">Addresses: ${cacheData.krakenAddresses.length}</span>
+          </div>
+
+          <!-- Block 2: Stats Grid (Deposits, Trades, Withdrawals) -->
+          <div style="display:grid; grid-template-columns: auto auto; gap:2px 12px; align-items:center; font-size:0.7rem;">
+            <!-- Row 1: Deposits -->
+            <div style="font-weight:600; text-align:left; color:#000;">Deposits:</div>
+            <div style="text-align:left; color:#000;"><b>${dFiat}</b> Fiat</div>
+
+            <!-- Row 2: Trades -->
+            <div style="font-weight:600; text-align:left; color:#8e44ad;">Trades:</div>
+            <div style="text-align:left; color:#8e44ad;">
+               <b>${tradesFiatToCrypto}</b> f&gt;c / <b>${tradesCryptoToFiat}</b> c&gt;f / <b>${tradesFiatToFiat}</b> f&gt;f
+            </div>
+
+            <!-- Row 3: Withdrawals -->
+            <div style="font-weight:600; text-align:left; color:#000;">Withdrawals:</div>
+            <div style="text-align:left; color:#000;">
+               <b>${wCrypto}</b> Crypto / <b>${wFiat}</b> Fiat
+            </div>
+          </div>
         </div>
       `;
 
@@ -1644,33 +1664,28 @@
         `3. Statement (${bankCount}): Low count expected (Merges 2x Trade lines into 1).`;
 
       // Flex layout for vertical stacking: Label | Ledger | Trade/Withdraw Report | Statement Report
+      // Grid layout for tight vertical stacking and aligned numbers
       hint.innerHTML = `
-        <div style="display:flex; gap:30px; align-items:flex-start;">
+        <div style="display:flex; gap:15px; align-items:flex-start;">
           <!-- Col 1: Label -->
-          <div style="display:flex; flex-direction:column; align-items:flex-start; justify-content:center; height:100%; line-height:1.2; color:#333; font-weight:600;" title="${tooltipText}">
+          <div style="display:flex; flex-direction:column; justify-content:center; height:100%; line-height:1.2; color:#333; font-weight:600;" title="${tooltipText}">
             <span>Number of</span>
             <span>Records</span>
           </div>
 
-          <!-- Col 2: Ledger -->
-          <div style="display:flex; flex-direction:column; align-items:flex-start; line-height:1.2; color:#16a085;">
-            <span>Ledger</span>
-            <span style="visibility:hidden;">-</span> <!-- Spacer to align with 3-line headers -->
-            <span style="font-weight:bold;">${ledgerCount}</span>
-          </div>
+          <!-- Col 2: Stats Grid -->
+          <div style="display:grid; grid-template-columns: auto auto; gap:2px 15px; align-items:baseline;">
+            <!-- Ledger -->
+            <div style="color:#16a085; text-align:right;">Ledger</div>
+            <div style="font-weight:bold; color:#16a085; text-align:left;">${ledgerCount}</div>
 
-          <!-- Col 3: Trade/Withdraw Report -->
-          <div style="display:flex; flex-direction:column; align-items:flex-start; line-height:1.2; color:#d35400;">
-            <span>Trade/Withdraw</span>
-            <span>Report</span>
-            <span style="font-weight:bold;">${reportCount}</span>
-          </div>
+            <!-- Trade/Withdraw Report -->
+            <div style="color:#d35400; text-align:right;">Trade/Withdraw Report</div>
+            <div style="font-weight:bold; color:#d35400; text-align:left;">${reportCount}</div>
 
-          <!-- Col 4: Statement Report -->
-          <div style="display:flex; flex-direction:column; align-items:flex-start; line-height:1.2; color:#000;">
-            <span>Statement</span>
-            <span>Report</span>
-            <span style="font-weight:bold;">${bankCount}</span>
+            <!-- Statement Report -->
+            <div style="color:#000; text-align:right;">Statement Report</div>
+            <div style="font-weight:bold; color:#000; text-align:left;">${bankCount}</div>
           </div>
         </div>
       `;
