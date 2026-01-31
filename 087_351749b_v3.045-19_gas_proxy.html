@@ -495,7 +495,7 @@
 
 
   <script>
-    const APP_VERSION = "v3.045-19.16";
+    const APP_VERSION = "v3.045-19.17";
   </script>
 
 
@@ -884,6 +884,32 @@
     // ---------- Date Handling ----------
     // ---------- Date Handling ----------
     function handleDateChange(id) {
+      const sInput = document.getElementById("startDate");
+      const eInput = document.getElementById("endDate");
+      const sVal = sInput.value;
+      const eVal = eInput.value;
+      const today = new Date().toISOString().split("T")[0];
+
+      // Set MAX to today for both (proactive UX)
+      if (!sInput.max) sInput.max = today;
+      if (!eInput.max) eInput.max = today;
+
+      // 1. Future Check
+      if (eVal && eVal > today) {
+        alert("End Date cannot be in the future.");
+        eInput.value = "";
+        return;
+      }
+
+      // 2. Sequence Check (Only if both present)
+      if (sVal && eVal) {
+        if (eVal < sVal) {
+          alert("End Date cannot be before Start Date.");
+          eInput.value = ""; // Reset End Date
+          return;
+        }
+      }
+
       // Update Bank Report Button Label (Always run this)
       updateBankButtonLabel();
 
