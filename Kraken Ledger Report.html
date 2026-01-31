@@ -3904,7 +3904,13 @@
             // 1. History Lookup
             // v4.004: Strict RefID matching (User Request "No Fuzzy Logic").
             // Diagnostic logging enabled for failed matches.
-            let historyMatch = cacheData.withdrawalHistory.find(h => h.refid === e.refid);
+            // v4.005: Extended Direct Match (RefID, LedgerID, Cross-Check)
+            let historyMatch = cacheData.withdrawalHistory.find(h => {
+              if (h.refid === e.refid) return true;
+              if (h.ledger_id && h.ledger_id === e.ledgerId) return true;
+              if (h.refid === e.ledgerId) return true;
+              return false;
+            });
 
             // Diagnostic Logging for Fiat Linkage Failures
             if (!historyMatch && (normalizedAsset === "GBP" || normalizedAsset === "EUR")) {
