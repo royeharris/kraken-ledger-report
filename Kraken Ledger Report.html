@@ -7,7 +7,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-  <title>Kraken Ledger Report v4.001</title>
+  <title>Kraken Ledger Report v4.002</title>
   <script async defer src="https://accounts.google.com/gsi/client"></script>
   <script async defer src="https://apis.google.com/js/api.js"></script>
   <style>
@@ -495,7 +495,7 @@
 
 
   <script>
-    const APP_VERSION = "v4.001";
+    const APP_VERSION = "v4.002";
   </script>
 
 
@@ -773,7 +773,7 @@
     <button id="log_btn" onclick="toggleLog()"
       style="width:100%; padding:8px; margin-top:10px; background:#8e44ad; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Display
       Progress Log</button>
-    <div id="trace_log" onclick="toggleLog()">Trace: v4.001 Kraken Ledger Report initialized.</div>
+    <div id="trace_log" onclick="toggleLog()">Trace: v4.002 Kraken Ledger Report initialized.</div>
   </div>
 
   <script>
@@ -2831,8 +2831,9 @@
     async function fetchWithdrawalHistory(otp) {
       const withdrawCreds = getWithdrawCredentials();
 
-      // Try both USDT and XRP (common assets for withdrawals)
-      const assets = ["USDT", "XXRP", "ZUSD", "ZGBP"];
+      // Try both USDT and XRP (common assets for withdrawals) plus Fiat
+      // v4.002: added EUR, ZEUR, GBP, XRP to ensure Fiat withdrawals are captured for RefID linking
+      const assets = ["USDT", "XXRP", "XRP", "ZUSD", "ZGBP", "GBP", "ZEUR", "EUR"];
       const allWithdrawals = [];
 
       for (const asset of assets) {
