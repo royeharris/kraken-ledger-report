@@ -7,7 +7,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-  <title>Kraken Ledger Report v4.002</title>
+  <title>Kraken Ledger Report v4.003</title>
   <script async defer src="https://accounts.google.com/gsi/client"></script>
   <script async defer src="https://apis.google.com/js/api.js"></script>
   <style>
@@ -495,7 +495,7 @@
 
 
   <script>
-    const APP_VERSION = "v4.002";
+    const APP_VERSION = "v4.003";
   </script>
 
 
@@ -773,7 +773,7 @@
     <button id="log_btn" onclick="toggleLog()"
       style="width:100%; padding:8px; margin-top:10px; background:#8e44ad; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Display
       Progress Log</button>
-    <div id="trace_log" onclick="toggleLog()">Trace: v4.002 Kraken Ledger Report initialized.</div>
+    <div id="trace_log" onclick="toggleLog()">Trace: v4.003 Kraken Ledger Report initialized.</div>
   </div>
 
   <script>
@@ -3902,7 +3902,28 @@
             let recipient = null;
 
             // 1. History Lookup
-            const historyMatch = cacheData.withdrawalHistory.find(h => h.refid === e.refid);
+            // 1. History Lookup
+            // v4.003: "Smart Match" - if RefID fails (common for Bank Wires where LedgerID != FundingID), match by Amount + Time.
+            let historyMatch = cacheData.withdrawalHistory.find(h => h.refid === e.refid);
+
+            if (!historyMatch) {
+              // Fallback: Find by Asset + Exact Amount + Time Window (e.g. 2 hours)
+              historyMatch = cacheData.withdrawalHistory.find(h => {
+                const isSameAsset = (h.asset === e.asset) || (h.asset === normalizedAsset); // handle ZGBP vs GBP
+                if (!isSameAsset) return false;
+
+                const isSameAmount = Math.abs(parseFloat(h.amount) - Math.abs(e.amount)) < 0.000001;
+                if (!isSameAmount) return false;
+
+                const timeDiff = Math.abs(h.time - e.time);
+                return timeDiff < 7200; // Match within 2 hours
+              });
+
+              if (historyMatch) {
+                // console.log("Smart Linked Fiat Withdrawal:", e.refid, "to", historyMatch.refid);
+              }
+            }
+
             if (historyMatch) {
               const addr = historyMatch.info || historyMatch.address;
               const addrMatch = cacheData.krakenAddresses.find(a => a.address === addr);
