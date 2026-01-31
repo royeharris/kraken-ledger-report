@@ -2498,6 +2498,19 @@
       if (savedWithdrawPrivate) document.getElementById("withdrawPrivateKey").value = savedWithdrawPrivate;
       if (savedSheetId) document.getElementById("googleSheetId").value = savedSheetId;
 
+      // v4.007: Load persisted Withdrawal History on startup
+      const savedHistory = localStorage.getItem("kraken_withdrawal_history");
+      if (savedHistory) {
+        try {
+          cacheData.withdrawalHistory = JSON.parse(savedHistory);
+          logTrace("Loaded " + cacheData.withdrawalHistory.length + " withdrawal history records from storage.");
+        } catch (e) {
+          logTrace("Error parsing saved history.");
+        }
+      } else {
+        logTrace("No saved withdrawal history found. Please 'Pull Addresses' once to populate.");
+      }
+
       logTrace("Credentials loaded from storage.");
     }
 
