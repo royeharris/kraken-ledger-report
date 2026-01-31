@@ -257,7 +257,14 @@
     }
 
     .w-type {
-      width: 70px;
+      min-width: 9ch;
+      width: 9ch;
+      /* Sticky Type Column */
+      position: sticky;
+      left: 0;
+      background-color: #fff;
+      z-index: 20;
+      border-right: 1px solid #ddd;
     }
 
     .w-time {
@@ -324,7 +331,7 @@
       width: 17ch;
       /* Sticky Description Column */
       position: sticky;
-      left: 0;
+      left: 9ch;
       /* Fix transparency: must be opaque to hide scrolling content behind it */
       background-color: #fff;
       z-index: 20;
@@ -488,7 +495,7 @@
 
 
   <script>
-    const APP_VERSION = "v3.045-19.07";
+    const APP_VERSION = "v3.045-19.09";
   </script>
 
 
@@ -4074,6 +4081,25 @@
                 }
                 if (gbpEq) fMap[recipient].EUR_GBP += gbpEq;
               }
+            }
+          } else {
+            // CATCH-ALL: Any other transaction type (Spend, Margin, Transfer, etc)
+            // Treat as "Net Trade Activity" to ensure Closing Balance reconciles.
+            // Duplicate logic from isTrade block
+            if (!tradeTotals[asset]) tradeTotals[asset] = 0;
+            tradeTotals[asset] += val;
+
+            let gbpEq = 0;
+            if (item.gbpValues && item.gbpValues[asset]) {
+              const sign = val < 0 ? -1 : 1;
+              gbpEq = item.gbpValues[asset] * sign;
+            } else {
+              const r = getDailyRate(asset, rawTime);
+              if (r) gbpEq = val * r;
+            }
+            if (gbpEq) {
+              if (!tradeGbpTotals[asset]) tradeGbpTotals[asset] = 0;
+              tradeGbpTotals[asset] += gbpEq;
             }
           }
         } // end amounts loop
