@@ -7,7 +7,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-  <title>Kraken Ledger Report v4.017</title>
+  <title>Kraken Ledger Report v4.018</title>
   <script async defer src="https://accounts.google.com/gsi/client"></script>
   <script async defer src="https://apis.google.com/js/api.js"></script>
   <style>
@@ -495,7 +495,7 @@
 
 
   <script>
-    const APP_VERSION = "v4.017";
+    const APP_VERSION = "v4.018";
   </script>
 
 
@@ -773,7 +773,7 @@
     <button id="log_btn" onclick="toggleLog()"
       style="width:100%; padding:8px; margin-top:10px; background:#8e44ad; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Display
       Progress Log</button>
-    <div id="trace_log" onclick="toggleLog()">Trace: v4.017 Kraken Ledger Report initialized.</div>
+    <div id="trace_log" onclick="toggleLog()">Trace: v4.018 Kraken Ledger Report initialized.</div>
   </div>
 
   <script>
@@ -3949,6 +3949,22 @@
             }
 
             if (historyMatch) {
+              // v4.018: First Principles Data Flow Tracing
+              // 1. Ledger Entry (ID, RefID) -> 2. Withdrawal Record (Key, Info) -> 3. Address Book (Name)
+              if (normalizedAsset === "GBP" || normalizedAsset === "EUR") {
+                if (!window['debug_flow_' + e.refid]) {
+                  console.log(`[Flow Trace] Ledger Entry: ID=${e.ledgerId}, RefID=${e.refid}`);
+                  if (historyMatch) {
+                    console.log(`[Flow Trace] -> LINKED to Withdrawal Record:`, historyMatch);
+                    if (historyMatch.key) console.log(`[Flow Trace] -> FOUND KEY: "${historyMatch.key}" (Using this as Unique ID)`);
+                    else console.log(`[Flow Trace] -> NO KEY FOUND in Withdrawal Record. Falling back to Info/Address matching.`);
+                  } else {
+                    console.log(`[Flow Trace] -> FAILED to link to Withdrawal Record.`);
+                  }
+                  window['debug_flow_' + e.refid] = true;
+                }
+              }
+
               // v4.009: Debugging the Address Book Link for Fiat (Restored)
               if (normalizedAsset === "GBP" || normalizedAsset === "EUR") {
                 if (!window['debug_fiat_' + normalizedAsset]) {
