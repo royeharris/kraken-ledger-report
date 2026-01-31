@@ -7,7 +7,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-  <title>Kraken Ledger Report v3.045-19.38</title>
+  <title>Kraken Ledger Report v3.045-19.39</title>
   <script async defer src="https://accounts.google.com/gsi/client"></script>
   <script async defer src="https://apis.google.com/js/api.js"></script>
   <style>
@@ -495,7 +495,7 @@
 
 
   <script>
-    const APP_VERSION = "v3.045-19.38";
+    const APP_VERSION = "v3.045-19.39";
   </script>
 
 
@@ -773,7 +773,7 @@
     <button id="log_btn" onclick="toggleLog()"
       style="width:100%; padding:8px; margin-top:10px; background:#8e44ad; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Display
       Progress Log</button>
-    <div id="trace_log" onclick="toggleLog()">Trace: v3.045-19.38 Kraken Withdrawals Report initialized.</div>
+    <div id="trace_log" onclick="toggleLog()">Trace: v3.045-19.39 Kraken Withdrawals Report initialized.</div>
   </div>
 
   <script>
@@ -3797,12 +3797,10 @@
             // v3.045-19.12 Fix: "Lookback" Logic for Withdrawals
             // If we just bought this crypto (Trade), use the explicit GBP value from that Trade
             // instead of failing to find a rate.
-            if (!foundGbp && Math.abs(e.amount) > 0) {
-              // Check previous row in 'bankRecords' (which we are building linearly)
-              // The previous row is bankRecords[bankRecords.length - 1]
-              // But wait, we haven't pushed the current row yet.
-              // So we check the last pushed row.
-              // v3.045-19.14b Robust Lookback: Search backwards for the last TRADE of this asset
+            // v3.045-19.14b Robust Lookback: Always try to link to a preceding Trade first
+            // This overrides any cached values which might be based on inaccurate daily rates.
+            // We search backwards for the last TRADE of this asset.
+            if (Math.abs(e.amount) > 0) {
               // This handles cases where a FEE or other small transaction sits between the Trade and the Withdrawal.
               if (bankRecords.length > 0) {
                 // Search backwards up to 5 records or until time gap is too large
