@@ -495,7 +495,7 @@
 
 
   <script>
-    const APP_VERSION = "v3.045-19.15";
+    const APP_VERSION = "v3.045-19.16";
   </script>
 
 
@@ -4619,15 +4619,15 @@
       if (endUnix) {
         if (!endEURGBP) {
           const r = await getKrakenRate("EUR", endUnix);
-          endEURGBP = (r && typeof r.gbpRate === "number") ? r.gbpRate : null;
+          endEURGBP = (r && typeof r.gbpRate === "number") ? r.gbpRate : startEURGBP; // Fallback to start rate
         }
         if (!endUSDTGBP) {
           const r = await getKrakenRate("USDT", endUnix);
-          endUSDTGBP = (r && typeof r.gbpRate === "number") ? r.gbpRate : null;
+          endUSDTGBP = (r && typeof r.gbpRate === "number") ? r.gbpRate : startUSDTGBP;
         }
         if (!endXRPGBP) {
           const r = await getKrakenRate("XRP", endUnix);
-          endXRPGBP = (r && typeof r.gbpRate === "number") ? r.gbpRate : null;
+          endXRPGBP = (r && typeof r.gbpRate === "number") ? r.gbpRate : startXRPGBP;
         }
       }
 
