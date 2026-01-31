@@ -3918,6 +3918,15 @@
             }
 
             if (historyMatch) {
+              // v4.006: Debugging the Address Book Link for Fiat
+              if (normalizedAsset === "GBP" || normalizedAsset === "EUR") {
+                if (!window['debug_fiat_' + normalizedAsset]) {
+                  logTrace(`DEBUG ${normalizedAsset} History Record: ` + JSON.stringify(historyMatch));
+                  const abData = cacheData.krakenAddresses.filter(a => a.asset === normalizedAsset);
+                  logTrace(`DEBUG ${normalizedAsset} Address Book Entries (${abData.length}): ` + JSON.stringify(abData));
+                  window['debug_fiat_' + normalizedAsset] = true;
+                }
+              }
               const addr = historyMatch.info || historyMatch.address;
               const addrMatch = cacheData.krakenAddresses.find(a => a.address === addr);
               if (addrMatch) recipient = addrMatch.key;
