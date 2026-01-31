@@ -495,7 +495,7 @@
 
 
   <script>
-    const APP_VERSION = "v3.045-19.14";
+    const APP_VERSION = "v3.045-19.14b";
   </script>
 
 
@@ -3731,39 +3731,36 @@
               // The previous row is bankRecords[bankRecords.length - 1]
               // But wait, we haven't pushed the current row yet.
               // So we check the last pushed row.
+              // v3.045-19.14b Robust Lookback: Search backwards for the last TRADE of this asset
+              // This handles cases where a FEE or other small transaction sits between the Trade and the Withdrawal.
               if (bankRecords.length > 0) {
-                const prevRow = bankRecords[bankRecords.length - 1];
-                // Is it a trade?
-                if (prevRow.type === "trade") {
-                  // Does the asset match?
-                  // prevRow.amounts has the net change. For a "Buy USDT", USDT amount is positive.
-                  // e.amount for withdrawal is negative.
-                  const prevAmt = prevRow.amounts[normalizedAsset];
-                  const currAmt = Math.abs(e.amount); // Withdrawal amount is negative in ledger usually, or positive? 
-                  // In processEntry: row.amounts[asset] = entry.amount.
-                  // Ledger withdrawal amount is negative.
-
-                  // v3.045-19.13 Refined Lookback: Time-based matching (User feedback: "seconds or minutes")
-                  // If we bought the asset recently (e.g. within 60 mins), use that trade's implied rate.
-                  // This handles cases where withdrawal amount != trade amount (e.g. fees, partial send).
-
+                // Search backwards up to 5 records or until time gap is too large
+                for (let k = bankRecords.length - 1; k >= 0; k--) {
+                  const prevRow = bankRecords[k];
                   const timeDiff = (e.time - (prevRow._raw ? prevRow._raw.time : 0));
-                  const isTimeClose = (timeDiff >= 0 && timeDiff < 3600); // 1 hour window
 
-                  // Check if we bought this asset in the previous trade
-                  if (prevAmt && isTimeClose) {
-                    // Match Found! 
-                    // Does the trade have a known GBP value for this asset?
-                    if (prevRow.gbpValues && prevRow.gbpValues[normalizedAsset]) {
-                      const tradeGbpVal = prevRow.gbpValues[normalizedAsset];
-                      // Calculate Implied Rate from the Trade
-                      // Rate = GBP / Amount
-                      // Note: prevAmt for trade is net amount received. 
-                      if (Math.abs(prevAmt) > 0) {
-                        const impliedRate = tradeGbpVal / Math.abs(prevAmt);
+                  // Stop if we go back too far in time (> 90 mins)
+                  if (timeDiff > 5400) break;
+                  // Stop if we go back too many rows (e.g. 10) to avoid performance hit
+                  if ((bankRecords.length - k) > 10) break;
 
-                        // Apply to current withdrawal amount
+                  if (prevRow.type === "trade") {
+                    const prevAmt = prevRow.amounts[normalizedAsset];
+                    // Check if this trade involved BUYING the asset we are withdrawing
+                    if (prevAmt > 0) { // Positive amount = Bought/Received
+                      // Check if this trade has a known GBP value
+                      if (prevRow.gbpValues && prevRow.gbpValues[normalizedAsset]) {
+                        const tradeGbpVal = prevRow.gbpValues[normalizedAsset];
+                        const impliedRate = tradeGbpVal / prevAmt;
+                        const currAmt = Math.abs(e.amount);
+
                         foundGbp = currAmt * impliedRate;
+
+                        console.log(`[Recon Trace] Withdrawal ${normalizedAsset} (${currAmt}) linked to Trade @ ${prevRow.time}`);
+                        console.log(` -> Trade: Bought ${prevAmt} for £${tradeGbpVal.toFixed(2)} (Rate: ${impliedRate.toFixed(4)})`);
+                        console.log(` -> Valuation: ${currAmt} * ${impliedRate.toFixed(4)} = £${foundGbp.toFixed(2)}`);
+
+                        break; // Stop searching once found
                       }
                     }
                   }
