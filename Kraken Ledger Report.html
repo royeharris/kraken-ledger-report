@@ -7,7 +7,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-  <title>Kraken Ledger Report v3.045-19.43</title>
+  <title>Kraken Ledger Report v3.045-19.44</title>
   <script async defer src="https://accounts.google.com/gsi/client"></script>
   <script async defer src="https://apis.google.com/js/api.js"></script>
   <style>
@@ -495,7 +495,7 @@
 
 
   <script>
-    const APP_VERSION = "v3.045-19.43";
+    const APP_VERSION = "v3.045-19.44";
   </script>
 
 
@@ -773,7 +773,7 @@
     <button id="log_btn" onclick="toggleLog()"
       style="width:100%; padding:8px; margin-top:10px; background:#8e44ad; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Display
       Progress Log</button>
-    <div id="trace_log" onclick="toggleLog()">Trace: v3.045-19.43 Kraken Withdrawals Report initialized.</div>
+    <div id="trace_log" onclick="toggleLog()">Trace: v3.045-19.44 Kraken Withdrawals Report initialized.</div>
   </div>
 
   <script>
@@ -3747,7 +3747,6 @@
             row.gbpValues[bAsset] = Math.abs(sold.amount);
           } else if (bAsset === "EUR" && sAsset !== "EUR") {
             // Bought EUR, Sold Crypto. Value of Sold Crypto = EUR Val * Daily EURGBP.
-            // Access daily rate
             const dObj = new Date(e.time * 1000);
             const dStr = dObj.toISOString().split("T")[0];
             const dayRates = (cacheData && cacheData.ratesCache) ? cacheData.ratesCache[dStr] : null;
@@ -3763,6 +3762,43 @@
             const rate = (dayRates && dayRates.EURGBP) ? dayRates.EURGBP : 0;
             if (rate > 0) {
               row.gbpValues[bAsset] = Math.abs(sold.amount) * rate;
+            }
+          } else {
+            // v3.045-19.44: Crypto-to-Crypto Anchor (USDT / XRP)
+            // If trading USDT <-> XRP, use USDT as the Anchor for valuation to ensure Net Trade = 0.
+            // Otherwise variance occurs due to mismatched daily rates.
+            let anchorAsset = null;
+            let anchorAmount = 0;
+            let targetAsset = null;
+
+            if (bAsset === "USDT") { anchorAsset = "USDT"; anchorAmount = Math.abs(bought.amount); targetAsset = sAsset; }
+            else if (sAsset === "USDT") { anchorAsset = "USDT"; anchorAmount = Math.abs(sold.amount); targetAsset = bAsset; }
+            else if (bAsset === "XRP") { anchorAsset = "XRP"; anchorAmount = Math.abs(bought.amount); targetAsset = sAsset; } // Weak anchor but better than nothing
+            else if (sAsset === "XRP") { anchorAsset = "XRP"; anchorAmount = Math.abs(sold.amount); targetAsset = bAsset; }
+
+            if (anchorAsset && targetAsset) {
+              const dObj = new Date(e.time * 1000);
+              const dStr = dObj.toISOString().split("T")[0];
+              const dayRates = (cacheData && cacheData.ratesCache) ? cacheData.ratesCache[dStr] : null;
+
+              let rate = 0;
+              if (anchorAsset === "USDT") rate = (dayRates ? dayRates.USDTGBP : 0);
+              else if (anchorAsset === "XRP") rate = (dayRates ? dayRates.XRPGBP : 0);
+
+              if (rate > 0) {
+                const tradeGbp = anchorAmount * rate;
+                // Set BOTH to the same GBP magnitude
+                row.gbpValues[anchorAsset] = tradeGbp;
+                row.gbpValues[targetAsset] = tradeGbp;
+
+                // Also update Last Trade Rate for the Target (Cost Basis update)
+                // e.g. Sold USDT (Anchor), Bought XRP (Target). 
+                // Cost of XRP = tradeGbp.
+                // Amount of XRP = bought.amount.
+                if (bAsset === targetAsset && Math.abs(bought.amount) > 0) {
+                  lastTradeRates[targetAsset] = tradeGbp / Math.abs(bought.amount);
+                }
+              }
             }
           }
 
