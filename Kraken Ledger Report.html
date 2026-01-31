@@ -3914,7 +3914,7 @@
 
             // Diagnostic Logging for Fiat Linkage Failures
             if (!historyMatch && (normalizedAsset === "GBP" || normalizedAsset === "EUR")) {
-              logTrace(`Linkage Failed for ${normalizedAsset}: Ledger RefID '${e.refid}' not found in Status History.`);
+              logTrace(`Linkage Failed for ${normalizedAsset}: Ledger RefID '${e.refid}' / LedgerID '${e.ledgerId}' not found in Status History.`);
             }
 
             if (historyMatch) {
