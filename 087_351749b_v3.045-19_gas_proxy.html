@@ -325,10 +325,11 @@
       /* Sticky Description Column */
       position: sticky;
       left: 0;
-      background-color: inherit;
-      /* will inherit row background */
+      /* Fix transparency: must be opaque to hide scrolling content behind it */
+      background-color: #fff;
       z-index: 2;
       /* higher than normal cells */
+      border-right: 1px solid #ddd;
     }
 
     /* Filter Input Optimization */
@@ -358,17 +359,6 @@
 
     .section-border-left {
       border-left: 2px solid #bdc3c7 !important;
-    }
-
-
-
-
-    #auth_status {
-      font-size: 0.75rem;
-      margin-top: 10px;
-      text-align: center;
-      color: var(--primary);
-      font-weight: 800;
     }
 
     #log_btn {
@@ -445,6 +435,16 @@
       color: #000 !important;
       font-weight: 400 !important;
     }
+
+    /* Fixed sticky column transparency fix */
+    .sticky-col {
+      position: sticky;
+      left: 0;
+      background-color: #fff !important;
+      z-index: 10;
+      border-right: 1px solid #ddd;
+      /* separation line */
+    }
   </style>
 
   <script>
@@ -488,7 +488,7 @@
 
 
   <script>
-    const APP_VERSION = "v3.045-19.02";
+    const APP_VERSION = "v3.045-19.03";
   </script>
 
 
@@ -515,12 +515,8 @@
         <div class="branding-row" style="margin-bottom:0; line-height:1.2;">
           <div><b>Kraken Reports</b> <span style="font-size:0.7rem; color:#7f8c8d; font-weight:600;"><span
                 id="appVersion"></span></span></div>
-          <div style="font-size:0.65rem; color:#b0b0b0; font-weight:400;">GBP | EUR | USDT | XRP transactions in Date
-            range</div>
+          <div style="font-size:0.65rem; color:#b0b0b0; font-weight:400;">GBP | EUR | USDT | XRP</div>
         </div>
-        <div id="auth_status"
-          style="position:absolute; left:50%; transform:translateX(-50%); font-size:0.7rem; font-weight:700;">Status:
-          Ready</div>
         <div style="display:flex; gap:4px;">
           <button onclick="copyTraceToClipboard()"
             style="background:#16a085; padding:4px 8px; height:auto; font-size:0.65rem; border-radius:6px; border:none; color:#fff; cursor:pointer; font-weight:800;">Copy
@@ -569,6 +565,10 @@
           style="flex:1; padding:8px 4px; background:var(--joy); color:#fff; border:none; border-radius:4px; font-size:0.65rem; font-weight:600; cursor:pointer;">Generate
           Report</button>
       </div>
+
+      <div id="auth_status"
+        style="font-size:0.7rem; font-weight:700; text-align:center; margin-bottom:10px; color:var(--primary);">Status:
+        Ready</div>
     </div>
 
     <!-- API Config Button + Panel (click to close) -->
@@ -4710,9 +4710,13 @@
       const _rowTotal = (a, b, c, d) => _n2(a) + _n2(b) + _n2(c) + _n2(d);
 
       html += '<div style="background:#2980b9; color:#fff; padding:5px 10px; font-size:0.7rem; font-weight:bold; border-radius:4px 4px 0 0; margin-top:14px; margin-bottom:0; page-break-before:always; break-before:page;">Reconciliation Difference  GBP | EUR | USDT | XRP</div>';
-      html += '<table style="width:100%; border-collapse:collapse; margin-bottom:0; border:1px solid #ddd; page-break-inside:avoid; break-inside:avoid;">';
+
+      // Scrollable Container for Reconciliation Table
+      html += '<div style="overflow-x:auto; border:1px solid #ddd; border-top:none;">';
+      html += '<table style="width:100%; min-width:600px; border-collapse:collapse; margin-bottom:0; page-break-inside:avoid; break-inside:avoid;">';
+
       html += '<thead><tr style="background:#f2f2f2;">';
-      html += '<th style="padding:4px; border:1px solid #ddd; text-align:left;">Item</th>';
+      html += '<th style="padding:4px; border:1px solid #ddd; text-align:left; position:sticky; left:0; background:#f2f2f2; z-index:5;">Item</th>';
       html += '<th style="padding:4px; border:1px solid #ddd; text-align:right;">GBP</th>';
       html += '<th style="padding:4px; border:1px solid #ddd; text-align:right;">EUR (GBP Eq)</th>';
       html += '<th style="padding:4px; border:1px solid #ddd; text-align:right;">USDT (GBP Eq)</th>';
@@ -4724,8 +4728,11 @@
         const total = _rowTotal(gbp, eur, usdt, xrp);
         const lblStyle = isTotalRow ? "font-weight:bold;" : "";
         const numStyle = isTotalRow ? "font-weight:bold; color:#000;" : "color:#000;";
+        // Sticky First Column for Recon Table too? Yes, for consistency on small screens
+        const stickyStyle = "position:sticky; left:0; background:#fff; z-index:2; border-right:1px solid #ddd;";
+
         html += '<tr>';
-        html += `<td style="padding:4px; border:1px solid #ddd; text-align:left; ${lblStyle}">${label}</td>`;
+        html += `<td style="padding:4px; border:1px solid #ddd; text-align:left; ${lblStyle} ${stickyStyle}">${label}</td>`;
         html += `<td style="padding:4px; border:1px solid #ddd; text-align:right; ${numStyle}">${_fmt2(gbp)}</td>`;
         html += `<td style="padding:4px; border:1px solid #ddd; text-align:right; ${numStyle}">${_fmt2(eur)}</td>`;
         html += `<td style="padding:4px; border:1px solid #ddd; text-align:right; ${numStyle}">${_fmt2(usdt)}</td>`;
@@ -4744,7 +4751,7 @@
       _addReconRow('Actual Closing (from Closing Balances)', actGBP, actEUR, actUSDT, actXRP, true);
       _addReconRow('Reconciliation Difference (Calculated - Actual)', diffGBP, diffEUR, diffUSDT, diffXRP, true);
 
-      html += '</tbody></table>';
+      html += '</tbody></table></div>';
 
       // v3.045-18.7: Calculate Total Volume for FX Variance Context
       // Volume = Sum of absolute values of all flows (Deposits + Withdrawals + Fees + Trades)
