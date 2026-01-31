@@ -2544,7 +2544,9 @@
         throw new Error("Please enter Withdraw API credentials in API Config (requires 2FA permission)");
       }
       const proxy = getSelectedProxy();
-      return { apiKey, privateKey, proxy };
+      const proxyType = document.getElementById("corsProxySelect").value;
+      const gasUrl = document.getElementById("gasProxyUrl").value.trim();
+      return { apiKey, privateKey, proxy, proxyType, gasUrl };
     }
 
     // Base64 helpers
