@@ -495,7 +495,7 @@
 
 
   <script>
-    const APP_VERSION = "v3.045-19.25";
+    const APP_VERSION = "v3.045-19.28";
   </script>
 
 
@@ -2189,8 +2189,18 @@
               });
             }
 
-            // 2. Calculate Opening/Closing Balances (using ratesCache if needed)
+            // 2. Calculate Opening/Closing Balances (using values passed from on-screen generation)
             let openGBP = 0, openEUR = 0, openUSDT = 0, openXRP = 0;
+
+            if (summaryRecords.openingBalances) {
+              openGBP = summaryRecords.openingBalances.GBP || 0;
+              // For Sheets, we need the GBP Equivalent for EUR/USDT/XRP in the Recon table columns
+              openEUR = summaryRecords.openingBalances.EUR_GBP || 0;
+              // openUSDT / openXRP usually 0 but consistent
+              openUSDT = summaryRecords.openingBalances.USDT_GBP || 0;
+              openXRP = summaryRecords.openingBalances.XRP_GBP || 0;
+            }
+
             let actGBP = 0, actEUR = 0, actUSDT = 0, actXRP = 0;
 
             const _getRate = (asset, dateStr) => {
@@ -4304,7 +4314,23 @@
         { asset: "XRP", total: tradeTotals.XRP, gbpEq: tradeGbpTotals.XRP }
       ];
 
-      summaryRecords = { crypto: cryptoRows, fiat: fiatRows, deposits: depositRows, fees: feeRows, trades: tradeRows };
+      // Populate global summary records for Sheets Sync or PDF
+      summaryRecords = {
+        crypto: cryptoRows, // Assuming cryptoAudit is cryptoRows
+        fiat: fiatRows,     // Assuming fiatAudit is fiatRows
+        deposits: depositRows,
+        fees: feeRows,
+        trades: tradeRows,
+        openingBalances: {
+          GBP: _obGBP,
+          EUR: _obEUR,
+          EUR_GBP: _obEURgbp,
+          USDT: _obUSDT,
+          USDT_GBP: _obUSDTgbp,
+          XRP: _obXRP,
+          XRP_GBP: _obXRPgbp
+        }
+      };
 
       // Persist
       localStorage.setItem("kraken_summary_staging_v3.045-18", JSON.stringify(summaryRecords));
@@ -5119,8 +5145,8 @@
       const content = tmp.querySelector('div[style*="padding:15px"]');
       const tablesHtml = content ? content.innerHTML : tmp.innerHTML;
 
-      const titleLine = `Kraken Reports ${APP_VERSION}`;
-      const subtitleLine = `GBP | EUR | USDT | XRP transactions ${formatDateForPDF(start)} to ${formatDateForPDF(end)}`;
+      const titleLine = "Kraken Statement Summary";
+      const dateRangeLine = `${formatDateForPDF(start)} - ${formatDateForPDF(end)}`;
 
       const w = window.open("", "_blank");
       if (!w) { alert("Popup blocked. Allow popups to print."); return; }
@@ -5135,10 +5161,13 @@
   @page { margin: 12mm; }
   * { box-sizing: border-box; }
   body { font-family: Arial, Helvetica, sans-serif; color:#000; margin:0; }
-  .hdr { margin-bottom: 10px; }
-  .hdr .t1 { font-size: 18px; font-weight: 700; }
-  .hdr .t2 { font-size: 12px; color:#444; margin-top: 2px; }
-  .subhdr { margin: 10px 0 14px; font-size: 14px; font-weight: 700; }
+  .hdr { text-align: center; margin-bottom: 20px; }
+  .hdr .t1 { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
+  .hdr .t2 { font-size: 14px; font-weight: 700; color:#333; }
+  
+  /* Remove on-screen subheaders if copied */
+  .subhdr { display: none; }
+  
   table { width: 100% !important; border-collapse: collapse; table-layout: fixed; }
   th, td { border: 1px solid #ddd; padding: 5px; font-size: 11px; vertical-align: top; }
   th { background: #f9f9f9; font-weight: 700; }
@@ -5151,9 +5180,8 @@
 <body>
   <div class="hdr">
     <div class="t1">${titleLine}</div>
-    <div class="t2">${subtitleLine}</div>
+    <div class="t2">${dateRangeLine}</div>
   </div>
-  <div class="subhdr">${escHtml(stmtLabel)}</div>
   <div class="wrap">${tablesHtml}</div>
 </body>
 </html>`);
@@ -5187,9 +5215,7 @@
       const end = document.getElementById("endDate")?.value || "";
 
       const pdfTitle = `Kraken Statement ${start} to ${end}`; // For filename
-      const pdfHeader = `Kraken Statement ${formatDateForPDF(start)} to ${formatDateForPDF(end)}`; // For header display
-
-      const titleLine = `Kraken Reports ${APP_VERSION}`;
+      const pdfHeaderDate = `${formatDateForPDF(start)} - ${formatDateForPDF(end)}`;
 
       const w = window.open("", "_blank");
       w.document.open();
@@ -5199,8 +5225,13 @@
         <title>${pdfTitle}</title>
         <style>
           body { font-family: Arial, sans-serif; margin: 18px; }
-          .pdf-title { font-size: 16px; font-weight: 700; margin: 0 0 6px 0; }
-          .pdf-subtitle { font-size: 13px; font-weight: 700; margin: 0 0 14px 0; }
+          .hdr { text-align: center; margin-bottom: 25px; }
+          .hdr .t1 { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
+          .hdr .t2 { font-size: 14px; font-weight: 700; color:#333; }
+          
+          /* Hide any on-screen headers that might be cloned */
+          .subhdr, .report-header, h1, h2, h3 { display: none; }
+          
           table { width: 100%; border-collapse: collapse; margin: 10px 0 18px 0; }
           th, td { border: 1px solid #ddd; padding: 6px 8px; font-size: 12px; vertical-align: top; }
           th { background: #f2f2f2; }
@@ -5217,8 +5248,11 @@
         </style>
       </head>
       <body>
-        <div class="pdf-title">${titleLine}</div>
-        <div class="pdf-subtitle">${pdfHeader}</div>
+        <div class="hdr">
+          <div class="t1">Kraken Statement</div>
+          <div class="t2">${pdfHeaderDate}</div>
+        </div>
+        <!-- Original PDF Subtitle logic removed -->
       </body>
     </html>
   `);
