@@ -4695,17 +4695,9 @@
       // [Moved to top of function]
 
       // Populate opening balances (GBP basis) using opening snapshot + end-of-period FX rates (consistent with closing balance GBP equivalents)
-      if (openingBalances) {
-        const obGBP = (openingBalances.GBP != null) ? Number(openingBalances.GBP) : 0;
-        const obEUR = (openingBalances.EUR != null) ? Number(openingBalances.EUR) : 0;
-        const obUSDT = (openingBalances.USDT != null) ? Number(openingBalances.USDT) : 0;
-        const obXRP = (openingBalances.XRP != null) ? Number(openingBalances.XRP) : 0;
-
-        openGBP = (isFinite(obGBP) ? obGBP : 0);
-        openEUR = (isFinite(obEUR) && startEURGBP != null ? (obEUR * startEURGBP) : 0);
-        openUSDT = (isFinite(obUSDT) && startUSDTGBP != null ? (obUSDT * startUSDTGBP) : 0);
-        openXRP = (isFinite(obXRP) && startXRPGBP != null ? (obXRP * startXRPGBP) : 0);
-      }
+      // [Logic Moved to Top of Function using summaryRecords]
+      // Legacy redundant block removed to prevent overwrite
+      // if (openingBalances) { ... }
 
 
       // Compute missing end-rates (closing balances should rarely show '-')
