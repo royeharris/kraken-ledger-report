@@ -3940,6 +3940,16 @@
             }
 
             if (historyMatch) {
+              // v4.009: Debugging the Address Book Link for Fiat (Restored)
+              if (normalizedAsset === "GBP" || normalizedAsset === "EUR") {
+                if (!window['debug_fiat_' + normalizedAsset]) {
+                  logTrace(`DEBUG ${normalizedAsset} History Record: ` + JSON.stringify(historyMatch));
+                  const abData = cacheData.krakenAddresses.filter(a => a.asset === normalizedAsset);
+                  logTrace(`DEBUG ${normalizedAsset} Address Book Entries (${abData.length}): ` + JSON.stringify(abData));
+                  window['debug_fiat_' + normalizedAsset] = true;
+                }
+              }
+
               const addr = historyMatch.info || historyMatch.address;
               // v4.008: Smart Link for Address Book
               // 1. Try Exact Address Match (Crypto)
