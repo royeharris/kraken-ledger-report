@@ -495,7 +495,7 @@
 
 
   <script>
-    const APP_VERSION = "v3.045-19.29";
+    const APP_VERSION = "v3.045-19.30";
   </script>
 
 
@@ -4314,23 +4314,7 @@
         { asset: "XRP", total: tradeTotals.XRP, gbpEq: tradeGbpTotals.XRP }
       ];
 
-      // Populate global summary records for Sheets Sync or PDF
-      summaryRecords = {
-        crypto: cryptoRows, // Assuming cryptoAudit is cryptoRows
-        fiat: fiatRows,     // Assuming fiatAudit is fiatRows
-        deposits: depositRows,
-        fees: feeRows,
-        trades: tradeRows,
-        openingBalances: {
-          GBP: _obGBP,
-          EUR: _obEUR,
-          EUR_GBP: _obEURgbp,
-          USDT: _obUSDT,
-          USDT_GBP: _obUSDTgbp,
-          XRP: _obXRP,
-          XRP_GBP: _obXRPgbp
-        }
-      };
+
 
       // Persist
       localStorage.setItem("kraken_summary_staging_v3.045-18", JSON.stringify(summaryRecords));
@@ -4515,6 +4499,26 @@
       const _obEURgbp = (_obEUR && startEURGBP != null) ? (_obEUR * startEURGBP) : 0;
       const _obUSDTgbp = (_obUSDT && startUSDTGBP != null) ? (_obUSDT * startUSDTGBP) : 0;
       const _obXRPgbp = (_obXRP && startXRPGBP != null) ? (_obXRP * startXRPGBP) : 0;
+
+      // v3.045-19.30: Assign summaryRecords HERE, after all variables are calculated
+      summaryRecords = {
+        crypto: cryptoRows,
+        fiat: fiatRows,
+        deposits: depositRows,
+        fees: feeRows,
+        trades: tradeRows,
+        openingBalances: {
+          GBP: _obGBP,
+          EUR: _obEUR,
+          EUR_GBP: _obEURgbp,
+          USDT: _obUSDT,
+          USDT_GBP: _obUSDTgbp,
+          XRP: _obXRP,
+          XRP_GBP: _obXRPgbp
+        }
+      };
+      // Persist (Update key if needed, or keep consistent)
+      localStorage.setItem("kraken_summary_staging_v3.045-18", JSON.stringify(summaryRecords));
 
       const _addOBRow = (asset, bal, gbpEq, isGBPRow) => {
         const balShow = (isGBPRow ? fmtGBPAmount(bal) : fmtAmount(bal));
