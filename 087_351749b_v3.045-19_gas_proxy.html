@@ -495,7 +495,7 @@
 
 
   <script>
-    const APP_VERSION = "v3.045-19.21";
+    const APP_VERSION = "v3.045-19.22";
   </script>
 
 
@@ -723,11 +723,16 @@
     </div>
 
     <!-- Status Bar -->
-    <div class="status-row">
-      <div id="statusSummary" style="flex:4; display:flex; flex-wrap:wrap; gap:12px; font-size:0.7rem;">
+    <div class="status-row"
+      style="display:flex; align-items:center; justify-content:space-between; gap:20px; padding:6px 0;">
+      <!-- Left & Center Content (Addresses + Stats) -->
+      <div id="statusSummary" style="flex:1; display:flex; font-size:0.7rem;">
         <div>Ref: <b id="withdrawalCount">0</b></div>
       </div>
-      <div class="status-item" id="stagingHint" style="flex:1; text-align:right; font-size:0.65rem; color:#7f8c8d;">
+
+      <!-- Right Content (Record Counts) -->
+      <div class="status-item" id="stagingHint"
+        style="flex:0 0 auto; text-align:right; font-size:0.7rem; color:#7f8c8d;">
       </div>
     </div>
 
@@ -1135,14 +1140,14 @@
       const totalTrades = tradesFiatToCrypto + tradesCryptoToFiat;
 
       const summaryHtml = `
-        <div style="display:flex; flex-direction:row; align-items:center; gap:25px; height:100%;">
-          <!-- Block 1: Addresses (Centered Vertical) -->
-          <div style="display:flex; flex-direction:column; justify-content:center; align-items:center; height:100%;">
+        <div style="display:flex; flex-direction:row; align-items:center; justify-content:space-between; width:100%; height:100%; font-size:0.7rem;">
+          <!-- Block 1: Addresses (Left) -->
+          <div style="display:flex; flex-direction:column; justify-content:center; align-items:flex-start;">
              <span style="color:#d35400;">Addresses: <b id="addressCount">${cacheData.krakenAddresses.length}</b></span>
           </div>
 
-          <!-- Block 2: Stats Grid (Deposits, Trades, Withdrawals) -->
-          <div style="display:grid; grid-template-columns: auto auto; gap:2px 12px; align-items:center; font-size:0.7rem;">
+          <!-- Block 2: Stats Grid (Centered) -->
+          <div style="display:grid; grid-template-columns: auto auto; gap:2px 12px; align-items:center;">
             <!-- Row 1: Deposits -->
             <div style="font-weight:600; text-align:left; color:#000;">Deposits:</div>
             <div style="text-align:left; color:#000;"><b>${dFiat}</b> fiat</div>
@@ -1150,15 +1155,18 @@
             <!-- Row 2: Trades -->
             <div style="font-weight:600; text-align:left; color:#8e44ad;">Trades:</div>
             <div style="text-align:left; color:#8e44ad;">
-               <b>${tradesFiatToCrypto}</b> fiat&gt;crypto / <b>${tradesCryptoToFiat}</b> crypto&gt;fiat / <b>${tradesFiatToFiat}</b> fiat&gt;fiat
+               <b>${tradesFiatToCrypto}</b> fiat&gt;crypto <span style="color:#ccc; margin:0 4px;">|</span> <b>${tradesCryptoToFiat}</b> crypto&gt;fiat <span style="color:#ccc; margin:0 4px;">|</span> <b>${tradesFiatToFiat}</b> fiat&gt;fiat
             </div>
 
             <!-- Row 3: Withdrawals -->
             <div style="font-weight:600; text-align:left; color:#000;">Withdrawals:</div>
             <div style="text-align:left; color:#000;">
-               <b>${wCrypto}</b> crypto / <b>${wFiat}</b> fiat
+               <b>${wCrypto}</b> crypto <span style="color:#ccc; margin:0 4px;">|</span> <b>${wFiat}</b> fiat
             </div>
           </div>
+          
+          <!-- Spacer to push Block 3 (in parallel div) to right, or just empty here if using external div -->
+          <div style="width:10px;"></div>
         </div>
       `;
 
@@ -1666,8 +1674,9 @@
       // Flex layout for vertical stacking: Label | Ledger | Trade/Withdraw Report | Statement Report
       // Grid layout for tight vertical stacking and aligned numbers
       // Grid layout for tight vertical stacking and aligned numbers
+      // Grid layout for tight vertical stacking and aligned numbers. Matches Left side font size.
       hint.innerHTML = `
-        <div style="display:flex; gap:15px; align-items:center;">
+        <div style="display:flex; gap:15px; align-items:center; font-size:0.7rem;">
           <!-- Col 1: Label (Vertically Centered) -->
           <div style="display:flex; flex-direction:column; justify-content:center; height:100%; line-height:1.2; color:#333; font-weight:600;" title="${tooltipText}">
             <span>Number of</span>
