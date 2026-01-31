@@ -7,7 +7,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-  <title>Kraken Ledger Report v3.045-19.45</title>
+  <title>Kraken Ledger Report v3.045-19.46</title>
   <script async defer src="https://accounts.google.com/gsi/client"></script>
   <script async defer src="https://apis.google.com/js/api.js"></script>
   <style>
@@ -495,7 +495,7 @@
 
 
   <script>
-    const APP_VERSION = "v3.045-19.45";
+    const APP_VERSION = "v3.045-19.46";
   </script>
 
 
@@ -773,7 +773,7 @@
     <button id="log_btn" onclick="toggleLog()"
       style="width:100%; padding:8px; margin-top:10px; background:#8e44ad; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Display
       Progress Log</button>
-    <div id="trace_log" onclick="toggleLog()">Trace: v3.045-19.45 Kraken Withdrawals Report initialized.</div>
+    <div id="trace_log" onclick="toggleLog()">Trace: v3.045-19.46 Kraken Withdrawals Report initialized.</div>
   </div>
 
   <script>
@@ -1429,6 +1429,14 @@
         }
 
         cacheData.withdrawals = allLedgerEntries;  // Still use withdrawals key for compatibility
+
+        // Re-enable Generate Button
+        if (genBtn) {
+          genBtn.disabled = false;
+          genBtn.innerText = "Generate Report"; // Reset text if needed
+          genBtn.style.opacity = "1.0";
+        }
+
         updateStatusCounts();
         renderLedgerTable();
 
@@ -1437,6 +1445,7 @@
 
 
       } catch (e) {
+        if (genBtn) genBtn.disabled = false; // Re-enable on error
         updateStatus("Ledger Error", "error");
         logTrace("ERROR in readLedger: " + (e.message || e));
         // alert("Error reading ledger: " + (e.message || e));
