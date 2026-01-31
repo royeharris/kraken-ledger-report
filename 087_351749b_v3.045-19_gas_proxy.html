@@ -7,7 +7,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-  <title>Kraken Ledger Report v3.045-19.42</title>
+  <title>Kraken Ledger Report v3.045-19.43</title>
   <script async defer src="https://accounts.google.com/gsi/client"></script>
   <script async defer src="https://apis.google.com/js/api.js"></script>
   <style>
@@ -495,7 +495,7 @@
 
 
   <script>
-    const APP_VERSION = "v3.045-19.42";
+    const APP_VERSION = "v3.045-19.43";
   </script>
 
 
@@ -773,7 +773,7 @@
     <button id="log_btn" onclick="toggleLog()"
       style="width:100%; padding:8px; margin-top:10px; background:#8e44ad; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Display
       Progress Log</button>
-    <div id="trace_log" onclick="toggleLog()">Trace: v3.045-19.42 Kraken Withdrawals Report initialized.</div>
+    <div id="trace_log" onclick="toggleLog()">Trace: v3.045-19.43 Kraken Withdrawals Report initialized.</div>
   </div>
 
   <script>
@@ -3778,21 +3778,9 @@
             // Try to get recipient name from address book logic
             const normalizedAsset = (e.asset.includes("XRP") || e.asset === "XXRP") ? "XRP" : (e.asset.includes("USDT") ? "USDT" : e.asset);
 
-            // v2.95: Try to find calculated GBP value from Withdrawal Cache (Re-applying v2.90 fix + Fallback)
+            // v2.95 Legacy Cache Lookup REMOVED in v3.045-19.43 to strictly follow Phase II First Principles.
+            // We now rely solely on Persistent Cost Basis (Option B) or Daily Rates.
             let foundGbp = 0;
-            if (cacheData.withdrawalCache) {
-              // Try exact RefID match
-              let match = cacheData.withdrawalCache.find(w => w.refid === e.refid);
-              // Fallback Match
-              if (!match) {
-                match = cacheData.withdrawalCache.find(w =>
-                  Math.abs(w.time - e.time) < 5 &&
-                  Math.abs(w.amount - e.amount) < 0.0001 &&
-                  w.asset === normalizedAsset
-                );
-              }
-              if (match && match.gbpSent) foundGbp = parseFloat(match.gbpSent);
-            }
 
             // v3.045-19.12 Fix: "Lookback" Logic for Withdrawals
             // If we just bought this crypto (Trade), use the explicit GBP value from that Trade
