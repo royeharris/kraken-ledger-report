@@ -495,7 +495,7 @@
 
 
   <script>
-    const APP_VERSION = "v3.045-19.12";
+    const APP_VERSION = "v3.045-19.14";
   </script>
 
 
@@ -3743,16 +3743,27 @@
                   // In processEntry: row.amounts[asset] = entry.amount.
                   // Ledger withdrawal amount is negative.
 
-                  // Allow small tolerance (dust)
-                  if (prevAmt && Math.abs(prevAmt - currAmt) < 5.0) {
-                    // Match Found! This withdrawal is likely the immediate transfer of the purchased crypto.
+                  // v3.045-19.13 Refined Lookback: Time-based matching (User feedback: "seconds or minutes")
+                  // If we bought the asset recently (e.g. within 60 mins), use that trade's implied rate.
+                  // This handles cases where withdrawal amount != trade amount (e.g. fees, partial send).
+
+                  const timeDiff = (e.time - (prevRow._raw ? prevRow._raw.time : 0));
+                  const isTimeClose = (timeDiff >= 0 && timeDiff < 3600); // 1 hour window
+
+                  // Check if we bought this asset in the previous trade
+                  if (prevAmt && isTimeClose) {
+                    // Match Found! 
                     // Does the trade have a known GBP value for this asset?
                     if (prevRow.gbpValues && prevRow.gbpValues[normalizedAsset]) {
-                      foundGbp = prevRow.gbpValues[normalizedAsset];
-                      // Pro-rate if amounts aren't identical?
-                      // Value = (RowGBP / RowAmt) * WithdrawalAmt
-                      if (prevAmt > 0) {
-                        foundGbp = (foundGbp / prevAmt) * currAmt;
+                      const tradeGbpVal = prevRow.gbpValues[normalizedAsset];
+                      // Calculate Implied Rate from the Trade
+                      // Rate = GBP / Amount
+                      // Note: prevAmt for trade is net amount received. 
+                      if (Math.abs(prevAmt) > 0) {
+                        const impliedRate = tradeGbpVal / Math.abs(prevAmt);
+
+                        // Apply to current withdrawal amount
+                        foundGbp = currAmt * impliedRate;
                       }
                     }
                   }
