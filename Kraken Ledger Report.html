@@ -495,7 +495,7 @@
 
 
   <script>
-    const APP_VERSION = "v3.045-19.33";
+    const APP_VERSION = "v3.045-19.34";
   </script>
 
 
@@ -4391,6 +4391,59 @@
       let openUSDT = 0;
       let openXRP = 0;
 
+      // v3.045-19.34: Hoisted Rate Logic (Consolidated)
+      // Determine start-of-period FX rates
+      let startDateStr = (() => {
+        try {
+          const v = document.getElementById("startDate").value;
+          if (!v) return null;
+          return v;
+        } catch (e) { return null; }
+      })();
+
+      const _rateKeys = (cacheData && cacheData.ratesCache) ? Object.keys(cacheData.ratesCache).filter(k => /^\d{4}-\d{2}-\d{2}$/.test(k)).sort() : [];
+      let startRateKey = null;
+      if (startDateStr && _rateKeys.length) {
+        for (let i = 0; i < _rateKeys.length; i++) { if (_rateKeys[i] >= startDateStr) { startRateKey = _rateKeys[i]; break; } }
+        if (!startRateKey) { for (let i = _rateKeys.length - 1; i >= 0; i--) { if (_rateKeys[i] <= startDateStr) { startRateKey = _rateKeys[i]; break; } } }
+      }
+      if (!startRateKey) startRateKey = startDateStr || null;
+      let startRates = (startRateKey && cacheData && cacheData.ratesCache) ? (cacheData.ratesCache[startRateKey] || {}) : {};
+      let startUSDTGBP = (startRates && typeof startRates.USDTGBP === "number") ? startRates.USDTGBP : null;
+      let startXRPGBP = (startRates && typeof startRates.XRPGBP === "number") ? startRates.XRPGBP : null;
+      let startEURGBP = (startRates && typeof startRates.EURGBP === "number") ? startRates.EURGBP : ((startRates && typeof startRates.USDTGBP === "number" && typeof startRates.USDTEUR === "number" && startRates.USDTEUR !== 0) ? (startRates.USDTGBP / startRates.USDTEUR) : null);
+
+      // Determine end-of-period FX rates
+      let endDateStr = (() => {
+        try {
+          const v = document.getElementById("endDate").value;
+          if (!v) return null;
+          return new Date(v).toISOString().split("T")[0];
+        } catch (e) { return null; }
+      })();
+
+      const endUnix = endDateStr ? Math.floor(new Date(endDateStr + "T12:00:00Z").getTime() / 1000) : null;
+
+      // Ensure end-date FX rates exist (closing balances need end-date conversion)
+      if (endDateStr && endUnix && cacheData && cacheData.ratesCache && !cacheData.ratesCache[endDateStr]) {
+        const [usdtEnd, xrpEnd, eurEnd] = await Promise.all([
+          getKrakenRate('USDT', endUnix),
+          getKrakenRate('XRP', endUnix),
+          getKrakenRate('EUR', endUnix)
+        ]);
+        cacheData.ratesCache[endDateStr] = {
+          USDTGBP: (usdtEnd && typeof usdtEnd.gbpRate === 'number') ? usdtEnd.gbpRate : null,
+          XRPGBP: (xrpEnd && typeof xrpEnd.gbpRate === 'number') ? xrpEnd.gbpRate : null,
+          EURGBP: (eurEnd && typeof eurEnd.gbpRate === 'number') ? eurEnd.gbpRate : null
+        };
+        saveCacheToLocalStorage();
+      }
+
+      let endRates = (endDateStr && cacheData && cacheData.ratesCache) ? (cacheData.ratesCache[endDateStr] || {}) : {};
+      let endUSDTGBP = (endRates && typeof endRates.USDTGBP === "number") ? endRates.USDTGBP : null;
+      let endXRPGBP = (endRates && typeof endRates.XRPGBP === "number") ? endRates.XRPGBP : null;
+      let endEURGBP = (endRates && typeof endRates.EURGBP === "number") ? endRates.EURGBP : null;
+
       // Local amount formatters for Statement Summary sections (avoid undefined global refs)
       const fmtGBPAmount = (n) => {
         const v = (n == null || n === "" || isNaN(n)) ? 0 : Number(n);
@@ -4493,19 +4546,7 @@
       const _obXRPgbp = obs.XRP_GBP || 0;
 
 
-      // v3.045-19.33: Restore local rate definitions for Closing Balance section usage
-      const startDateStr = document.getElementById("startDate").value;
-      const _rateKeys = (cacheData && cacheData.ratesCache) ? Object.keys(cacheData.ratesCache).filter(k => /^\d{4}-\d{2}-\d{2}$/.test(k)).sort() : [];
-      let startRateKey = null;
-      if (startDateStr && _rateKeys.length) {
-        for (let i = 0; i < _rateKeys.length; i++) { if (_rateKeys[i] >= startDateStr) { startRateKey = _rateKeys[i]; break; } }
-        if (!startRateKey) { for (let i = _rateKeys.length - 1; i >= 0; i--) { if (_rateKeys[i] <= startDateStr) { startRateKey = _rateKeys[i]; break; } } }
-      }
-      if (!startRateKey) startRateKey = startDateStr || null;
-      let startRates = (startRateKey && cacheData && cacheData.ratesCache) ? (cacheData.ratesCache[startRateKey] || {}) : {};
-      let startUSDTGBP = (startRates && typeof startRates.USDTGBP === "number") ? startRates.USDTGBP : null;
-      let startXRPGBP = (startRates && typeof startRates.XRPGBP === "number") ? startRates.XRPGBP : null;
-      let startEURGBP = (startRates && typeof startRates.EURGBP === "number") ? startRates.EURGBP : ((startRates && typeof startRates.USDTGBP === "number" && typeof startRates.USDTEUR === "number" && startRates.USDTEUR !== 0) ? (startRates.USDTGBP / startRates.USDTEUR) : null);
+
 
       // --- OPENING BALANCES ---
       html += '<div style="background:#2980b9; color:#fff; padding:5px 10px; font-size:0.7rem; font-weight:bold; border-radius:4px 4px 0 0; margin-top:14px; margin-bottom:0;">Opening Balances  GBP | EUR | USDT | XRP</div>';
@@ -4640,46 +4681,7 @@
         }
       }
 
-      // Determine start-of-period FX rates for Opening Balance GBP equivalent conversions
-
-      startDateStr = (() => {
-        try {
-          const v = document.getElementById("startDate").value;
-          if (!v) return null;
-          return v;
-        } catch (e) { return null; }
-      })();
-
-      // Determine end-of-period FX rates for GBP equivalent conversions
-      endDateStr = (() => {
-        try {
-          const v = document.getElementById("endDate").value;
-          if (!v) return null;
-          return new Date(v).toISOString().split("T")[0];
-        } catch (e) { return null; }
-      })();
-
-      const endUnix = endDateStr ? Math.floor(new Date(endDateStr + "T12:00:00Z").getTime() / 1000) : null;
-
-      // Ensure end-date FX rates exist (closing balances need end-date conversion)
-      if (endDateStr && endUnix && cacheData && cacheData.ratesCache && !cacheData.ratesCache[endDateStr]) {
-        const [usdtEnd, xrpEnd, eurEnd] = await Promise.all([
-          getKrakenRate('USDT', endUnix),
-          getKrakenRate('XRP', endUnix),
-          getKrakenRate('EUR', endUnix)
-        ]);
-        cacheData.ratesCache[endDateStr] = {
-          USDTGBP: (usdtEnd && typeof usdtEnd.gbpRate === 'number') ? usdtEnd.gbpRate : null,
-          XRPGBP: (xrpEnd && typeof xrpEnd.gbpRate === 'number') ? xrpEnd.gbpRate : null,
-          EURGBP: (eurEnd && typeof eurEnd.gbpRate === 'number') ? eurEnd.gbpRate : null
-        };
-        saveCacheToLocalStorage();
-      }
-
-      endRates = (endDateStr && cacheData && cacheData.ratesCache) ? (cacheData.ratesCache[endDateStr] || {}) : {};
-      endUSDTGBP = (endRates && typeof endRates.USDTGBP === "number") ? endRates.USDTGBP : null;
-      endXRPGBP = (endRates && typeof endRates.XRPGBP === "number") ? endRates.XRPGBP : null;
-      endEURGBP = (endRates && typeof endRates.EURGBP === "number") ? endRates.EURGBP : null;
+      // [Moved to top of function]
 
       // Populate opening balances (GBP basis) using opening snapshot + end-of-period FX rates (consistent with closing balance GBP equivalents)
       if (openingBalances) {
