@@ -495,7 +495,7 @@
 
 
   <script>
-    const APP_VERSION = "v3.045-19.18";
+    const APP_VERSION = "v3.045-19.19";
   </script>
 
 
@@ -4883,23 +4883,27 @@
         const total = _rowTotal(gbp, eur, usdt, xrp);
         const lblStyle = isTotalRow ? "font-weight:bold;" : "";
         const numStyle = isTotalRow ? "font-weight:bold; color:#000;" : "color:#000;";
-        // Sticky First Column for Recon Table too? Yes, for consistency on small screens
         const stickyStyle = "position:sticky; left:0; background:#fff; z-index:20; border-right:1px solid #ddd;";
+
+        const _fmtRecon = (v) => {
+          if (v === "n/a") return '<span style="color:#7f8c8d; font-weight:normal;">n/a</span>';
+          return _fmt2(v);
+        };
 
         html += '<tr>';
         html += `<td style="padding:4px; border:1px solid #ddd; text-align:left; ${lblStyle} ${stickyStyle}">${label}</td>`;
-        html += `<td style="padding:4px; border:1px solid #ddd; text-align:right; ${numStyle}">${_fmt2(gbp)}</td>`;
-        html += `<td style="padding:4px; border:1px solid #ddd; text-align:right; ${numStyle}">${_fmt2(eur)}</td>`;
-        html += `<td style="padding:4px; border:1px solid #ddd; text-align:right; ${numStyle}">${_fmt2(usdt)}</td>`;
-        html += `<td style="padding:4px; border:1px solid #ddd; text-align:right; ${numStyle}">${_fmt2(xrp)}</td>`;
+        html += `<td style="padding:4px; border:1px solid #ddd; text-align:right; ${numStyle}">${_fmtRecon(gbp)}</td>`;
+        html += `<td style="padding:4px; border:1px solid #ddd; text-align:right; ${numStyle}">${_fmtRecon(eur)}</td>`;
+        html += `<td style="padding:4px; border:1px solid #ddd; text-align:right; ${numStyle}">${_fmtRecon(usdt)}</td>`;
+        html += `<td style="padding:4px; border:1px solid #ddd; text-align:right; ${numStyle}">${_fmtRecon(xrp)}</td>`;
         html += `<td style="padding:4px; border:1px solid #ddd; text-align:right; ${numStyle}">${_fmt2(total)}</td>`;
         html += '</tr>';
       };
 
       _addReconRow('Opening Balance', openGBP, openEUR, openUSDT, openXRP, false);
-      _addReconRow('Deposits (Bank Accounts)', depGBP, depEUR, 0, 0, false);
-      _addReconRow('Withdrawals (Recipients)', 0, 0, wRecUSDT, wRecXRP, false);
-      _addReconRow('Withdrawals (Bank Accounts)', wBankGBP, wBankEUR, 0, 0, false);
+      _addReconRow('Deposits (Bank Accounts)', depGBP, depEUR, "n/a", "n/a", false);
+      _addReconRow('Withdrawals (Recipients)', "n/a", "n/a", wRecUSDT, wRecXRP, false);
+      _addReconRow('Withdrawals (Bank Accounts)', wBankGBP, wBankEUR, "n/a", "n/a", false);
       _addReconRow('Fees', feeGBP, feeEUR, feeUSDT, feeXRP, false);
       _addReconRow('Net Trade Activity', tradeGBP, tradeEUR, tradeUSDT, tradeXRP, false);
       _addReconRow('Calculated Closing', expGBP, expEUR, expUSDT, expXRP, true);
