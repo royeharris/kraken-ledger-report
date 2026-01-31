@@ -4550,6 +4550,12 @@
       const _obUSDTgbp = obs.USDT_GBP || 0;
       const _obXRPgbp = obs.XRP_GBP || 0;
 
+      // Link for Reconciliation Calculation (User Request: Sequence Consistency)
+      openGBP = _obGBP;
+      openEUR = _obEURgbp; // Reconciliation table uses GBP Equivalent for EUR column
+      openUSDT = _obUSDTgbp; // Reconciliation table uses GBP Equivalent for USDT column
+      openXRP = _obXRPgbp; // Reconciliation table uses GBP Equivalent for XRP column
+
 
 
 
