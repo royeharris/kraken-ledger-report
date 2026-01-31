@@ -495,7 +495,7 @@
 
 
   <script>
-    const APP_VERSION = "v3.045-19.14b";
+    const APP_VERSION = "v3.045-19.15";
   </script>
 
 
@@ -2623,7 +2623,14 @@
           throw new Error("HTTP " + response.status + ": " + response.statusText + " " + errorDetails.substring(0, 100));
         }
 
-        const rawData = await response.json();
+        const textData = await response.text();
+        let rawData;
+        try {
+          rawData = JSON.parse(textData);
+        } catch (jsonErr) {
+          logTrace("JSON Parse Error. Raw response (first 200 chars): " + textData.substring(0, 200));
+          throw new Error("API Parse Error: " + jsonErr.message);
+        }
 
         // UNWRAP GAS RESPONSE ?
         // If we used GAS, the response is { statusCode: 200, body: "{...}" }
