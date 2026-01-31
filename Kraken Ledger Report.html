@@ -7,7 +7,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-  <title>Kraken Ledger Report v3.045-19.47</title>
+  <title>Kraken Ledger Report v3.045-19.48</title>
   <script async defer src="https://accounts.google.com/gsi/client"></script>
   <script async defer src="https://apis.google.com/js/api.js"></script>
   <style>
@@ -495,7 +495,7 @@
 
 
   <script>
-    const APP_VERSION = "v3.045-19.47";
+    const APP_VERSION = "v3.045-19.48";
   </script>
 
 
@@ -773,7 +773,7 @@
     <button id="log_btn" onclick="toggleLog()"
       style="width:100%; padding:8px; margin-top:10px; background:#8e44ad; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Display
       Progress Log</button>
-    <div id="trace_log" onclick="toggleLog()">Trace: v3.045-19.47 Kraken Ledger Report initialized.</div>
+    <div id="trace_log" onclick="toggleLog()">Trace: v3.045-19.48 Kraken Ledger Report initialized.</div>
   </div>
 
   <script>
@@ -1310,10 +1310,16 @@
       logTrace("Date range: " + startDate + " to " + endDate);
       logTrace("Unix range: " + startTime + " to " + endTime);
 
+      // v3.045-19.47c: Fixed Scope - genBtn defined before try block
+      const genBtn = document.getElementById("generate_btn");
+
       try {
         const creds = getApiCredentials();
         logTrace("Using Query API Key: " + creds.apiKey.substring(0, 8) + "...");
         logTrace("Proxy: " + (creds.proxy || "(none)"));
+
+        if (genBtn) genBtn.disabled = true;
+        cacheData.withdrawals = []; // Clear stale data
 
         updateStatus("Reading Ledger...", "sync");
 
