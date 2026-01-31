@@ -3902,26 +3902,13 @@
             let recipient = null;
 
             // 1. History Lookup
-            // 1. History Lookup
-            // v4.003: "Smart Match" - if RefID fails (common for Bank Wires where LedgerID != FundingID), match by Amount + Time.
+            // v4.004: Strict RefID matching (User Request "No Fuzzy Logic").
+            // Diagnostic logging enabled for failed matches.
             let historyMatch = cacheData.withdrawalHistory.find(h => h.refid === e.refid);
 
-            if (!historyMatch) {
-              // Fallback: Find by Asset + Exact Amount + Time Window (e.g. 2 hours)
-              historyMatch = cacheData.withdrawalHistory.find(h => {
-                const isSameAsset = (h.asset === e.asset) || (h.asset === normalizedAsset); // handle ZGBP vs GBP
-                if (!isSameAsset) return false;
-
-                const isSameAmount = Math.abs(parseFloat(h.amount) - Math.abs(e.amount)) < 0.000001;
-                if (!isSameAmount) return false;
-
-                const timeDiff = Math.abs(h.time - e.time);
-                return timeDiff < 7200; // Match within 2 hours
-              });
-
-              if (historyMatch) {
-                // console.log("Smart Linked Fiat Withdrawal:", e.refid, "to", historyMatch.refid);
-              }
+            // Diagnostic Logging for Fiat Linkage Failures
+            if (!historyMatch && (normalizedAsset === "GBP" || normalizedAsset === "EUR")) {
+              logTrace(`Linkage Failed for ${normalizedAsset}: Ledger RefID '${e.refid}' not found in Status History.`);
             }
 
             if (historyMatch) {
