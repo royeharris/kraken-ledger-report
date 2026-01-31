@@ -495,7 +495,7 @@
 
 
   <script>
-    const APP_VERSION = "v3.045-19.24";
+    const APP_VERSION = "v3.045-19.25";
   </script>
 
 
@@ -1150,18 +1150,18 @@
           <div style="display:grid; grid-template-columns: auto auto; gap:2px 12px; align-items:center;">
             <!-- Row 1: Deposits -->
             <div style="font-weight:600; text-align:left; color:#000;">Deposits:</div>
-            <div style="text-align:left; color:#000;"><b>${dFiat}</b> fiat</div>
+            <div style="text-align:left; color:#000;">fiat <b>${dFiat}</b></div>
 
             <!-- Row 2: Trades -->
             <div style="font-weight:600; text-align:left; color:#8e44ad;">Trades:</div>
             <div style="text-align:left; color:#8e44ad;">
-               <b>${tradesFiatToCrypto}</b> fiat&gt;crypto <span style="color:#ccc; margin:0 4px;">|</span> <b>${tradesCryptoToFiat}</b> crypto&gt;fiat <span style="color:#ccc; margin:0 4px;">|</span> <b>${tradesFiatToFiat}</b> fiat&gt;fiat
+               fiat&gt;crypto <b>${tradesFiatToCrypto}</b> <span style="color:#ccc; margin:0 4px;">|</span> crypto&gt;fiat <b>${tradesCryptoToFiat}</b> <span style="color:#ccc; margin:0 4px;">|</span> fiat&gt;fiat <b>${tradesFiatToFiat}</b>
             </div>
 
             <!-- Row 3: Withdrawals -->
             <div style="font-weight:600; text-align:left; color:#000;">Withdrawals:</div>
             <div style="text-align:left; color:#000;">
-               <b>${wCrypto}</b> crypto <span style="color:#ccc; margin:0 4px;">|</span> <b>${wFiat}</b> fiat
+               crypto <b>${wCrypto}</b> <span style="color:#ccc; margin:0 4px;">|</span> fiat <b>${wFiat}</b>
             </div>
           </div>
           
