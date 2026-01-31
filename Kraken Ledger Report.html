@@ -495,7 +495,7 @@
 
 
   <script>
-    const APP_VERSION = "v3.045-19.30";
+    const APP_VERSION = "v3.045-19.32";
   </script>
 
 
@@ -4316,6 +4316,59 @@
 
 
 
+      // v3.045-19.31: Calculate Opening Balances HERE (moved from renderSummaryTable)
+      let openingBalances = null;
+      if (Array.isArray(sourceData) && sourceData.length > 0) {
+        for (let i = 0; i < sourceData.length; i++) {
+          const r = sourceData[i];
+          if (r && (r.details === "Opening Balance" || r.type === "Balance")) {
+            if (r.details === "Opening Balance" && r.balances) { openingBalances = r.balances; break; }
+          }
+        }
+      }
+
+      // Rates for OB Calculation
+      const startDateStr = document.getElementById("startDate").value;
+      const _rateKeys = (cacheData && cacheData.ratesCache) ? Object.keys(cacheData.ratesCache).filter(k => /^\d{4}-\d{2}-\d{2}$/.test(k)).sort() : [];
+      let startRateKey = null;
+      if (startDateStr && _rateKeys.length) {
+        for (let i = 0; i < _rateKeys.length; i++) { if (_rateKeys[i] >= startDateStr) { startRateKey = _rateKeys[i]; break; } }
+        if (!startRateKey) { for (let i = _rateKeys.length - 1; i >= 0; i--) { if (_rateKeys[i] <= startDateStr) { startRateKey = _rateKeys[i]; break; } } }
+      }
+      if (!startRateKey) startRateKey = startDateStr || null;
+      let startRates = (startRateKey && cacheData && cacheData.ratesCache) ? (cacheData.ratesCache[startRateKey] || {}) : {};
+      let startUSDTGBP = (startRates && typeof startRates.USDTGBP === "number") ? startRates.USDTGBP : null;
+      let startXRPGBP = (startRates && typeof startRates.XRPGBP === "number") ? startRates.XRPGBP : null;
+      let startEURGBP = (startRates && typeof startRates.EURGBP === "number") ? startRates.EURGBP : ((startRates && typeof startRates.USDTGBP === "number" && typeof startRates.USDTEUR === "number" && startRates.USDTEUR !== 0) ? (startRates.USDTGBP / startRates.USDTEUR) : null);
+
+      const _ob = (openingBalances && typeof openingBalances === "object") ? openingBalances : {};
+      const _obGBP = (isFinite(Number(_ob.GBP)) ? Number(_ob.GBP) : 0);
+      const _obEUR = (isFinite(Number(_ob.EUR)) ? Number(_ob.EUR) : 0);
+      const _obUSDT = (isFinite(Number(_ob.USDT)) ? Number(_ob.USDT) : 0);
+      const _obXRP = (isFinite(Number(_ob.XRP)) ? Number(_ob.XRP) : 0);
+
+      const _obEURgbp = (_obEUR && startEURGBP != null) ? (_obEUR * startEURGBP) : 0;
+      const _obUSDTgbp = (_obUSDT && startUSDTGBP != null) ? (_obUSDT * startUSDTGBP) : 0;
+      const _obXRPgbp = (_obXRP && startXRPGBP != null) ? (_obXRP * startXRPGBP) : 0;
+
+      // Populate global summary records
+      summaryRecords = {
+        crypto: cryptoRows,
+        fiat: fiatRows,
+        deposits: depositRows,
+        fees: feeRows,
+        trades: tradeRows,
+        openingBalances: {
+          GBP: _obGBP,
+          EUR: _obEUR,
+          EUR_GBP: _obEURgbp,
+          USDT: _obUSDT,
+          USDT_GBP: _obUSDTgbp,
+          XRP: _obXRP,
+          XRP_GBP: _obXRPgbp
+        }
+      };
+
       // Persist
       localStorage.setItem("kraken_summary_staging_v3.045-18", JSON.stringify(summaryRecords));
 
@@ -4419,8 +4472,6 @@
           // GBP Equivalent for EUR
           const eqShow = (r.EUR && r.EUR > 0) ? (r.EUR_GBP ? r.EUR_GBP.toFixed(2) : "0.00") : "n/a";
 
-          html += '<tr>';
-          html += `<td style="padding:4px; border:1px solid #ddd;">${r.recipient}</td>`;
           const gbpStyle = (r.GBP && r.GBP > 0) ? "font-weight:bold; color:#000;" : "";
           html += `<td style="padding:4px; border:1px solid #ddd; text-align:right; ${gbpStyle}">${gbpShow}</td>`;
           html += `<td style="padding:4px; border:1px solid #ddd; text-align:right;">${eurShow}</td>`;
@@ -4431,53 +4482,15 @@
       }
       html += '</tbody></table>';
 
-      // Also capture Statement "Opening Balance" snapshot for reconciliation inputs (uses early-declared locals)
-
-      if (Array.isArray(bankRecords) && bankRecords.length > 0) {
-        for (let i = 0; i < bankRecords.length; i++) {
-          const r = bankRecords[i];
-          if (r && (r.details === "Opening Balance" || r.type === "Balance")) {
-            if (r.details === "Opening Balance" && r.balances) { openingBalances = r.balances; break; }
-          }
-        }
-      }
-
-
-
-
-      // 
-      // Start-of-period rates (used for GBP equivalents in Opening Balances section)
-      let startDateStr = (() => {
-        try {
-          const v = document.getElementById("startDate").value;
-          if (!v) return null;
-          return v;
-        } catch (e) { return null; }
-      })();
-      let endDateStr = (() => {
-        try {
-          const v = document.getElementById("endDate").value;
-          if (!v) return null;
-          return v;
-        } catch (e) { return null; }
-      })();
-      const _rateKeys = (cacheData && cacheData.ratesCache) ? Object.keys(cacheData.ratesCache).filter(k => /^\d{4}-\d{2}-\d{2}$/.test(k)).sort() : [];
-      let startRateKey = null;
-      if (startDateStr && _rateKeys.length) {
-        for (let i = 0; i < _rateKeys.length; i++) { if (_rateKeys[i] >= startDateStr) { startRateKey = _rateKeys[i]; break; } }
-        if (!startRateKey) { for (let i = _rateKeys.length - 1; i >= 0; i--) { if (_rateKeys[i] <= startDateStr) { startRateKey = _rateKeys[i]; break; } } }
-      }
-      if (!startRateKey) startRateKey = startDateStr || null;
-      let startRates = (startRateKey && cacheData && cacheData.ratesCache) ? (cacheData.ratesCache[startRateKey] || {}) : {};
-      let startUSDTGBP = (startRates && typeof startRates.USDTGBP === "number") ? startRates.USDTGBP : null;
-      let startXRPGBP = (startRates && typeof startRates.XRPGBP === "number") ? startRates.XRPGBP : null;
-      let startEURGBP = (startRates && typeof startRates.EURGBP === "number") ? startRates.EURGBP : ((startRates && typeof startRates.USDTGBP === "number" && typeof startRates.USDTEUR === "number" && startRates.USDTEUR !== 0) ? (startRates.USDTGBP / startRates.USDTEUR) : null);
-
-      // End-of-period rates (used for GBP equivalents in Closing Balances section)
-      let endRates = (endDateStr && cacheData && cacheData.ratesCache) ? (cacheData.ratesCache[endDateStr] || {}) : {};
-      let endUSDTGBP = (endRates && typeof endRates.USDTGBP === "number") ? endRates.USDTGBP : null;
-      let endXRPGBP = (endRates && typeof endRates.XRPGBP === "number") ? endRates.XRPGBP : null;
-      let endEURGBP = (endRates && typeof endRates.EURGBP === "number") ? endRates.EURGBP : ((endRates && typeof endRates.USDTGBP === "number" && typeof endRates.USDTEUR === "number" && endRates.USDTEUR !== 0) ? (endRates.USDTGBP / endRates.USDTEUR) : null);
+      // v3.045-19.31: Data now pre-calculated in generateStatementSummary
+      const obs = summaryRecords.openingBalances || {};
+      const _obGBP = obs.GBP || 0;
+      const _obEUR = obs.EUR || 0;
+      const _obUSDT = obs.USDT || 0;
+      const _obXRP = obs.XRP || 0;
+      const _obEURgbp = obs.EUR_GBP || 0;
+      const _obUSDTgbp = obs.USDT_GBP || 0;
+      const _obXRPgbp = obs.XRP_GBP || 0;
 
       // --- OPENING BALANCES ---
       html += '<div style="background:#2980b9; color:#fff; padding:5px 10px; font-size:0.7rem; font-weight:bold; border-radius:4px 4px 0 0; margin-top:14px; margin-bottom:0;">Opening Balances  GBP | EUR | USDT | XRP</div>';
@@ -4487,38 +4500,6 @@
       html += '<th style="padding:4px; border:1px solid #ddd; text-align:right;">Balance</th>';
       html += '<th style="padding:4px; border:1px solid #ddd; text-align:right;">GBP Equivalent</th>';
       html += '</tr></thead><tbody>';
-
-      // Use statement snapshot balances if present; otherwise show zeros
-      const _ob = (openingBalances && typeof openingBalances === "object") ? openingBalances : {};
-      const _obGBP = (isFinite(Number(_ob.GBP)) ? Number(_ob.GBP) : 0);
-      const _obEUR = (isFinite(Number(_ob.EUR)) ? Number(_ob.EUR) : 0);
-      const _obUSDT = (isFinite(Number(_ob.USDT)) ? Number(_ob.USDT) : 0);
-      const _obXRP = (isFinite(Number(_ob.XRP)) ? Number(_ob.XRP) : 0);
-
-      // GBP equivalents use start-of-period rates (closest available at/after start date)
-      const _obEURgbp = (_obEUR && startEURGBP != null) ? (_obEUR * startEURGBP) : 0;
-      const _obUSDTgbp = (_obUSDT && startUSDTGBP != null) ? (_obUSDT * startUSDTGBP) : 0;
-      const _obXRPgbp = (_obXRP && startXRPGBP != null) ? (_obXRP * startXRPGBP) : 0;
-
-      // v3.045-19.30: Assign summaryRecords HERE, after all variables are calculated
-      summaryRecords = {
-        crypto: cryptoRows,
-        fiat: fiatRows,
-        deposits: depositRows,
-        fees: feeRows,
-        trades: tradeRows,
-        openingBalances: {
-          GBP: _obGBP,
-          EUR: _obEUR,
-          EUR_GBP: _obEURgbp,
-          USDT: _obUSDT,
-          USDT_GBP: _obUSDTgbp,
-          XRP: _obXRP,
-          XRP_GBP: _obXRPgbp
-        }
-      };
-      // Persist (Update key if needed, or keep consistent)
-      localStorage.setItem("kraken_summary_staging_v3.045-18", JSON.stringify(summaryRecords));
 
       const _addOBRow = (asset, bal, gbpEq, isGBPRow) => {
         const balShow = (isGBPRow ? fmtGBPAmount(bal) : fmtAmount(bal));
