@@ -488,7 +488,7 @@
 
 
   <script>
-    const APP_VERSION = "v3.045-19.04";
+    const APP_VERSION = "v3.045-19.06";
   </script>
 
 
@@ -4730,7 +4730,7 @@
         const lblStyle = isTotalRow ? "font-weight:bold;" : "";
         const numStyle = isTotalRow ? "font-weight:bold; color:#000;" : "color:#000;";
         // Sticky First Column for Recon Table too? Yes, for consistency on small screens
-        const stickyStyle = "position:sticky; left:0; background:#fff; z-index:2; border-right:1px solid #ddd;";
+        const stickyStyle = "position:sticky; left:0; background:#fff; z-index:20; border-right:1px solid #ddd;";
 
         html += '<tr>';
         html += `<td style="padding:4px; border:1px solid #ddd; text-align:left; ${lblStyle} ${stickyStyle}">${label}</td>`;
@@ -4743,14 +4743,14 @@
       };
 
       _addReconRow('Opening Balance', openGBP, openEUR, openUSDT, openXRP, false);
-      _addReconRow('Deposits (Haricom Bank Accounts)', depGBP, depEUR, 0, 0, false);
+      _addReconRow('Deposits (Bank Accounts)', depGBP, depEUR, 0, 0, false);
       _addReconRow('Withdrawals (Recipients)', 0, 0, wRecUSDT, wRecXRP, false);
-      _addReconRow('Withdrawals (Haricom Bank Accounts)', wBankGBP, wBankEUR, 0, 0, false);
+      _addReconRow('Withdrawals (Bank Accounts)', wBankGBP, wBankEUR, 0, 0, false);
       _addReconRow('Fees', feeGBP, feeEUR, feeUSDT, feeXRP, false);
       _addReconRow('Net Trade Activity', tradeGBP, tradeEUR, tradeUSDT, tradeXRP, false);
       _addReconRow('Calculated Closing', expGBP, expEUR, expUSDT, expXRP, true);
-      _addReconRow('Actual Closing (from Closing Balances)', actGBP, actEUR, actUSDT, actXRP, true);
-      _addReconRow('Reconciliation Difference (Calculated - Actual)', diffGBP, diffEUR, diffUSDT, diffXRP, true);
+      _addReconRow('Actual Closing', actGBP, actEUR, actUSDT, actXRP, true);
+      _addReconRow('Reconciliation Difference', diffGBP, diffEUR, diffUSDT, diffXRP, true);
 
       html += '</tbody></table></div>';
 
