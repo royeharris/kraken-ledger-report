@@ -488,7 +488,7 @@
 
 
   <script>
-    const APP_VERSION = "v3.045-19.01";
+    const APP_VERSION = "v3.045-19.02";
   </script>
 
 
@@ -1224,11 +1224,7 @@
       localStorage.setItem("kraken_gas_proxy_url", gasUrl ? gasUrl.trim() : "");
 
       logTrace("API credentials saved (Query + Withdraw).");
-      if (document.getElementById("corsProxySelect").value === "gas") {
-        alert("API keys saved.\nGAS Proxy: " + (gasUrl ? "SET" : "EMPTY (Please paste URL!)"));
-      } else {
-        alert("API keys saved.");
-      }
+      alert("API keys saved.");
     }
 
     // ========== STEP 1: Read Ledger (Query API - no 2FA needed) ==========
@@ -2445,11 +2441,12 @@
       let privateKey = document.getElementById("krakenPrivateKey").value.trim();
       if (!apiKey) apiKey = DEFAULT_API_KEY;
       if (!privateKey) privateKey = DEFAULT_PRIVATE_KEY;
-      // Save for next time
-      localStorage.setItem("kraken_api_key", apiKey);
-      localStorage.setItem("kraken_private_key", privateKey);
+
       const proxy = getSelectedProxy();
-      return { apiKey, privateKey, proxy };
+      const proxyType = document.getElementById("corsProxySelect").value;
+      const gasUrl = document.getElementById("gasProxyUrl").value.trim();
+
+      return { apiKey, privateKey, proxy, proxyType, gasUrl };
     }
 
     // Withdraw API uses separate credentials (requires 2FA permission)
