@@ -495,7 +495,7 @@
 
 
   <script>
-    const APP_VERSION = "v3.045-19.11";
+    const APP_VERSION = "v3.045-19.12";
   </script>
 
 
@@ -3721,6 +3721,43 @@
                 );
               }
               if (match && match.gbpSent) foundGbp = parseFloat(match.gbpSent);
+            }
+
+            // v3.045-19.12 Fix: "Lookback" Logic for Withdrawals
+            // If we just bought this crypto (Trade), use the explicit GBP value from that Trade
+            // instead of failing to find a rate.
+            if (!foundGbp && Math.abs(e.amount) > 0) {
+              // Check previous row in 'bankRecords' (which we are building linearly)
+              // The previous row is bankRecords[bankRecords.length - 1]
+              // But wait, we haven't pushed the current row yet.
+              // So we check the last pushed row.
+              if (bankRecords.length > 0) {
+                const prevRow = bankRecords[bankRecords.length - 1];
+                // Is it a trade?
+                if (prevRow.type === "trade") {
+                  // Does the asset match?
+                  // prevRow.amounts has the net change. For a "Buy USDT", USDT amount is positive.
+                  // e.amount for withdrawal is negative.
+                  const prevAmt = prevRow.amounts[normalizedAsset];
+                  const currAmt = Math.abs(e.amount); // Withdrawal amount is negative in ledger usually, or positive? 
+                  // In processEntry: row.amounts[asset] = entry.amount.
+                  // Ledger withdrawal amount is negative.
+
+                  // Allow small tolerance (dust)
+                  if (prevAmt && Math.abs(prevAmt - currAmt) < 5.0) {
+                    // Match Found! This withdrawal is likely the immediate transfer of the purchased crypto.
+                    // Does the trade have a known GBP value for this asset?
+                    if (prevRow.gbpValues && prevRow.gbpValues[normalizedAsset]) {
+                      foundGbp = prevRow.gbpValues[normalizedAsset];
+                      // Pro-rate if amounts aren't identical?
+                      // Value = (RowGBP / RowAmt) * WithdrawalAmt
+                      if (prevAmt > 0) {
+                        foundGbp = (foundGbp / prevAmt) * currAmt;
+                      }
+                    }
+                  }
+                }
+              }
             }
 
             // Fallback: Calculate from Rates if still missing
