@@ -2793,6 +2793,15 @@
           const keyName = addr.key || "";  // This is the saved address name (e.g., "Aleksey XRP")
           const asset = addr.asset || "";
           const address = addr.address || "";
+          // Debug Fiat Structure for potential Sort Code/Account Number
+          if (asset.includes("GBP") || asset.includes("EUR")) {
+            console.log("DEBUG Fiat Address: ", addr);
+            // Log to trace occasionally (first one)
+            if (!window.loggedFiatStruct) {
+              logTrace("DEBUG Fiat Address Query: " + JSON.stringify(addr));
+              window.loggedFiatStruct = true;
+            }
+          }
           const destTag = addr.tag || addr.memo || "";  // XRP uses tag, others might use memo
 
           // Try to extract recipient name from key (e.g., "Aleksey XRP" -> "Aleksey")
