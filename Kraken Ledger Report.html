@@ -495,7 +495,7 @@
 
 
   <script>
-    const APP_VERSION = "v3.045-19.28";
+    const APP_VERSION = "v3.045-19.29";
   </script>
 
 
@@ -2268,9 +2268,9 @@
             ];
 
             s5Rows.push(_mkRow("Opening Balance", openGBP, openEUR, openUSDT, openXRP));
-            s5Rows.push(_mkRow("Deposits (Haricom Bank Accounts)", depGBP, depEUR, 0, 0));
-            s5Rows.push(_mkRow("Withdrawals (Recipients)", 0, 0, wRecUSDT, wRecXRP));
-            s5Rows.push(_mkRow("Withdrawals (Haricom Bank Accounts)", wBankGBP, wBankEUR, 0, 0));
+            s5Rows.push(_mkRow("Deposits from bank accounts", depGBP, depEUR, 0, 0));
+            s5Rows.push(_mkRow("Withdrawals to recipients", 0, 0, wRecUSDT, wRecXRP));
+            s5Rows.push(_mkRow("Withdrawals to bank accounts", wBankGBP, wBankEUR, 0, 0));
             s5Rows.push(_mkRow("Fees", feeGBP, feeEUR, feeUSDT, feeXRP));
             s5Rows.push(_mkRow("Net Trade Activity", tradeGBP, tradeEUR, tradeUSDT, tradeXRP));
             s5Rows.push(_mkRow("Calculated Closing", expGBP, expEUR, expUSDT, expXRP, true));
@@ -4940,9 +4940,9 @@
       };
 
       _addReconRow('Opening Balance', openGBP, openEUR, openUSDT, openXRP, false);
-      _addReconRow('Deposits bank accounts', depGBP, depEUR, "n/a", "n/a", false);
-      _addReconRow('Withdrawals recipients', "n/a", "n/a", wRecUSDT, wRecXRP, false);
-      _addReconRow('Withdrawals bank accounts', wBankGBP, wBankEUR, "n/a", "n/a", false);
+      _addReconRow('Deposits from bank accounts', depGBP, depEUR, "n/a", "n/a", false);
+      _addReconRow('Withdrawals to recipients', "n/a", "n/a", wRecUSDT, wRecXRP, false);
+      _addReconRow('Withdrawals to bank accounts', wBankGBP, wBankEUR, "n/a", "n/a", false);
       _addReconRow('Fees', feeGBP, feeEUR, feeUSDT, feeXRP, false);
       _addReconRow('Net Trade Activity', tradeGBP, tradeEUR, tradeUSDT, tradeXRP, false);
       _addReconRow('Calculated Closing', expGBP, expEUR, expUSDT, expXRP, true);
