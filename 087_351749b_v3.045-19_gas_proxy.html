@@ -4530,6 +4530,7 @@
           const eqShow = (r.EUR && r.EUR > 0) ? (r.EUR_GBP ? r.EUR_GBP.toFixed(2) : "0.00") : "n/a";
 
           const gbpStyle = (r.GBP && r.GBP > 0) ? "font-weight:bold; color:#000;" : "";
+          html += `<td style="padding:4px; border:1px solid #ddd; text-align:left;">${escHtml(r.recipient)}</td>`;
           html += `<td style="padding:4px; border:1px solid #ddd; text-align:right; ${gbpStyle}">${gbpShow}</td>`;
           html += `<td style="padding:4px; border:1px solid #ddd; text-align:right;">${eurShow}</td>`;
           const eqStyle = (r.EUR && r.EUR > 0) ? "font-weight:bold; color:#000;" : "color:#7f8c8d;";
