@@ -7,7 +7,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-  <title>Kraken Ledger Report v4.012</title>
+  <title>Kraken Ledger Report v4.013</title>
   <script async defer src="https://accounts.google.com/gsi/client"></script>
   <script async defer src="https://apis.google.com/js/api.js"></script>
   <style>
@@ -495,7 +495,7 @@
 
 
   <script>
-    const APP_VERSION = "v4.012";
+    const APP_VERSION = "v4.013";
   </script>
 
 
@@ -773,7 +773,7 @@
     <button id="log_btn" onclick="toggleLog()"
       style="width:100%; padding:8px; margin-top:10px; background:#8e44ad; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Display
       Progress Log</button>
-    <div id="trace_log" onclick="toggleLog()">Trace: v4.012 Kraken Ledger Report initialized.</div>
+    <div id="trace_log" onclick="toggleLog()">Trace: v4.013 Kraken Ledger Report initialized.</div>
   </div>
 
   <script>
@@ -3995,15 +3995,6 @@
               const words = recipient.split(/\s+/).slice(0, 2).join(" ");
               // Clean common suffixes if needed, or just trust words
               detail = `${words}`;
-
-              // v3.028: Fix "Withdrawal (EUR)" showing instead of name
-              // Use the detected name as the primary detail
-              row.details = detail;
-              // v4.012: CRITICAL FIX. Propagate the resolved name to the Recipient field.
-              // This ensures the Statement Summary groups by the CORRECT name (e.g. "Revolut Business")
-              // instead of the raw Ledger Info ("Revolut Ltd").
-              row.recipient = detail;
-
             } else if (e.info && e.info !== "Withdrawal" && e.info !== "Deposit") {
               // v3.017: Fallback to ledger info if no address match (e.g. "Revolut Ltd")
               detail = e.info;
@@ -4021,6 +4012,11 @@
             if (!detail.includes("(" + cleanAsset + ")")) {
               detail += ` (${cleanAsset})`;
             }
+
+            // v4.013: FINAL ASSIGNMENT (Moved to end)
+            // Ensure row.details AND row.recipient get the fully processed string (with suffix).
+            row.details = detail;
+            row.recipient = detail; // This guarantees Summary Separation.
 
             row.details = detail;
             // v3.045-19.35: Persist detected recipient for Summary Report
