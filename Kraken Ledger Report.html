@@ -7,7 +7,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-  <title>Kraken Ledger Report v4.019</title>
+  <title>Kraken Ledger Report v4.020</title>
   <script async defer src="https://accounts.google.com/gsi/client"></script>
   <script async defer src="https://apis.google.com/js/api.js"></script>
   <style>
@@ -495,7 +495,7 @@
 
 
   <script>
-    const APP_VERSION = "v4.019";
+    const APP_VERSION = "v4.020";
   </script>
 
 
@@ -773,7 +773,7 @@
     <button id="log_btn" onclick="toggleLog()"
       style="width:100%; padding:8px; margin-top:10px; background:#8e44ad; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Display
       Progress Log</button>
-    <div id="trace_log" onclick="toggleLog()">Trace: v4.019 Kraken Ledger Report initialized.</div>
+    <div id="trace_log" onclick="toggleLog()">Trace: v4.020 Kraken Ledger Report initialized.</div>
   </div>
 
   <script>
@@ -5243,7 +5243,8 @@
           const rowStyle = isBalRow ? "background:#f2f2f2; font-weight:bold;" : "";
 
           // Apply Z-strip to description if it contains (ZEUR) etc.
-          let desc = escHtml(r.details);
+          // v4.020: Prioritize Resolved Recipient (e.g. "Revolut Business") over Details
+          let desc = escHtml(r.recipient || r.details);
           desc = desc.replace("(ZEUR)", "(EUR)").replace("(ZGBP)", "(GBP)").replace("(ZUSD)", "(USD)");
 
           html += `<tr style="${rowStyle}">`;
