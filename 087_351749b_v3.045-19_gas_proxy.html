@@ -488,7 +488,7 @@
 
 
   <script>
-    const APP_VERSION = "v3.045-19.00";
+    const APP_VERSION = "v3.045-19.01";
   </script>
 
 
@@ -2554,7 +2554,10 @@
         };
 
         // --- PROXY LOGIC ---
-        if (proxyType === "gas" && gasUrl) {
+        if (proxyType === "gas" || proxy === "gas") {
+          if (!gasUrl) {
+            throw new Error("Google Proxy URL is missing. Please paste your Web App URL in API Config.");
+          }
           // GOOGLE APPS SCRIPT WRAPPER
           // Wrapper request: POST to gasUrl with JSON body
           url = gasUrl;
