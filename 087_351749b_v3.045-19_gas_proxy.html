@@ -495,7 +495,7 @@
 
 
   <script>
-    const APP_VERSION = "v3.045-19.34";
+    const APP_VERSION = "v3.045-19.35";
   </script>
 
 
@@ -3900,6 +3900,10 @@
             }
 
             row.details = detail;
+            // v3.045-19.35: Persist detected recipient for Summary Report
+            if (recipient) row.recipient = recipient;
+            // Also helpful: Save the raw info if needed
+            if (e.info) row.rawInfo = e.info;
 
           } else {
             // Use e.type or fallback. If type is missing, use "Transfer"
