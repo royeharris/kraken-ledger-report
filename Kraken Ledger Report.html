@@ -7,7 +7,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-  <title>Kraken Ledger Report v4.013</title>
+  <title>Kraken Ledger Report v4.014</title>
   <script async defer src="https://accounts.google.com/gsi/client"></script>
   <script async defer src="https://apis.google.com/js/api.js"></script>
   <style>
@@ -495,7 +495,7 @@
 
 
   <script>
-    const APP_VERSION = "v4.013";
+    const APP_VERSION = "v4.014";
   </script>
 
 
@@ -773,7 +773,7 @@
     <button id="log_btn" onclick="toggleLog()"
       style="width:100%; padding:8px; margin-top:10px; background:#8e44ad; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Display
       Progress Log</button>
-    <div id="trace_log" onclick="toggleLog()">Trace: v4.013 Kraken Ledger Report initialized.</div>
+    <div id="trace_log" onclick="toggleLog()">Trace: v4.014 Kraken Ledger Report initialized.</div>
   </div>
 
   <script>
@@ -4000,23 +4000,16 @@
               detail = e.info;
             }
 
-            // Fix: Override for Revolut GBP
             // v3.030: User requested NO hardcoding of bank names.
             // Keeping dynamic logic only.
-            // if (detail === "Revolut Ltd") { detail = "Revolut Business"; }
 
-            // Append Asset (cleaned)
-            let cleanAsset = normalizedAsset.replace("ZEUR", "EUR").replace("ZGBP", "GBP").replace("ZUSD", "USD");
-
-            // v3.028: Make sure we don't double append
-            if (!detail.includes("(" + cleanAsset + ")")) {
-              detail += ` (${cleanAsset})`;
-            }
+            // v4.014: User Request - REMOVE Asset Suffix (e.g. "(GBP)").
+            // The separation relies entirely on the Address Book Key (e.g. "Revolut Business" vs "Revolut B").
 
             // v4.013: FINAL ASSIGNMENT (Moved to end)
-            // Ensure row.details AND row.recipient get the fully processed string (with suffix).
+            // Ensure row.details AND row.recipient get the fully processed string.
             row.details = detail;
-            row.recipient = detail; // This guarantees Summary Separation.
+            row.recipient = detail; // This guarantees Summary Separation IF the Address Book names are unique.
 
             row.details = detail;
             // v3.045-19.35: Persist detected recipient for Summary Report
