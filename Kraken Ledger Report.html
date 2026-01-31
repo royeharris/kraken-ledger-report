@@ -320,15 +320,15 @@
     }
 
     .w-bank-details {
-      min-width: 25ch;
-      width: 25ch;
+      min-width: 17ch;
+      width: 17ch;
       /* Sticky Description Column */
       position: sticky;
       left: 0;
       /* Fix transparency: must be opaque to hide scrolling content behind it */
       background-color: #fff;
-      z-index: 2;
-      /* higher than normal cells */
+      z-index: 20;
+      /* High z-index to stay on top of scrolling content */
       border-right: 1px solid #ddd;
     }
 
@@ -441,7 +441,7 @@
       position: sticky;
       left: 0;
       background-color: #fff !important;
-      z-index: 10;
+      z-index: 20;
       border-right: 1px solid #ddd;
       /* separation line */
     }
@@ -488,7 +488,7 @@
 
 
   <script>
-    const APP_VERSION = "v3.045-19.03";
+    const APP_VERSION = "v3.045-19.04";
   </script>
 
 
@@ -567,13 +567,14 @@
       </div>
 
       <div id="auth_status"
-        style="font-size:0.7rem; font-weight:700; text-align:center; margin-bottom:10px; color:var(--primary);">Status:
+        style="font-size:0.7rem; font-weight:700; text-align:center; margin-bottom:0; margin-top:0; color:var(--primary);">
+        Status:
         Ready</div>
     </div>
 
     <!-- API Config Button + Panel (click to close) -->
     <button id="api_btn" onclick="toggleApiConfig()"
-      style="width:100%; padding:8px; margin-top:10px; background:#34495e; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">⚙️
+      style="width:100%; padding:8px; margin-top:4px; background:#34495e; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">⚙️
       API Config</button>
 
     <div id="apiConfigSection" onclick="toggleApiConfig()"
