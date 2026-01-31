@@ -1224,7 +1224,11 @@
       localStorage.setItem("kraken_gas_proxy_url", gasUrl ? gasUrl.trim() : "");
 
       logTrace("API credentials saved (Query + Withdraw).");
-      alert("API keys saved.");
+      if (document.getElementById("corsProxySelect").value === "gas") {
+        alert("API keys saved.\nGAS Proxy: " + (gasUrl ? "SET" : "EMPTY (Please paste URL!)"));
+      } else {
+        alert("API keys saved.");
+      }
     }
 
     // ========== STEP 1: Read Ledger (Query API - no 2FA needed) ==========
