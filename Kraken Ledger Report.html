@@ -495,7 +495,7 @@
 
 
   <script>
-    const APP_VERSION = "v3.045-19.19";
+    const APP_VERSION = "v3.045-19.20";
   </script>
 
 
@@ -1138,25 +1138,25 @@
         <div style="display:flex; flex-direction:row; align-items:center; gap:25px; height:100%;">
           <!-- Block 1: Addresses (Centered Vertical) -->
           <div style="display:flex; flex-direction:column; justify-content:center; align-items:center; height:100%;">
-             <span style="color:#d35400; font-weight:bold; font-size:0.8rem;">Addresses: ${cacheData.krakenAddresses.length}</span>
+             <span style="color:#d35400;">Addresses: <b id="addressCount">${cacheData.krakenAddresses.length}</b></span>
           </div>
 
           <!-- Block 2: Stats Grid (Deposits, Trades, Withdrawals) -->
           <div style="display:grid; grid-template-columns: auto auto; gap:2px 12px; align-items:center; font-size:0.7rem;">
             <!-- Row 1: Deposits -->
             <div style="font-weight:600; text-align:left; color:#000;">Deposits:</div>
-            <div style="text-align:left; color:#000;"><b>${dFiat}</b> Fiat</div>
+            <div style="text-align:left; color:#000;"><b>${dFiat}</b> fiat</div>
 
             <!-- Row 2: Trades -->
             <div style="font-weight:600; text-align:left; color:#8e44ad;">Trades:</div>
             <div style="text-align:left; color:#8e44ad;">
-               <b>${tradesFiatToCrypto}</b> f&gt;c / <b>${tradesCryptoToFiat}</b> c&gt;f / <b>${tradesFiatToFiat}</b> f&gt;f
+               <b>${tradesFiatToCrypto}</b> fiat&gt;crypto / <b>${tradesCryptoToFiat}</b> crypto&gt;fiat / <b>${tradesFiatToFiat}</b> fiat&gt;fiat
             </div>
 
             <!-- Row 3: Withdrawals -->
             <div style="font-weight:600; text-align:left; color:#000;">Withdrawals:</div>
             <div style="text-align:left; color:#000;">
-               <b>${wCrypto}</b> Crypto / <b>${wFiat}</b> Fiat
+               <b>${wCrypto}</b> crypto / <b>${wFiat}</b> fiat
             </div>
           </div>
         </div>
@@ -1665,9 +1665,10 @@
 
       // Flex layout for vertical stacking: Label | Ledger | Trade/Withdraw Report | Statement Report
       // Grid layout for tight vertical stacking and aligned numbers
+      // Grid layout for tight vertical stacking and aligned numbers
       hint.innerHTML = `
-        <div style="display:flex; gap:15px; align-items:flex-start;">
-          <!-- Col 1: Label -->
+        <div style="display:flex; gap:15px; align-items:center;">
+          <!-- Col 1: Label (Vertically Centered) -->
           <div style="display:flex; flex-direction:column; justify-content:center; height:100%; line-height:1.2; color:#333; font-weight:600;" title="${tooltipText}">
             <span>Number of</span>
             <span>Records</span>
@@ -1676,16 +1677,16 @@
           <!-- Col 2: Stats Grid -->
           <div style="display:grid; grid-template-columns: auto auto; gap:2px 15px; align-items:baseline;">
             <!-- Ledger -->
-            <div style="color:#16a085; text-align:right;">Ledger</div>
-            <div style="font-weight:bold; color:#16a085; text-align:left;">${ledgerCount}</div>
+            <div style="color:#16a085; text-align:left;">Ledger</div>
+            <div style="font-weight:bold; color:#16a085; text-align:right;">${ledgerCount}</div>
 
             <!-- Trade/Withdraw Report -->
-            <div style="color:#d35400; text-align:right;">Trade/Withdraw Report</div>
-            <div style="font-weight:bold; color:#d35400; text-align:left;">${reportCount}</div>
+            <div style="color:#d35400; text-align:left;">Trade/Withdraw Report</div>
+            <div style="font-weight:bold; color:#d35400; text-align:right;">${reportCount}</div>
 
             <!-- Statement Report -->
-            <div style="color:#000; text-align:right;">Statement Report</div>
-            <div style="font-weight:bold; color:#000; text-align:left;">${bankCount}</div>
+            <div style="color:#000; text-align:left;">Statement Report</div>
+            <div style="font-weight:bold; color:#000; text-align:right;">${bankCount}</div>
           </div>
         </div>
       `;
