@@ -495,7 +495,7 @@
 
 
   <script>
-    const APP_VERSION = "v3.045-19.23";
+    const APP_VERSION = "v3.045-19.24";
   </script>
 
 
@@ -1660,7 +1660,10 @@
 
       const ledgerCount = (cacheData.withdrawals && Array.isArray(cacheData.withdrawals)) ? cacheData.withdrawals.length : 0;
       const reportCount = (stagingRecords && Array.isArray(stagingRecords)) ? stagingRecords.length : 0;
-      const bankCount = (typeof bankRecords !== 'undefined' && Array.isArray(bankRecords)) ? bankRecords.length : 0;
+      // Filter out Opening/Closing Balance rows from the count (User Request v3.045-19.24)
+      const bankCount = (typeof bankRecords !== 'undefined' && Array.isArray(bankRecords))
+        ? bankRecords.filter(r => r.type !== 'Balance').length
+        : 0;
 
       // Calculate Reconciliations for Tooltip
       const depositCount = cacheData.withdrawals.filter(w => w.type === 'deposit').length;
