@@ -488,7 +488,7 @@
 
 
   <script>
-    const APP_VERSION = "v3.045-19.06";
+    const APP_VERSION = "v3.045-19.07";
   </script>
 
 
@@ -4178,7 +4178,7 @@
       html += '<div onclick="toggleSummaryReport()" style="cursor:pointer; background:#2980b9; color:#fff; padding:8px 15px; font-size:0.8rem; font-weight:bold; display:flex; justify-content:space-between; align-items:center;" title="Click to close report">';
       html += '<span>Statement Summary</span>';
       if (!isEmpty) {
-        html += '<span style="display:flex; gap:6px; align-items:center;"><button onclick="event.stopPropagation(); printStatementSummary()" title="Print / Save PDF" style="padding:2px 8px; background:#e74c3c; color:#fff; border:none; border-radius:3px; font-size:0.65rem; font-weight:600; cursor:pointer;">&#x1F5B6; Statement Summary PDF</button><button onclick="event.stopPropagation(); printKrakenStatement()" title="Print / Save Kraken Statement PDF" style="padding:2px 8px; background:#fff; color:#000; border:none; border-radius:3px; font-size:0.65rem; font-weight:600; cursor:pointer;">&#x1F5B6; Statement PDF</button><button onclick="event.stopPropagation(); copySummaryReport()" title="Copy Table" style="padding:2px 8px; background:#fff; color:#000; border:none; border-radius:3px; font-size:0.65rem; font-weight:600; cursor:pointer;">&#x2398; Copy Tables</button></span>';
+        html += '<span style="display:flex; gap:6px; align-items:center;"><button onclick="event.stopPropagation(); printKrakenStatement()" title="Print / Save Kraken Statement PDF" style="padding:2px 8px; background:#fff; color:#000; border:none; border-radius:3px; font-size:0.65rem; font-weight:600; cursor:pointer;">&#x1F5B6; Statement PDF</button><button onclick="event.stopPropagation(); printStatementSummary()" title="Print / Save PDF" style="padding:2px 8px; background:#fff; color:#000; border:none; border-radius:3px; font-size:0.65rem; font-weight:600; cursor:pointer;">&#x1F5B6; Statement Summary PDF</button><button onclick="event.stopPropagation(); copySummaryReport()" title="Copy Table" style="padding:2px 8px; background:#fff; color:#000; border:none; border-radius:3px; font-size:0.65rem; font-weight:600; cursor:pointer;">&#x2398; Copy Tables</button></span>';
       }
       html += '</div>';
 
