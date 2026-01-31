@@ -7,7 +7,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-  <title>Kraken Ledger Report v4.000</title>
+  <title>Kraken Ledger Report v4.001</title>
   <script async defer src="https://accounts.google.com/gsi/client"></script>
   <script async defer src="https://apis.google.com/js/api.js"></script>
   <style>
@@ -495,7 +495,7 @@
 
 
   <script>
-    const APP_VERSION = "v4.000";
+    const APP_VERSION = "v4.001";
   </script>
 
 
@@ -773,7 +773,7 @@
     <button id="log_btn" onclick="toggleLog()"
       style="width:100%; padding:8px; margin-top:10px; background:#8e44ad; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Display
       Progress Log</button>
-    <div id="trace_log" onclick="toggleLog()">Trace: v4.000 Kraken Ledger Report initialized.</div>
+    <div id="trace_log" onclick="toggleLog()">Trace: v4.001 Kraken Ledger Report initialized.</div>
   </div>
 
   <script>
@@ -828,7 +828,7 @@
       const now = new Date().toLocaleTimeString();
       const base = log.textContent && log.textContent.trim().length
         ? log.textContent
-        : "Trace: v3.045-17 Kraken Ledger Report initialized.";
+        : "Trace: " + APP_VERSION + " Kraken Ledger Report initialized.";
       log.textContent = base + "\n[" + now + "] " + msg;
       log.scrollTop = log.scrollHeight;
       console.log(msg);
@@ -870,7 +870,7 @@
     function copyTraceToClipboard() {
       const log = document.getElementById("trace_log");
       const text = log.textContent || "";
-      if (!text.trim() || text.trim() === "Trace: v3.045-17 Kraken Ledger Report initialized.") {
+      if (!text.trim() || text.trim() === "Trace: " + APP_VERSION + " Kraken Ledger Report initialized.") {
         alert("There are no trace log records to copy.");
         return;
       }
@@ -1018,8 +1018,8 @@
       // Clear LocalStorage
       localStorage.removeItem("kraken_staging");
       localStorage.removeItem("kraken_v2_withdrawals");
-      localStorage.removeItem("kraken_v2_rates_v3.045-17");
-      localStorage.removeItem("kraken_summary_staging_v3.045-17");
+      localStorage.removeItem("kraken_v2_rates_" + APP_VERSION);
+      localStorage.removeItem("kraken_summary_staging_" + APP_VERSION);
 
       // Clear Views
       renderPreview();
@@ -1223,7 +1223,7 @@
         localStorage.setItem("kraken_v2_withdrawals", JSON.stringify(cacheData.withdrawals || []));
         localStorage.setItem("kraken_v2_history", JSON.stringify(cacheData.withdrawalHistory || []));
         localStorage.setItem("kraken_v2_addresses", JSON.stringify(cacheData.krakenAddresses || []));
-        localStorage.setItem("kraken_v2_rates_v3.045-17", JSON.stringify(cacheData.ratesCache || {}));
+        localStorage.setItem("kraken_v2_rates_" + APP_VERSION, JSON.stringify(cacheData.ratesCache || {}));
         // Optional: store computed withdrawalCache (used for GBP fallbacks)
         if (cacheData && Array.isArray(cacheData.withdrawalCache)) {
           localStorage.setItem("kraken_v3_withdrawal_cache", JSON.stringify(cacheData.withdrawalCache));
@@ -1244,7 +1244,7 @@
       localStorage.setItem("kraken_v2_withdrawals", JSON.stringify(cacheData.withdrawals));
       localStorage.setItem("kraken_v2_history", JSON.stringify(cacheData.withdrawalHistory));
       localStorage.setItem("kraken_v2_addresses", JSON.stringify(cacheData.krakenAddresses));
-      localStorage.setItem("kraken_v2_rates_v3.045-17", JSON.stringify(cacheData.ratesCache));
+      localStorage.setItem("kraken_v2_rates_" + APP_VERSION, JSON.stringify(cacheData.ratesCache));
       logTrace("Data saved to localStorage.");
       alert("Data saved to local storage.");
     }
@@ -1258,7 +1258,7 @@
       cacheData.withdrawals = JSON.parse(cached || "[]");
       cacheData.withdrawalHistory = JSON.parse(localStorage.getItem("kraken_v2_history") || "[]");
       cacheData.krakenAddresses = JSON.parse(localStorage.getItem("kraken_v2_addresses") || "[]");
-      cacheData.ratesCache = JSON.parse(localStorage.getItem("kraken_v2_rates_v3.045-17") || "{}");
+      cacheData.ratesCache = JSON.parse(localStorage.getItem("kraken_v2_rates_" + APP_VERSION) || "{}");
       updateStatusCounts();
       logTrace("Loaded from localStorage. Withdrawals=" + cacheData.withdrawals.length);
 
@@ -1527,7 +1527,7 @@
       bankRecords = [];
       summaryRecords = { withdrawals: [], deposits: [] };
       localStorage.removeItem("kraken_bank_staging");
-      localStorage.removeItem("kraken_summary_staging_v3.045-17");
+      localStorage.removeItem("kraken_summary_staging_" + APP_VERSION);
 
       const bankArea = document.getElementById("bankReportArea");
       if (bankArea) bankArea.style.display = "none";
@@ -3909,6 +3909,16 @@
               else if (addr) recipient = addr;
             }
 
+            // v4.001: Fallback for Fiat Withdrawals (Bank Names)
+            // If history lookup failed (common for Banks), try to find a matching address book entry by Name Similarity.
+            // e.g. Ledger "Revolut Ltd" -> Address Book "Revolut Business"
+            if (!recipient && (normalizedAsset === "GBP" || normalizedAsset === "EUR")) {
+              if (e.info && e.info.toLowerCase().includes("revolut")) {
+                const match = cacheData.krakenAddresses.find(a => a.asset === normalizedAsset && a.key.toLowerCase().includes("revolut"));
+                if (match) recipient = match.key;
+              }
+            }
+
             if (recipient) {
               // Take first 2 words
               const words = recipient.split(/\s+/).slice(0, 2).join(" ");
@@ -5429,7 +5439,7 @@
       const savedWithdrawals = localStorage.getItem("kraken_v2_withdrawals");
       const savedAddresses = localStorage.getItem("kraken_v2_addresses");
       const savedHistory = localStorage.getItem("kraken_v2_history");
-      const savedRates = localStorage.getItem("kraken_v2_rates_v3.045-17");
+      const savedRates = localStorage.getItem("kraken_v2_rates_" + APP_VERSION);
       if (savedWithdrawals) cacheData.withdrawals = JSON.parse(savedWithdrawals);
       if (savedAddresses) cacheData.krakenAddresses = JSON.parse(savedAddresses);
       if (savedHistory) cacheData.withdrawalHistory = JSON.parse(savedHistory);
