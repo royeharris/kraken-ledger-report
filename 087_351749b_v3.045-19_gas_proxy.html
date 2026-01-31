@@ -7,7 +7,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-  <title>Kraken Ledger Report v4.009</title>
+  <title>Kraken Ledger Report v4.010</title>
   <script async defer src="https://accounts.google.com/gsi/client"></script>
   <script async defer src="https://apis.google.com/js/api.js"></script>
   <style>
@@ -495,7 +495,7 @@
 
 
   <script>
-    const APP_VERSION = "v4.009";
+    const APP_VERSION = "v4.010";
   </script>
 
 
@@ -773,7 +773,7 @@
     <button id="log_btn" onclick="toggleLog()"
       style="width:100%; padding:8px; margin-top:10px; background:#8e44ad; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Display
       Progress Log</button>
-    <div id="trace_log" onclick="toggleLog()">Trace: v4.009 Kraken Ledger Report initialized.</div>
+    <div id="trace_log" onclick="toggleLog()">Trace: v4.010 Kraken Ledger Report initialized.</div>
   </div>
 
   <script>
@@ -3951,12 +3951,31 @@
               }
 
               const addr = historyMatch.info || historyMatch.address;
-              // v4.008: Smart Link for Address Book
+              // v4.010: Smart Asset-Aware Bank Linkage
               // 1. Try Exact Address Match (Crypto)
               let addrMatch = cacheData.krakenAddresses.find(a => a.address === addr);
-              // 2. Try Key Name Match (Fiat Banks - where 'address' is empty but 'key' matches 'info')
+
+              // 2. Try Exact Key Match (Fiat)
               if (!addrMatch && addr) {
                 addrMatch = cacheData.krakenAddresses.find(a => a.key === addr);
+              }
+
+              // 3. Try Asset-Aware Partial Match (The "Revolut" Fix)
+              if (!addrMatch && addr && (normalizedAsset === "GBP" || normalizedAsset === "EUR")) {
+                // Get only addresses for this asset (GBP or EUR)
+                const assetAddresses = cacheData.krakenAddresses.filter(a => a.asset === normalizedAsset);
+                // Check if the Info string contains the Key (or vice versa), or share the first word
+                addrMatch = assetAddresses.find(a => {
+                  const infoSafe = addr.toLowerCase().trim();
+                  const keySafe = a.key.toLowerCase().trim();
+                  // Match if info contains key, or key contains info
+                  if (infoSafe.includes(keySafe) || keySafe.includes(infoSafe)) return true;
+                  // Match if first word is identical (e.g. "Revolut") and length > 3
+                  const firstWordInfo = infoSafe.split(' ')[0];
+                  const firstWordKey = keySafe.split(' ')[0];
+                  if (firstWordInfo.length > 3 && firstWordInfo === firstWordKey) return true;
+                  return false;
+                });
               }
 
               if (addrMatch) recipient = addrMatch.key;
