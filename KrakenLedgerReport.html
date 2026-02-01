@@ -7,7 +7,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-  <title>Kraken Ledger Report v4.00-48</title>
+  <title>Kraken Ledger Report v4.00-49</title>
   <script async defer src="https://accounts.google.com/gsi/client"></script>
   <script async defer src="https://apis.google.com/js/api.js"></script>
   <style>
@@ -495,7 +495,7 @@
 
 
   <script>
-    const APP_VERSION = "v4.00-48";
+    const APP_VERSION = "v4.00-49";
   </script>
 
 
@@ -2273,7 +2273,15 @@
             let s1ColHeaders = ["Recipient", "USDT", "Avg Rate", "GBP Equivalent", "XRP Amount", "Avg Rate", "GBP Equivalent"];
 
             let s1Rows = [];
-            const fmt = (v, d) => (v && parseFloat(v) !== 0) ? parseFloat(v).toFixed(d) : "-";
+            const fmt = (v, d) => {
+              if (v === undefined || v === null || v === "") return "-";
+              const n0 = parseFloat(v);
+              if (!isFinite(n0)) return "-";
+              const n = (Math.abs(n0) < 1e-9) ? 0 : n0; // prevent "-0.00"
+              if (n === 0) return "-";
+              const s = n.toFixed(d);
+              return (s === "-0.00" || s === "-0.0000") ? s.replace("-", "") : s;
+            };
 
             if (summaryRecords.crypto && summaryRecords.crypto.length > 0) {
               s1Rows = summaryRecords.crypto.map(r => {
@@ -2308,14 +2316,20 @@
               s2Rows = [["", "-", "-", "-"]];
             }
 
-            // S3: Deposits
-            let s3Headers = ["Deposits from Haricom Bank Accounts  GBP | EUR", "", ""];
-            let s3ColHeaders = ["Currency", "Total Amount", "GBP Equivalent"];
-            const s3Rows = (summaryRecords.deposits || []).map(r => [
-              r.asset,
-              fmt(r.total, 2),
-              (r.asset === "GBP") ? "n/a" : fmt(r.gbpEq || 0, 2)
-            ]);
+            // S3: Deposits (Phase III-1 aligned with bank-withdrawal labelling + currency split)
+            let s3Headers = ["Deposits from Haricom Bank Accounts  GBP | EUR", "", "", ""];
+            let s3ColHeaders = ["Haricom Bank Account", "GBP Amount", "EUR Amount", "EUR (GBP Eq)"];
+            let s3Rows = [];
+            if (summaryRecords.deposits && summaryRecords.deposits.length > 0) {
+              s3Rows = summaryRecords.deposits.map(r => [
+                r.recipient,
+                fmt(r.GBP, 2),
+                fmt(r.EUR, 2),
+                (r.EUR > 0 && r.EUR_GBP > 0) ? fmt(r.EUR_GBP, 2) : "-"
+              ]);
+            } else {
+              s3Rows = [["No deposits for this period.", "-", "-", "-"]];
+            }
 
             // S4: Fees
             let s4Headers = ["Fees  GBP | EUR | USDT | XRP", "", ""];
@@ -4515,6 +4529,10 @@
       const cryptoTotals = {}; // { recipient: { USDT: 0, XRP: 0, USDT_GBP: 0, XRP_GBP: 0 } }
       const fMap = {};         // { recipient: { GBP: 0, EUR: 0, EUR_GBP: 0 } }
 
+      // Phase III-1: Canonical institution label per fiat currency for consistent Deposits/Withdrawals presentation
+      // Populated from actual fiat withdrawal rows in the selected period (transaction evidence), not by frequency.
+      const fiatInstitutionByCurrency = { GBP: null, EUR: null };
+
       // Global reset
       depositTotals = { GBP: 0, EUR: 0 };
       const depositGbpTotals = { GBP: 0, EUR: 0 };
@@ -4668,6 +4686,7 @@
               // FIAT EXPENSE (bank withdrawals)
               // IMPORTANT: Keep GBP and EUR on separate summary rows by suffixing the label with currency.
               // This prevents merged rows when Kraken 'info' uses the same institution string (e.g. 'Revolut Ltd') for both currencies.
+              if (!fiatInstitutionByCurrency[asset]) fiatInstitutionByCurrency[asset] = recipient;
               const fiatKey = `${recipient} (${asset})`;
               if (!fMap[fiatKey]) fMap[fiatKey] = { GBP: 0, EUR: 0, EUR_GBP: 0 };
 
@@ -4745,10 +4764,58 @@
       const cryptoRows = Object.keys(cryptoTotals).map(r => ({ recipient: r, ...cryptoTotals[r] })).sort((a, b) => a.recipient.localeCompare(b.recipient));
       const fiatRows = Object.keys(fMap).map(r => ({ recipient: r, ...fMap[r] })).sort((a, b) => a.recipient.localeCompare(b.recipient));
 
-      const depositRows = [
-        { asset: "GBP", total: depositTotals.GBP, gbpEq: null },
-        { asset: "EUR", total: depositTotals.EUR, gbpEq: depositGbpTotals.EUR }
-      ];
+      const depositRows = (() => {
+        // Phase III-1: Deposits summary must align with bank-withdrawal labelling:
+        // - left column is bank account label (institution + currency suffix)
+        // - only include currencies that actually have deposits in the selected period
+        // - never emit zero-value placeholder rows
+        const rows = [];
+
+        const normAsset = (a) => (a || "").replace(/^Z/, "").replace(/^X/, "");
+
+        const firstTwoWords = (s) => {
+          if (!s) return "";
+          const w = String(s).trim().split(/\s+/).filter(Boolean);
+          return (w.length <= 2) ? w.join(" ") : w.slice(0, 2).join(" ");
+        };
+
+        const isVerifiedAddress = (a) => {
+          const v = a && a.verified;
+          if (v === undefined || v === null) return true; // treat missing as verified for display purposes
+          if (v === true) return true;
+          const s = String(v).toLowerCase();
+          return (s === "true" || s === "1");
+        };
+
+        const fallbackInstitutionFromAddressBook = (ccy) => {
+          try {
+            const addrs = (cacheData && cacheData.krakenAddresses) ? cacheData.krakenAddresses : [];
+            const hits = addrs.filter(a => normAsset(a.asset) === ccy && isVerifiedAddress(a) && a.key);
+            if (!hits.length) return null;
+            return firstTwoWords(hits[0].key);
+          } catch (_) {
+            return null;
+          }
+        };
+
+        for (const ccy of ["GBP", "EUR"]) {
+          const total = (ccy === "GBP") ? depositTotals.GBP : depositTotals.EUR;
+          if (!total || total <= 0) continue;
+
+          // Prefer institution label evidenced by fiat withdrawals in-period (e.g., "Revolut Ltd"),
+          // otherwise fallback to the configured address-book key (e.g., "Revolut Business"/"Revolut B").
+          const inst = fiatInstitutionByCurrency[ccy] || fallbackInstitutionFromAddressBook(ccy) || "Bank";
+          const label = `${inst} (${ccy})`;
+
+          rows.push({
+            recipient: label,
+            GBP: (ccy === "GBP") ? total : 0,
+            EUR: (ccy === "EUR") ? total : 0,
+            EUR_GBP: (ccy === "EUR") ? (depositGbpTotals.EUR || 0) : 0
+          });
+        }
+        return rows;
+      })();
 
       const feeRows = [
         { asset: "GBP", total: feeTotals.GBP, gbpEq: null },
