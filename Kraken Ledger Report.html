@@ -495,7 +495,7 @@
 
 
   <script>
-    const APP_VERSION = "v4.00-20";
+    const APP_VERSION = "v4.00-21";
   </script>
 
 
@@ -1265,9 +1265,9 @@
         return;
       }
       cacheData.withdrawals = JSON.parse(cached || "[]");
-      cacheData.withdrawalHistory = JSON.parse(localStorage.getItem("kraken_v3_history") || "[]");
-      cacheData.krakenAddresses = JSON.parse(localStorage.getItem("kraken_v3_addresses") || "[]");
-      cacheData.ratesCache = JSON.parse(localStorage.getItem("kraken_v3_rates_" + APP_VERSION) || "{}");
+      cacheData.withdrawalHistory = JSON.parse(localStorage.getItem("kraken_v2_history") || "[]");
+      cacheData.krakenAddresses = JSON.parse(localStorage.getItem("kraken_v2_addresses") || "[]");
+      cacheData.ratesCache = JSON.parse(localStorage.getItem("kraken_v2_rates_" + APP_VERSION) || "{}");
 
       // CRITICAL FIX: Rebuild RefID Index after loading from Cache
       cacheData.withdrawalHistoryByRefid = {};
