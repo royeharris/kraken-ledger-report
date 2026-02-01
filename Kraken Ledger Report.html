@@ -495,7 +495,7 @@
 
 
   <script>
-    const APP_VERSION = "v4.00-31";
+    const APP_VERSION = "v4.00-32";
   </script>
 
 
@@ -748,6 +748,7 @@
             <th style="padding:4px; border:1px solid #90caf9; width:80px;">Balance</th>
             <th style="padding:4px; border:1px solid #90caf9; width:140px;">Ledger ID</th>
             <th style="padding:4px; border:1px solid #90caf9;">Ref ID</th>
+            <th style="padding:4px; border:1px solid #90caf9;">Info</th>
           </tr>
         </thead>
         <tbody id="ledgerTableBody">
@@ -1554,10 +1555,13 @@
 
 
       } catch (e) {
-        if (genBtn) genBtn.disabled = false; // Re-enable on error
         updateStatus("Ledger Error", "error");
         logTrace("ERROR in readLedger: " + (e.message || e));
-        // alert("Error reading ledger: " + (e.message || e));
+      } finally {
+        // Re-enable buttons
+        if (btnRead) btnRead.disabled = false;
+        if (btnPull) btnPull.disabled = false;
+        if (btnGen) btnGen.disabled = false;
       }
     }
 
@@ -1577,6 +1581,15 @@
         logTrace("Using Withdraw API Key: " + creds.apiKey.substring(0, 8) + "...");
 
         updateStatus("Pulling Addresses...", "sync");
+
+        // v4.00-31: Disable other buttons
+        const btnRead = document.getElementById("read_ledger_btn");
+        const btnPull = document.getElementById("pull_btn");
+        const btnGen = document.getElementById("generate_btn");
+        if (btnRead) btnRead.disabled = true;
+        if (btnPull) btnPull.disabled = true;
+        if (btnGen) btnGen.disabled = true;
+
 
         // Call WithdrawAddresses API
         logTrace("Calling Kraken WithdrawAddresses API...");
@@ -1604,7 +1617,14 @@
       } catch (e) {
         updateStatus("Address Error", "error");
         logTrace("ERROR in pullAddresses: " + (e.message || e));
-        // alert("Error pulling addresses: " + (e.message || e));
+      } finally {
+        // Re-enable buttons
+        const btnRead = document.getElementById("read_ledger_btn");
+        const btnPull = document.getElementById("pull_btn");
+        const btnGen = document.getElementById("generate_btn");
+        if (btnRead) btnRead.disabled = false;
+        if (btnPull) btnPull.disabled = false;
+        if (btnGen) btnGen.disabled = false;
       }
     }
 
