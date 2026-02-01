@@ -495,7 +495,7 @@
 
 
   <script>
-    const APP_VERSION = "v4.00-36";
+    const APP_VERSION = "v4.00-37";
   </script>
 
 
@@ -1375,6 +1375,12 @@
         logTrace("Using Query API Key: " + creds.apiKey.substring(0, 8) + "...");
         logTrace("Proxy: " + (creds.proxy || "(none)"));
 
+        // v4.00-37: Mutual Exclusion - Disable ALL buttons
+        const btnRead = document.getElementById("read_ledger_btn");
+        const btnPull = document.getElementById("pull_btn");
+
+        if (btnRead) btnRead.disabled = true;
+        if (btnPull) btnPull.disabled = true;
         if (genBtn) genBtn.disabled = true;
         cacheData.withdrawals = []; // Clear stale data
 
