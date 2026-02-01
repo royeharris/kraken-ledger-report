@@ -2874,6 +2874,75 @@
       return allWithdrawals;
     }
 
+    // -----------------------------------------------------
+    // RECIPIENT RESOLUTION HELPERS (Phase III-1)
+    // -----------------------------------------------------
+
+    function resolveRecipientLabel({ asset, refid, historyMatch, krakenAddresses, withdrawalHistoryByRefid }) {
+      // --- 1) Fiat bank withdrawals (ZGBP/ZEUR): prefer refid -> key ---
+      if (asset === "ZGBP" || asset === "ZEUR") {
+        const w = (refid && withdrawalHistoryByRefid) ? withdrawalHistoryByRefid[refid] : null;
+
+        // If WithdrawStatus provides a withdrawal key (common for fiat), use it
+        if (w && w.key) return trimLabel(w.key);
+
+        // If key is not present, try to resolve by matching info/address fields to address book key
+        // (best-effort; may be empty for fiat)
+        if (w && w.info) {
+          const k = tryMatchKeyFromInfo(w.info, krakenAddresses, asset);
+          if (k) return trimLabel(k);
+        }
+
+        // Last-resort fallback: ONLY if there is exactly one verified address for this asset
+        const candidates = krakenAddresses.filter(a => a.asset === asset && a.verified === true);
+        if (candidates.length === 1) return trimLabel(candidates[0].key);
+
+        // Ambiguous: multiple candidates and no key => do not guess
+        return null;
+      }
+
+      // --- 2) Crypto withdrawals (USDT/XRP): address+tag join ---
+      if (asset === "USDT" || asset === "XRP" || asset === "XXRP") {
+        if (historyMatch?.address) {
+          const addr = krakenAddresses.find(a =>
+            a.address === historyMatch.address &&
+            (a.tag || "") === (historyMatch.tag || "")
+          );
+          if (addr?.key) return trimLabel(addr.key);
+        }
+      }
+
+      // --- 3) Generic fallback ---
+      if (historyMatch?.info) return trimLabel(historyMatch.info);
+
+      return null;
+    }
+
+    function tryMatchKeyFromInfo(infoStr, krakenAddresses, asset) {
+      if (!infoStr) return null;
+      const n = norm(infoStr);
+      for (const a of krakenAddresses) {
+        if (a.asset !== asset) continue;
+        if (a.key && norm(a.key) === n) return a.key;
+      }
+      return null;
+    }
+
+    function norm(s) {
+      return String(s).toUpperCase().replace(/\s+/g, " ").trim();
+    }
+
+    function trimLabel(str) {
+      return String(str)
+        .replace(/\(.*?\)/g, "")
+        .trim()
+        .split(/\s+/)
+        .slice(0, 2)
+        .join(" ");
+    }
+
+    // -----------------------------------------------------
+
     // Get historical exchange rate from Kraken public API
     // Returns { gbpRate, eurRate } for the given asset at the given timestamp
     // Strategy: Fetch USD pair (more history) and convert via GBP/USD rate
@@ -3908,53 +3977,43 @@
             if (!row.gbpValues) row.gbpValues = {};
             if (foundGbp) row.gbpValues[normalizedAsset] = parseFloat(foundGbp);
 
+            // v4.00-03 Phase III-1: Canonical Label Resolution
+            const label = resolveRecipientLabel({
+              asset: normalizedAsset,
+              refid: e.refid,
+              historyMatch: cacheData.withdrawalHistory.find(h => h.refid === e.refid),
+              krakenAddresses: cacheData.krakenAddresses,
+              withdrawalHistoryByRefid: cacheData.withdrawalHistoryByRefid
+            });
+
             // Default Detail
             detail = (e.type === 'withdrawal') ? `Withdrawal` : `Deposit`;
 
-            // Enriched Logic: First 2 words of recipient
-            let recipient = null;
+            // If we resolved a canonical label, Use it.
+            if (label) {
+              detail = label;
 
-            // 1. History Lookup
-            const historyMatch = cacheData.withdrawalHistory.find(h => h.refid === e.refid);
-            if (historyMatch) {
-              const addr = historyMatch.info || historyMatch.address;
-              const addrMatch = cacheData.krakenAddresses.find(a => a.address === addr);
-              if (addrMatch) recipient = addrMatch.key;
-              else if (addr) recipient = addr;
+              // Persist for Summary Report
+              row.recipient = label;
+            } else {
+              // FALLBACK: Use info if available (e.g. "Revolut Ltd")
+              if (e.info && e.info !== "Withdrawal" && e.info !== "Deposit") {
+                detail = e.info;
+              }
             }
-
-            if (recipient) {
-              // Take first 2 words
-              const words = recipient.split(/\s+/).slice(0, 2).join(" ");
-              // Clean common suffixes if needed, or just trust words
-              detail = `${words}`;
-
-              // v3.028: Fix "Withdrawal (EUR)" showing instead of name
-              // Use the detected name as the primary detail
-              row.details = detail;
-
-            } else if (e.info && e.info !== "Withdrawal" && e.info !== "Deposit") {
-              // v3.017: Fallback to ledger info if no address match (e.g. "Revolut Ltd")
-              detail = e.info;
-            }
-
-            // Fix: Override for Revolut GBP
-            // v3.030: User requested NO hardcoding of bank names.
-            // Keeping dynamic logic only.
-            // if (detail === "Revolut Ltd") { detail = "Revolut Business"; }
 
             // Append Asset (cleaned)
             let cleanAsset = normalizedAsset.replace("ZEUR", "EUR").replace("ZGBP", "GBP").replace("ZUSD", "USD");
 
-            // v3.028: Make sure we don't double append
-            if (!detail.includes("(" + cleanAsset + ")")) {
+            // Patch 5: Only append asset if NO label was found, OR if the detail doesn't include it.
+            // If we found a label (e.g. "Revolut Business"), we do NOT append (EUR).
+            // But if we fell back to "Withdrawal", we DO append (EUR).
+            if (!label && !detail.includes("(" + cleanAsset + ")")) {
               detail += ` (${cleanAsset})`;
             }
 
             row.details = detail;
-            // v3.045-19.35: Persist detected recipient for Summary Report
-            if (recipient) row.recipient = recipient;
-            // Also helpful: Save the raw info if needed
+            // Also helpful: Save the raw info if needed (legacy)
             if (e.info) row.rawInfo = e.info;
 
           } else {
