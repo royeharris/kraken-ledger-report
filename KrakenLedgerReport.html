@@ -7,7 +7,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-  <title>Kraken Ledger Report v4.00-43</title>
+  <title>Kraken Ledger Report v4.00-44</title>
   <script async defer src="https://accounts.google.com/gsi/client"></script>
   <script async defer src="https://apis.google.com/js/api.js"></script>
   <style>
@@ -495,7 +495,7 @@
 
 
   <script>
-    const APP_VERSION = "v4.00-43";
+    const APP_VERSION = "v4.00-44";
   </script>
 
 
@@ -1641,6 +1641,11 @@
         logTrace("Report generation already in progress - ignoring click");
         return;
       }
+      // Bank-label diagnostics: reset per run and output to Trace log
+      if (ENABLE_BANK_LABEL_DIAGNOSTICS) {
+        window.bankLabelDiagnostics = [];
+      }
+
 
       const btn = document.getElementById("generate_btn");
       isGenerating = true;
@@ -3058,7 +3063,7 @@
 
 
     // Set true temporarily when debugging bank label joins (no UI changes; results go to window.bankLabelDiagnostics)
-    const ENABLE_BANK_LABEL_DIAGNOSTICS = false;
+    const ENABLE_BANK_LABEL_DIAGNOSTICS = true;
 
     function resolveRecipientLabel({ asset, refid, historyMatch, krakenAddresses, withdrawalHistoryByRefid, currentInfo }) {
       // --- 1) Fiat bank withdrawals (ZGBP/ZEUR): prefer refid -> key ---
@@ -3868,6 +3873,28 @@
       renderPreview();
       updateStatus("Ready", "active");
       logTrace("Report generated: " + stagingRecords.length + " records");
+      // Bank-label diagnostics: summarize in Trace log (no need to open browser console)
+      if (ENABLE_BANK_LABEL_DIAGNOSTICS && window.bankLabelDiagnostics && window.bankLabelDiagnostics.length) {
+        try {
+          const total = window.bankLabelDiagnostics.length;
+          const withKey = window.bankLabelDiagnostics.filter(d => d.hasKey).length;
+          const byAsset = {};
+          for (const d of window.bankLabelDiagnostics) {
+            const k = d.normAsset || d.asset || "UNKNOWN";
+            byAsset[k] = byAsset[k] || { total: 0, withKey: 0, noKey: 0 };
+            byAsset[k].total += 1;
+            if (d.hasKey) byAsset[k].withKey += 1; else byAsset[k].noKey += 1;
+          }
+          logTrace("BANK_LABEL_DIAG: entries=" + total + ", withKey=" + withKey + ", noKey=" + (total - withKey) + ", byAsset=" + JSON.stringify(byAsset));
+          const samples = window.bankLabelDiagnostics.slice(0, Math.min(10, total));
+          for (let i = 0; i < samples.length; i++) {
+            logTrace("BANK_LABEL_DIAG_SAMPLE[" + (i + 1) + "]: " + JSON.stringify(samples[i]));
+          }
+        } catch (e) {
+          logTrace("BANK_LABEL_DIAG: failed to summarize diagnostics: " + (e && e.message ? e.message : String(e)));
+        }
+      }
+
     }
 
     // Format unix timestamp to DD Mon YYYY
