@@ -495,7 +495,7 @@
 
 
   <script>
-    const APP_VERSION = "v4.00-41";
+    const APP_VERSION = "v4.00-42";
   </script>
 
 
@@ -3040,10 +3040,32 @@
     // RECIPIENT RESOLUTION HELPERS (Phase III-1 Canonical)
     // -----------------------------------------------------
 
+    function normalizeAsset(asset) {
+      const a = String(asset || "").trim();
+      if (a === "ZGBP") return "GBP";
+      if (a === "ZEUR") return "EUR";
+      if (a === "ZUSD") return "USD";
+      if (a === "XXRP") return "XRP";
+      return a;
+    }
+
+    // Set true temporarily when debugging bank label joins (no UI changes; results go to window.bankLabelDiagnostics)
+    const ENABLE_BANK_LABEL_DIAGNOSTICS = false;
+
     function resolveRecipientLabel({ asset, refid, historyMatch, krakenAddresses, withdrawalHistoryByRefid, currentInfo }) {
       // --- 1) Fiat bank withdrawals (ZGBP/ZEUR): prefer refid -> key ---
-      if (asset === "ZGBP" || asset === "ZEUR" || asset === "GBP" || asset === "EUR") {
+      const normAsset = normalizeAsset(asset);
+      if (normAsset === "GBP" || normAsset === "EUR") {
         const w = (refid && withdrawalHistoryByRefid) ? withdrawalHistoryByRefid[refid] : historyMatch;
+
+        if (ENABLE_BANK_LABEL_DIAGNOSTICS) {
+          try {
+            const candCount = krakenAddresses.filter(a => normalizeAsset(a.asset) === normAsset && a.verified === true).length;
+            const hasKey = Boolean(w && w.key);
+            window.bankLabelDiagnostics = window.bankLabelDiagnostics || [];
+            window.bankLabelDiagnostics.push({ refid: refid || null, asset: asset || null, normAsset, candidateCount: candCount, hasKey, info: (w && w.info) ? w.info : null });
+          } catch (e) {}
+        }
 
         // If WithdrawStatus provides a withdrawal key (common for fiat), use it
         if (w && w.key) return trimLabel(w.key);
@@ -3051,18 +3073,18 @@
         // If key is not present, try to resolve by matching info/address fields to address book key
         // Priority 1: History Info (if cached)
         if (w && w.info) {
-          const k = tryMatchKeyFromInfo(w.info, krakenAddresses, asset);
+          const k = tryMatchKeyFromInfo(w.info, krakenAddresses, normAsset);
           if (k) return trimLabel(k);
         }
 
         // Priority 2: Current Ledger Info (Live Data)
         if (currentInfo) {
-          const k2 = tryMatchKeyFromInfo(currentInfo, krakenAddresses, asset);
+          const k2 = tryMatchKeyFromInfo(currentInfo, krakenAddresses, normAsset);
           if (k2) return trimLabel(k2);
         }
 
         // Last-resort fallback: ONLY if there is exactly one verified address for this asset
-        const candidates = krakenAddresses.filter(a => a.asset === asset && a.verified === true);
+        const candidates = krakenAddresses.filter(a => normalizeAsset(a.asset) === normAsset && a.verified === true);
         if (candidates.length === 1) return trimLabel(candidates[0].key);
 
         // Ambiguous: multiple candidates and no key => do not guess
@@ -3090,7 +3112,7 @@
       if (!infoStr) return null;
       const n = norm(infoStr);
       for (const a of krakenAddresses) {
-        if (a.asset !== asset) continue;
+        if (normalizeAsset(a.asset) !== asset) continue;
         if (a.key && norm(a.key) === n) return a.key;
       }
       return null;
