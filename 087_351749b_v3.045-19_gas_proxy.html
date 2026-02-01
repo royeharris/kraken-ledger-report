@@ -7,7 +7,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-  <title>Kraken Ledger Report v4.00-18</title>
+  <title>Kraken Ledger Report v4.00-19</title>
   <script async defer src="https://accounts.google.com/gsi/client"></script>
   <script async defer src="https://apis.google.com/js/api.js"></script>
   <style>
@@ -495,7 +495,7 @@
 
 
   <script>
-    const APP_VERSION = "v4.00-18";
+    const APP_VERSION = "v4.00-19";
   </script>
 
 
@@ -773,7 +773,7 @@
     <button id="log_btn" onclick="toggleLog()"
       style="width:100%; padding:8px; margin-top:10px; background:#8e44ad; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Display
       Progress Log</button>
-    <div id="trace_log" onclick="toggleLog()">Trace: v4.00-18 Kraken Ledger Report initialized.</div>
+    <div id="trace_log" onclick="toggleLog()">Trace: v4.00-19 Kraken Ledger Report initialized.</div>
   </div>
 
   <script>
@@ -4112,18 +4112,20 @@
               if (e.info && e.info !== "Withdrawal" && e.info !== "Deposit") {
                 detail = e.info;
               }
-              // DEBUG TRACE PREVIEW: Log failure to find label
+              // DEBUG TRACE PROBE: Check why Crypto Withdrawals lose their name
               if (e.type === 'withdrawal' && Math.abs(e.amount) > 0) {
-                // Only log purely "unknown" cases to avoid spamming for things that just have generic info
-                // But for this debug session, we need verbose.
-                // Log to UI Trace so user can screenshot
-                const msg = `FAIL: RefID ${e.refid} (Asset: ${e.asset}) -> No Label. Info='${e.info}'`;
-                logTrace(msg);
+                // Only log if it's Crypto (USDT/XRP) to reduce noise, or if it FAILED
+                const isCrypto = e.asset.includes("USDT") || e.asset.includes("XRP");
 
-                // User Request: Update Status Line
-                // Use safe substring to avoid runtime crash just in case
-                const safeRef = (e.refid && typeof e.refid === 'string') ? e.refid.substring(0, 6) : "???";
-                updateStatus(`Unresolved: ${e.asset} RefID ${safeRef}...`, "error");
+                if (isCrypto || !label) {
+                  const msg = `TRACE: RefID ${e.refid.substring(0, 8)} (${e.asset}) -> Label='${label || "NULL"}' Recip='${e.recipient || "NULL"}' Info='${e.info}'`;
+                  logTrace(msg);
+                }
+
+                if (!label) {
+                  const safeRef = (e.refid && typeof e.refid === 'string') ? e.refid.substring(0, 6) : "???";
+                  updateStatus(`Unresolved: ${e.asset} RefID ${safeRef}...`, "error");
+                }
               }
             }
 
