@@ -495,7 +495,7 @@
 
 
   <script>
-    const APP_VERSION = "v4.00-50";
+    const APP_VERSION = "v4.00-51";
   </script>
 
 
@@ -2328,7 +2328,7 @@
                 (r.EUR > 0 && r.EUR_GBP > 0) ? fmt(r.EUR_GBP, 2) : "-"
               ]);
             } else {
-              s3Rows = [["No deposits for this period.", "-", "-", "-"]];
+              s3Rows = [["No deposits found for this period.", "-", "-", "-"]];
             }
 
             // S4: Fees
@@ -4549,7 +4549,34 @@
     // STATEMENT SUMMARY REPORT (v2.50)
     // ===========================================
     let summaryRecords = { crypto: [], fiat: [], deposits: [], fees: [] };
-    let depositTotals = { GBP: 0, EUR: 0 }; // v3.015: Global for access in render helpers
+    let depositTotals = { GBP: 0, EUR: 0 };
+      // Phase III-1 Fix: Derive fiat deposit totals directly from statement rows (sourceData),
+      // rather than relying on per-asset iteration that can miss deposits depending on row shape.
+      // This guarantees the Statement Summary deposit section reflects deposits visible in the Statement.
+      try {
+        for (const row of sourceData) {
+          if (!row || row.type !== "deposit" || !row.amounts) continue;
+          const t = (row._raw && row._raw.time) ? row._raw.time : null;
+
+          const g = Number(row.amounts.GBP || 0);
+          if (g > 0) depositTotals.GBP += g;
+
+          const e = Number(row.amounts.EUR || 0);
+          if (e > 0) {
+            depositTotals.EUR += e;
+
+            // EUR -> GBP equivalent for summary
+            let gbpEq = 0;
+            if (row.gbpValues && row.gbpValues.EUR) gbpEq = Number(row.gbpValues.EUR) || 0;
+            else if (t) {
+              const r = getDailyRate("EUR", t);
+              if (r) gbpEq = e * r;
+            }
+            depositGbpTotals.EUR += gbpEq;
+          }
+        }
+      } catch (_) {}
+ // v3.015: Global for access in render helpers
 
 
     function toggleSummaryReport() {
@@ -4724,6 +4751,7 @@
           const absVal = Math.abs(val);
 
           if (lType === "deposit" && val > 0) {
+            if (asset === "GBP" || asset === "EUR") { continue; }
             // DEPOSIT
             if (asset === "GBP" || asset === "EUR") {
               depositTotals[asset] += absVal;
