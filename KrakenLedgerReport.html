@@ -7,7 +7,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-  <title>Kraken Ledger Report v4.00-44</title>
+  <title>Kraken Ledger Report v4.00-46</title>
   <script async defer src="https://accounts.google.com/gsi/client"></script>
   <script async defer src="https://apis.google.com/js/api.js"></script>
   <style>
@@ -495,7 +495,7 @@
 
 
   <script>
-    const APP_VERSION = "v4.00-44";
+    const APP_VERSION = "v4.00-46";
   </script>
 
 
@@ -1436,14 +1436,17 @@
                 balance: parseFloat(entry.balance || 0),
                 info: entry.info || "",  // v4.00-08: Capture info
                 // v4.00-08: Resolve Label immediately for Main Report consistency
-                recipient: (entry.type === 'withdrawal') ? resolveRecipientLabel({
+                recipient: (entry.type === 'withdrawal') ? finalizeWithdrawalRecipientLabel({
+                  label: resolveRecipientLabel({
                   asset: asset,
                   refid: entry.refid,
                   historyMatch: cacheData.withdrawalHistoryByRefid ? cacheData.withdrawalHistoryByRefid[entry.refid] : null,
                   krakenAddresses: cacheData.krakenAddresses,
                   withdrawalHistoryByRefid: cacheData.withdrawalHistoryByRefid
-                }) : ""
-              });
+                }),
+                  asset: asset,
+                  info: entry.info || ""
+                }) : });
             }
           }
 
@@ -1684,15 +1687,18 @@
         cacheData.withdrawals.forEach(w => {
           if (w.type === 'withdrawal') {
             // Re-run resolution with arguably better data availability
-            w.recipient = resolveRecipientLabel({
+            w.recipient = finalizeWithdrawalRecipientLabel({
+              label: resolveRecipientLabel({
               asset: w.asset,
               refid: w.refid,
               historyMatch: cacheData.withdrawalHistoryByRefid ? cacheData.withdrawalHistoryByRefid[w.refid] : null,
               krakenAddresses: cacheData.krakenAddresses,
               withdrawalHistoryByRefid: cacheData.withdrawalHistoryByRefid,
               currentInfo: w.info
-            });
-          }
+            }),
+              asset: w.asset,
+              info: w.info
+            });}
         });
       }
 
@@ -1701,15 +1707,18 @@
       if (stagingRecords) {
         stagingRecords.forEach(r => {
           if (r.type === 'withdrawal') {
-            r.recipient = resolveRecipientLabel({
+            r.recipient = finalizeWithdrawalRecipientLabel({
+              label: resolveRecipientLabel({
               asset: r.asset,
               refid: r.refid, // stagingRecords has refid
               historyMatch: cacheData.withdrawalHistoryByRefid ? cacheData.withdrawalHistoryByRefid[r.refid] : null,
               krakenAddresses: cacheData.krakenAddresses,
               withdrawalHistoryByRefid: cacheData.withdrawalHistoryByRefid,
               currentInfo: r.info // stagingRecords needs to have captured info! (v4.00-08 did this)
-            });
-          }
+            }),
+              asset: r.asset,
+              info: r.info
+            });}
         });
       }
 
@@ -3121,6 +3130,29 @@
       return null;
     }
 
+
+    function applyFiatSuffix(label, asset) {
+      const a = normalizeAsset(asset);
+      if (a === "GBP" || a === "EUR") {
+        // Ensure currency-disambiguated labels so GBP/EUR never merge into one row.
+        return `${label} (${a})`;
+      }
+      return label;
+    }
+
+    function finalizeWithdrawalRecipientLabel({ label, asset, info }) {
+      const a = normalizeAsset(asset);
+      // For fiat withdrawals, always produce a currency-disambiguated label.
+      if (a === "GBP" || a === "EUR") {
+        const base = (label && String(label).trim()) ? String(label).trim() :
+                     (info && String(info).trim()) ? trimLabel(String(info).trim()) :
+                     "Withdrawal";
+        return applyFiatSuffix(trimLabel(base), a);
+      }
+      // For crypto withdrawals, keep label as-is (no asset suffix).
+      return (label && String(label).trim()) ? String(label).trim() : null;
+    }
+
     function tryMatchKeyFromInfo(infoStr, krakenAddresses, asset) {
       if (!infoStr) return null;
       const n = norm(infoStr);
@@ -4258,6 +4290,11 @@
                 withdrawalHistoryByRefid: cacheData.withdrawalHistoryByRefid,
                 currentInfo: e.info
               });
+            }
+
+            if (e.type === 'withdrawal') {
+              const fin = finalizeWithdrawalRecipientLabel({ label, asset: normalizedAsset, info: e.info });
+              if (fin) label = fin;
             }
 
             // Default Detail
