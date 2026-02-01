@@ -4244,7 +4244,8 @@
         const rawTime = (item._raw && item._raw.time) ? item._raw.time : null;
 
         // --- 1. RECIPIENT IDENTIFICATION ---
-        let recipient = item.details || "Unknown";
+        // v4.00-03: Prioritize authoritative recipient from Canonical Resolver
+        let recipient = item.recipient || item.details || "Unknown";
 
         // v3.045-19.40: Smart Name Extraction
         // If details is just "Withdrawal" (common for Bank Transfers), try to use the raw address label if available
