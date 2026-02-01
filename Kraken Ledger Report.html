@@ -7,7 +7,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-  <title>Kraken Ledger Report v4.00-02</title>
+  <title>Kraken Ledger Report v4.00-03</title>
   <script async defer src="https://accounts.google.com/gsi/client"></script>
   <script async defer src="https://apis.google.com/js/api.js"></script>
   <style>
@@ -495,7 +495,7 @@
 
 
   <script>
-    const APP_VERSION = "v4.00-02";
+    const APP_VERSION = "v4.00-03";
   </script>
 
 
@@ -2863,6 +2863,13 @@
       }
 
       cacheData.withdrawalHistory = allWithdrawals;
+
+      // Patch 1 Part 2: Build RefID Index for fast lookup
+      cacheData.withdrawalHistoryByRefid = {};
+      for (const w of allWithdrawals) {
+        if (w && w.refid) cacheData.withdrawalHistoryByRefid[w.refid] = w;
+      }
+
       logTrace("Total withdrawal history entries: " + allWithdrawals.length);
       return allWithdrawals;
     }
