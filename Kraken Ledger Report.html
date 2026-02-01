@@ -7,7 +7,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-  <title>Kraken Ledger Report v4.00-13</title>
+  <title>Kraken Ledger Report v4.00-14</title>
   <script async defer src="https://accounts.google.com/gsi/client"></script>
   <script async defer src="https://apis.google.com/js/api.js"></script>
   <style>
@@ -495,7 +495,7 @@
 
 
   <script>
-    const APP_VERSION = "v4.00-13";
+    const APP_VERSION = "v4.00-14";
   </script>
 
 
@@ -773,7 +773,7 @@
     <button id="log_btn" onclick="toggleLog()"
       style="width:100%; padding:8px; margin-top:10px; background:#8e44ad; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Display
       Progress Log</button>
-    <div id="trace_log" onclick="toggleLog()">Trace: v4.00-13 Kraken Ledger Report initialized.</div>
+    <div id="trace_log" onclick="toggleLog()">Trace: v4.00-14 Kraken Ledger Report initialized.</div>
   </div>
 
   <script>
@@ -4112,71 +4112,73 @@
               if (e.info && e.info !== "Withdrawal" && e.info !== "Deposit") {
                 detail = e.info;
               }
-              // DEBUG TRACE PREVIEW: Log failure to find label
-              if (e.type === 'withdrawal' && Math.abs(e.amount) > 0) {
-                // Only log purely "unknown" cases to avoid spamming for things that just have generic info
-                // But for this debug session, we need verbose.
-                // Log to UI Trace so user can screenshot
-                logTrace(`FAIL: RefID ${e.refid} (Asset: ${e.asset}) -> No Label. Info='${e.info}'`);
-              }
+              // Only log purely "unknown" cases to avoid spamming for things that just have generic info
+              // But for this debug session, we need verbose.
+              // Log to UI Trace so user can screenshot
+              const msg = `FAIL: RefID ${e.refid} (Asset: ${e.asset}) -> No Label. Info='${e.info}'`;
+              logTrace(msg);
+
+              // User Request: Update Status Line
+              updateStatus(`Unresolved: ${e.asset} RefID ${e.refid.substring(0, 6)}...`, "error");
             }
-
-            // Append Asset (cleaned)
-            let cleanAsset = normalizedAsset.replace("ZEUR", "EUR").replace("ZGBP", "GBP").replace("ZUSD", "USD");
-
-            // Patch 5: Only append asset if NO label was found, OR if the detail doesn't include it.
-            // If we found a label (e.g. "Revolut Business"), we do NOT append (EUR).
-            // But if we fell back to "Withdrawal", we DO append (EUR).
-            if (!label && !detail.includes("(" + cleanAsset + ")")) {
-              detail += ` (${cleanAsset})`;
-            }
-
-            row.details = detail;
-            // Also helpful: Save the raw info if needed (legacy)
-            if (e.info) row.rawInfo = e.info;
-
-          } else {
-            // Use e.type or fallback. If type is missing, use "Transfer"
-            const typeLabel = e.type || "Transfer";
-            row.details = `${typeLabel} (${e.asset})`;
-
-            // Fix: Ensure Balance rows have correct labels if somehow falling here
-            if (e.type === 'balance') row.details = "Balance Adjustment";
           }
-          i += 1;
-        }
 
-        // Copy current state of running balances to row
-        row.balances = { ...runningBal };
-        bankRecords.push(row);
+          // Append Asset (cleaned)
+          let cleanAsset = normalizedAsset.replace("ZEUR", "EUR").replace("ZGBP", "GBP").replace("ZUSD", "USD");
+
+          // Patch 5: Only append asset if NO label was found, OR if the detail doesn't include it.
+          // If we found a label (e.g. "Revolut Business"), we do NOT append (EUR).
+          // But if we fell back to "Withdrawal", we DO append (EUR).
+          if (!label && !detail.includes("(" + cleanAsset + ")")) {
+            detail += ` (${cleanAsset})`;
+          }
+
+          row.details = detail;
+          // Also helpful: Save the raw info if needed (legacy)
+          if (e.info) row.rawInfo = e.info;
+
+        } else {
+          // Use e.type or fallback. If type is missing, use "Transfer"
+          const typeLabel = e.type || "Transfer";
+          row.details = `${typeLabel} (${e.asset})`;
+
+          // Fix: Ensure Balance rows have correct labels if somehow falling here
+          if (e.type === 'balance') row.details = "Balance Adjustment";
+        }
+        i += 1;
       }
 
-      // 4. Closing Balance Row
-      const closingBalRow = {
-        date: formatTimestamp(endTs),
-        time: "23:59:59",
-        type: "Balance",
-        details: "Closing Balance",
-        balances: { ...runningBal },
-        amounts: {},
-        fees: {}
-      };
-      bankRecords.push(closingBalRow);
+      // Copy current state of running balances to row
+      row.balances = { ...runningBal };
+      bankRecords.push(row);
+    }
 
-      // 5. Render
-      // Save to Persistence
-      localStorage.setItem("kraken_bank_staging", JSON.stringify(bankRecords));
+    // 4. Closing Balance Row
+    const closingBalRow = {
+      date: formatTimestamp(endTs),
+      time: "23:59:59",
+      type: "Balance",
+      details: "Closing Balance",
+      balances: { ...runningBal },
+      amounts: {},
+      fees: {}
+    };
+    bankRecords.push(closingBalRow);
 
-      renderBankTable();
+    // 5. Render
+    // Save to Persistence
+    localStorage.setItem("kraken_bank_staging", JSON.stringify(bankRecords));
 
-      // Update button state (Toggle behavior)
-      const div = document.getElementById("bankReportArea");
-      div.style.display = "block"; // Auto-show after generate
+    renderBankTable();
 
-      // V2.84: Generate Summary immediately from these records to ensure consistency
-      // v3.025: Decoupled to avoid "Frankenstein" behavior (Summary opening with Statement)
-      // v3.045-18: Reactivated for Phase II (Strict Dependency)
-      generateStatementSummary(bankRecords);
+    // Update button state (Toggle behavior)
+    const div = document.getElementById("bankReportArea");
+    div.style.display = "block"; // Auto-show after generate
+
+    // V2.84: Generate Summary immediately from these records to ensure consistency
+    // v3.025: Decoupled to avoid "Frankenstein" behavior (Summary opening with Statement)
+    // v3.045-18: Reactivated for Phase II (Strict Dependency)
+    generateStatementSummary(bankRecords);
     }
 
     // Toggle function (Same approach as toggleReportViewer)
