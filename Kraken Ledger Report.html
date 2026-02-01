@@ -495,7 +495,7 @@
 
 
   <script>
-    const APP_VERSION = "v4.00-27";
+    const APP_VERSION = "v4.00-28";
   </script>
 
 
@@ -1752,6 +1752,8 @@
         html += '<td style="padding:4px; border:1px solid #90caf9;">' + w.balance.toFixed(6) + "</td>";
         html += '<td style="padding:4px; border:1px solid #90caf9; word-break:break-all;">' + escHtml(w.ledgerId || "") + "</td>";
         html += '<td style="padding:4px; border:1px solid #90caf9; word-break:break-all;">' + escHtml(w.refid || "") + "</td>";
+        // v4.00-28: Show Info column to reveal source of "Revolut Ltd"
+        html += '<td style="padding:4px; border:1px solid #90caf9; font-size:0.85em;">' + escHtml(w.info || "") + "</td>";
         html += "</tr>";
       }
       tbody.innerHTML = html;
