@@ -7,7 +7,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-  <title>Kraken Ledger Report v4.00-01</title>
+  <title>Kraken Ledger Report v4.00-02</title>
   <script async defer src="https://accounts.google.com/gsi/client"></script>
   <script async defer src="https://apis.google.com/js/api.js"></script>
   <style>
@@ -495,7 +495,7 @@
 
 
   <script>
-    const APP_VERSION = "v4.00-01";
+    const APP_VERSION = "v4.00-02";
   </script>
 
 
@@ -2544,7 +2544,9 @@
         throw new Error("Please enter Withdraw API credentials in API Config (requires 2FA permission)");
       }
       const proxy = getSelectedProxy();
-      return { apiKey, privateKey, proxy };
+      const proxyType = document.getElementById("corsProxySelect").value;
+      const gasUrl = document.getElementById("gasProxyUrl").value.trim();
+      return { apiKey, privateKey, proxy, proxyType, gasUrl };
     }
 
     // Base64 helpers
