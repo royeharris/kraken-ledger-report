@@ -7,7 +7,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-  <title>Kraken Ledger Report v4.021</title>
+  <title>Kraken Ledger Report v4.022</title>
   <script async defer src="https://accounts.google.com/gsi/client"></script>
   <script async defer src="https://apis.google.com/js/api.js"></script>
   <style>
@@ -495,7 +495,7 @@
 
 
   <script>
-    const APP_VERSION = "v4.021";
+    const APP_VERSION = "v4.022";
   </script>
 
 
@@ -773,7 +773,7 @@
     <button id="log_btn" onclick="toggleLog()"
       style="width:100%; padding:8px; margin-top:10px; background:#8e44ad; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Display
       Progress Log</button>
-    <div id="trace_log" onclick="toggleLog()">Trace: v4.021 Kraken Ledger Report initialized.</div>
+    <div id="trace_log" onclick="toggleLog()">Trace: v4.022 Kraken Ledger Report initialized.</div>
   </div>
 
   <script>
@@ -3984,14 +3984,15 @@
                 recipient = historyMatch.key;
               }
 
-              // v4.021: Improved Crypto Matching (Tag/Memo Awareness)
-              // Sometimes 'addr' contains the tag, but address book separates them.
-              if (!recipient) {
-                // Try Exact Match
-                addrMatch = cacheData.krakenAddresses.find(a => a.address === addr);
+              // v4.022: REVERT TO v4.001 LOGIC (Heuristic Match)
+              // The user requested a return to the logic that "worked really nicely".
+              // This logic explicitly checks for known bank names in the ledger info if strict linkage fails.
 
-                // If not found, try finding address inside the string (for Tagged addresses)
-                if (!addrMatch && addr.length > 20) {
+              // 1. Try Exact Address Match (Crypto)
+              if (!recipient) {
+                addrMatch = cacheData.krakenAddresses.find(a => a.address === addr);
+                // Keep v4.021 fix: Check if address is inside the string (for Tagged addresses)
+                if (!addrMatch && addr && addr.length > 20) {
                   addrMatch = cacheData.krakenAddresses.find(a => addr.includes(a.address));
                 }
               }
@@ -4006,24 +4007,17 @@
                 addrMatch = cacheData.krakenAddresses.find(a => a.info === addr);
               }
 
-              // 4. Try Asset-Aware Smart Match (Restored & Refined)
-              // Necessary because Ledger says "Revolut Ltd" but Address Book says "Revolut Business".
-              if (!addrMatch && addr && (normalizedAsset === "GBP" || normalizedAsset === "EUR")) {
-                const assetAddresses = cacheData.krakenAddresses.filter(a => a.asset === normalizedAsset);
-
-                addrMatch = assetAddresses.find(a => {
-                  const infoSafe = addr.toLowerCase().trim();
-                  const keySafe = a.key.toLowerCase().trim();
-                  // Match if they share the first word (e.g. "Revolut") provided it's significant (>3 chars)
-                  const firstWordInfo = infoSafe.split(' ')[0];
-                  const firstWordKey = keySafe.split(' ')[0];
-
-                  if (firstWordInfo.length > 3 && firstWordInfo === firstWordKey) {
-                    console.log(`[Smart Match] Success: '${firstWordInfo}' matches '${firstWordKey}' for ${normalizedAsset}`);
-                    return true;
-                  }
-                  return false;
-                });
+              // 4. v4.001 HEURISTIC FALLBACK (Restored)
+              // If no strict match, and it's Fiat, check for known bank patterns.
+              // This effectively bridges "Revolut Ltd" -> "Revolut Business" / "Revolut B"
+              if (!addrMatch && (normalizedAsset === "GBP" || normalizedAsset === "EUR")) {
+                const infoLower = (addr || "").toLowerCase();
+                // Specific check for Revolut to restore v4.001 behavior
+                if (infoLower.includes("revolut")) {
+                  const assetAddresses = cacheData.krakenAddresses.filter(a => a.asset === normalizedAsset);
+                  // Find the address entry that ALSO has "revolut" in its key
+                  addrMatch = assetAddresses.find(a => a.key.toLowerCase().includes("revolut"));
+                }
               }
 
               if (addrMatch) {
