@@ -7,7 +7,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-  <title>Kraken Ledger Report v4.022</title>
+  <title>Kraken Ledger Report v4.00</title>
   <script async defer src="https://accounts.google.com/gsi/client"></script>
   <script async defer src="https://apis.google.com/js/api.js"></script>
   <style>
@@ -495,7 +495,7 @@
 
 
   <script>
-    const APP_VERSION = "v4.022";
+    const APP_VERSION = "v4.00";
   </script>
 
 
@@ -773,7 +773,7 @@
     <button id="log_btn" onclick="toggleLog()"
       style="width:100%; padding:8px; margin-top:10px; background:#8e44ad; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Display
       Progress Log</button>
-    <div id="trace_log" onclick="toggleLog()">Trace: v4.022 Kraken Ledger Report initialized.</div>
+    <div id="trace_log" onclick="toggleLog()">Trace: v4.000 Kraken Ledger Report initialized.</div>
   </div>
 
   <script>
@@ -1446,7 +1446,7 @@
         updateStatusCounts();
         renderLedgerTable();
 
-        logTrace("SUCCESS: Fetched " + allLedgerEntries.length + " Ledger entries (from " + totalCount + " processed)");
+        logTrace("SUCCESS: Fetched " + allLedgerEntries.length + " USDT/XRP entries (from " + offset + " total entries)");
         updateStatus("Ledger: " + allLedgerEntries.length, "active");
 
 
@@ -2498,19 +2498,6 @@
       if (savedWithdrawPrivate) document.getElementById("withdrawPrivateKey").value = savedWithdrawPrivate;
       if (savedSheetId) document.getElementById("googleSheetId").value = savedSheetId;
 
-      // v4.007: Load persisted Withdrawal History on startup
-      const savedHistory = localStorage.getItem("kraken_withdrawal_history");
-      if (savedHistory) {
-        try {
-          cacheData.withdrawalHistory = JSON.parse(savedHistory);
-          logTrace("Loaded " + cacheData.withdrawalHistory.length + " withdrawal history records from storage.");
-        } catch (e) {
-          logTrace("Error parsing saved history.");
-        }
-      } else {
-        logTrace("No saved withdrawal history found. Please 'Pull Addresses' once to populate.");
-      }
-
       logTrace("Credentials loaded from storage.");
     }
 
@@ -2557,9 +2544,7 @@
         throw new Error("Please enter Withdraw API credentials in API Config (requires 2FA permission)");
       }
       const proxy = getSelectedProxy();
-      const proxyType = document.getElementById("corsProxySelect").value;
-      const gasUrl = document.getElementById("gasProxyUrl").value.trim();
-      return { apiKey, privateKey, proxy, proxyType, gasUrl };
+      return { apiKey, privateKey, proxy };
     }
 
     // Base64 helpers
@@ -2793,15 +2778,6 @@
           const keyName = addr.key || "";  // This is the saved address name (e.g., "Aleksey XRP")
           const asset = addr.asset || "";
           const address = addr.address || "";
-          // Debug Fiat Structure for potential Sort Code/Account Number
-          if (asset.includes("GBP") || asset.includes("EUR")) {
-            console.log("DEBUG Fiat Address: ", addr);
-            // Log to trace occasionally (first one)
-            if (!window.loggedFiatStruct) {
-              logTrace("DEBUG Fiat Address Query: " + JSON.stringify(addr));
-              window.loggedFiatStruct = true;
-            }
-          }
           const destTag = addr.tag || addr.memo || "";  // XRP uses tag, others might use memo
 
           // Try to extract recipient name from key (e.g., "Aleksey XRP" -> "Aleksey")
@@ -2855,9 +2831,8 @@
     async function fetchWithdrawalHistory(otp) {
       const withdrawCreds = getWithdrawCredentials();
 
-      // Try both USDT and XRP (common assets for withdrawals) plus Fiat
-      // v4.002: added EUR, ZEUR, GBP, XRP to ensure Fiat withdrawals are captured for RefID linking
-      const assets = ["USDT", "XXRP", "XRP", "ZUSD", "ZGBP", "GBP", "ZEUR", "EUR"];
+      // Try both USDT and XRP (common assets for withdrawals)
+      const assets = ["USDT", "XXRP", "ZUSD", "ZGBP"];
       const allWithdrawals = [];
 
       for (const asset of assets) {
@@ -2881,13 +2856,6 @@
       }
 
       cacheData.withdrawalHistory = allWithdrawals;
-      // v4.007: Persist Withdrawal History to LocalStorage so linkage works across sessions without re-pulling.
-      try {
-        localStorage.setItem("kraken_withdrawal_history", JSON.stringify(allWithdrawals));
-        logTrace("Saved " + allWithdrawals.length + " withdrawal history records to storage.");
-      } catch (e) {
-        logTrace("Warning: Could not save history to storage (quota exceeded?)");
-      }
       logTrace("Total withdrawal history entries: " + allWithdrawals.length);
       return allWithdrawals;
     }
@@ -3933,126 +3901,41 @@
             let recipient = null;
 
             // 1. History Lookup
-            // v4.004: Strict RefID matching (User Request "No Fuzzy Logic").
-            // Diagnostic logging enabled for failed matches.
-            // v4.005: Extended Direct Match (RefID, LedgerID, Cross-Check)
-            let historyMatch = cacheData.withdrawalHistory.find(h => {
-              if (h.refid === e.refid) return true;
-              if (h.ledger_id && h.ledger_id === e.ledgerId) return true;
-              if (h.refid === e.ledgerId) return true;
-              return false;
-            });
-
-            // Diagnostic Logging for Fiat Linkage Failures
-            if (!historyMatch && (normalizedAsset === "GBP" || normalizedAsset === "EUR")) {
-              logTrace(`Linkage Failed for ${normalizedAsset}: Ledger RefID '${e.refid}' / LedgerID '${e.ledgerId}' not found in Status History.`);
-            }
-
+            const historyMatch = cacheData.withdrawalHistory.find(h => h.refid === e.refid);
             if (historyMatch) {
-              // v4.018: First Principles Data Flow Tracing
-              // 1. Ledger Entry (ID, RefID) -> 2. Withdrawal Record (Key, Info) -> 3. Address Book (Name)
-              if (normalizedAsset === "GBP" || normalizedAsset === "EUR") {
-                if (!window['debug_flow_' + e.refid]) {
-                  console.log(`[Flow Trace] Ledger Entry: ID=${e.ledgerId}, RefID=${e.refid}`);
-                  if (historyMatch) {
-                    console.log(`[Flow Trace] -> LINKED to Withdrawal Record:`, historyMatch);
-                    if (historyMatch.key) console.log(`[Flow Trace] -> FOUND KEY: "${historyMatch.key}" (Using this as Unique ID)`);
-                    else console.log(`[Flow Trace] -> NO KEY FOUND in Withdrawal Record. Falling back to Info/Address matching.`);
-                  } else {
-                    console.log(`[Flow Trace] -> FAILED to link to Withdrawal Record.`);
-                  }
-                  window['debug_flow_' + e.refid] = true;
-                }
-              }
-
-              // v4.009: Debugging the Address Book Link for Fiat (Restored)
-              if (normalizedAsset === "GBP" || normalizedAsset === "EUR") {
-                if (!window['debug_fiat_' + normalizedAsset]) {
-                  logTrace(`DEBUG ${normalizedAsset} History Record: ` + JSON.stringify(historyMatch));
-                  const abData = cacheData.krakenAddresses.filter(a => a.asset === normalizedAsset);
-                  logTrace(`DEBUG ${normalizedAsset} Address Book Entries (${abData.length}): ` + JSON.stringify(abData));
-                  window['debug_fiat_' + normalizedAsset] = true;
-                }
-              }
-
               const addr = historyMatch.info || historyMatch.address;
-
-              // v4.016: Dynamic Transaction Key Priority
-              // If the history record ITSELF contains the key (e.g. "Revolut Business"), USE IT.
-              // This is the most direct, dynamic link to the specific address used.
-              if (historyMatch.key) {
-                recipient = historyMatch.key;
-              }
-
-              // v4.022: REVERT TO v4.001 LOGIC (Heuristic Match)
-              // The user requested a return to the logic that "worked really nicely".
-              // This logic explicitly checks for known bank names in the ledger info if strict linkage fails.
-
-              // 1. Try Exact Address Match (Crypto)
-              if (!recipient) {
-                addrMatch = cacheData.krakenAddresses.find(a => a.address === addr);
-                // Keep v4.021 fix: Check if address is inside the string (for Tagged addresses)
-                if (!addrMatch && addr && addr.length > 20) {
-                  addrMatch = cacheData.krakenAddresses.find(a => addr.includes(a.address));
-                }
-              }
-
-              // 2. Try Exact Key Match (Fiat)
-              if (!addrMatch && addr) {
-                addrMatch = cacheData.krakenAddresses.find(a => a.key === addr);
-              }
-
-              // 3. Try Exact Info Match (Fiat)
-              if (!addrMatch && addr) {
-                addrMatch = cacheData.krakenAddresses.find(a => a.info === addr);
-              }
-
-              // 4. v4.001 HEURISTIC FALLBACK (Restored)
-              // If no strict match, and it's Fiat, check for known bank patterns.
-              // This effectively bridges "Revolut Ltd" -> "Revolut Business" / "Revolut B"
-              if (!addrMatch && (normalizedAsset === "GBP" || normalizedAsset === "EUR")) {
-                const infoLower = (addr || "").toLowerCase();
-                // Specific check for Revolut to restore v4.001 behavior
-                if (infoLower.includes("revolut")) {
-                  const assetAddresses = cacheData.krakenAddresses.filter(a => a.asset === normalizedAsset);
-                  // Find the address entry that ALSO has "revolut" in its key
-                  addrMatch = assetAddresses.find(a => a.key.toLowerCase().includes("revolut"));
-                }
-              }
-
-              if (addrMatch) {
-                recipient = addrMatch.key;
-              } else if (addr) {
-                // FALLBACK: Use the history info (e.g. "Revolut Ltd").
-                // v4.017: User Request - REMOVE Asset Suffix (e.g. "(GBP)").
-                // Use the raw info exactly as provided.
-                recipient = addr;
-              }
+              const addrMatch = cacheData.krakenAddresses.find(a => a.address === addr);
+              if (addrMatch) recipient = addrMatch.key;
+              else if (addr) recipient = addr;
             }
-
-            // v4.017: Removed legacy hardcoded 'Revolut' check.
-            // Superseded by Asset-Aware Smart Match (v4.015) which is fully dynamic.
 
             if (recipient) {
               // Take first 2 words
               const words = recipient.split(/\s+/).slice(0, 2).join(" ");
               // Clean common suffixes if needed, or just trust words
               detail = `${words}`;
+
+              // v3.028: Fix "Withdrawal (EUR)" showing instead of name
+              // Use the detected name as the primary detail
+              row.details = detail;
+
             } else if (e.info && e.info !== "Withdrawal" && e.info !== "Deposit") {
               // v3.017: Fallback to ledger info if no address match (e.g. "Revolut Ltd")
               detail = e.info;
             }
 
+            // Fix: Override for Revolut GBP
             // v3.030: User requested NO hardcoding of bank names.
             // Keeping dynamic logic only.
+            // if (detail === "Revolut Ltd") { detail = "Revolut Business"; }
 
-            // v4.014: User Request - REMOVE Asset Suffix (e.g. "(GBP)").
-            // The separation relies entirely on the Address Book Key (e.g. "Revolut Business" vs "Revolut B").
+            // Append Asset (cleaned)
+            let cleanAsset = normalizedAsset.replace("ZEUR", "EUR").replace("ZGBP", "GBP").replace("ZUSD", "USD");
 
-            // v4.013: FINAL ASSIGNMENT (Moved to end)
-            // Ensure row.details AND row.recipient get the fully processed string.
-            row.details = detail;
-            row.recipient = detail; // This guarantees Summary Separation IF the Address Book names are unique.
+            // v3.028: Make sure we don't double append
+            if (!detail.includes("(" + cleanAsset + ")")) {
+              detail += ` (${cleanAsset})`;
+            }
 
             row.details = detail;
             // v3.045-19.35: Persist detected recipient for Summary Report
@@ -4288,9 +4171,7 @@
         const rawTime = (item._raw && item._raw.time) ? item._raw.time : null;
 
         // --- 1. RECIPIENT IDENTIFICATION ---
-        // v4.019: Prioritize the Resolved Recipient Name (e.g. "Revolut Business")
-        // Previously ignored item.recipient and used item.details (which is often just "Withdrawal").
-        let recipient = item.recipient || item.details || "Unknown";
+        let recipient = item.details || "Unknown";
 
         // v3.045-19.40: Smart Name Extraction
         // If details is just "Withdrawal" (common for Bank Transfers), try to use the raw address label if available
@@ -5246,8 +5127,7 @@
           const rowStyle = isBalRow ? "background:#f2f2f2; font-weight:bold;" : "";
 
           // Apply Z-strip to description if it contains (ZEUR) etc.
-          // v4.020: Prioritize Resolved Recipient (e.g. "Revolut Business") over Details
-          let desc = escHtml(r.recipient || r.details);
+          let desc = escHtml(r.details);
           desc = desc.replace("(ZEUR)", "(EUR)").replace("(ZGBP)", "(GBP)").replace("(ZUSD)", "(USD)");
 
           html += `<tr style="${rowStyle}">`;
