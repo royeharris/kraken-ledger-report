@@ -50,15 +50,13 @@
 - **Symptom:** Address book works in session, but is empty after page reload.
 - **Cause:** `saveLocalData` writes to `v2` keys, but `loadLocalData` reads from `v3` keys (or vice-versa).
 
-### Syntax & Merge Artifacts (Duplicate Code / Brackets)
-- **Symptom:** UI completely unresponsive; Console shows `Unexpected token` or `Identifier 'record' has already been declared`.
-- **Cause:**  AI or Manual Merges effectively "stamping" a code block twice, resulting in:
-  ```javascript
-  const record = {
-    const record = { ... } 
-  }
-  ```
-  Or missing closing brackets `}` at the end of functions after large edits.
-- **Fix:**
-  - **Always** collapse the modified function in the IDE to ensure the structure is valid before saving.
-  - **Strict Verification:** If a tool output shows "Replaced X lines", verify the *edges* of the replacement didn't duplicate the start/end lines.
+
+### 3. Kraken API Asset Codes (WithdrawStatus)
+**Context:** Fetching withdrawal history to link Ledger entries (via RefID) to Address Book Keys.
+**Constraint:** 
+- The `WithdrawStatus` API requires distinct calls for Crypto and Fiat.
+- **Critical:** It does NOT accept Ledger codes like `ZGBP` or `ZEUR`. It requires ISO codes `GBP` and `EUR`.
+- **Symptom:** If you query `ZGBP`, the API returns 0 records. The systems fails to find the history, fails to link the RefID, and falls back to the raw Ledger description "**Revolut Ltd**", overwriting the desired Address Book name ("Revolut Business").
+**Lesson:** 
+- Always query `["USDT", "XXRP", "ZGBP", "ZEUR", "GBP", "EUR"]` in `fetchWithdrawalHistory` to ensure full coverage.
+
