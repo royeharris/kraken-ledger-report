@@ -495,7 +495,7 @@
 
 
   <script>
-    const APP_VERSION = "v4.00-23";
+    const APP_VERSION = "v4.00-24";
   </script>
 
 
@@ -3762,6 +3762,7 @@
 
 
         const record = {
+          time: w.time, // v4.00-23: Maintain raw unix timestamp for filtering
           dateSent: formatTimestamp(w.time),
           timeSent: formatTime(w.time),
           refid: w.refid, // v2.90: needed for linking
@@ -3854,11 +3855,41 @@
       // 1. Filter and Sort Data
       // Use allLedgerEntries (cached in withdrawals)
       const entries = cacheData.withdrawals
-        .filter(e => e.time >= startTs && e.time <= endTs)
+        .filter(e => {
+          // v4.00-23 Fix: Ensure time is comparable (Unix Timestamp)
+          // If 'readLedger' populated stagingRecords with formatted strings, we might have lost the raw time.
+          // However, our stagingRecords push (line 3770) uses 'timeSent' which is formatted? 
+          // WAIT! In readLedger, we push 'timeSent: formatTimestamp(w.time)'.
+          // BUT we should have preserved the raw unix time in the record as 'time'.
+          // Let's check line 3770 area.
+          // Looking at readLedger: 
+          // record = { dateSent: ..., timeSent: ..., ... }
+          // It does NOT seem to strictly preserve 'time' property in the root of the object if we aren't careful.
+          // Let's ensure we use a normalized time check.
+          let t = e.time;
+          if (!t || isNaN(t)) {
+            // Try to parse 'dateSent' or 'timeSent' if original 'time' is missing
+            // Note: 'dateSent' is "DD Mon YYYY", 'timeSent' is "HH:MM:SS"
+            // Only reliable way is if we KEPT '_raw' or 'time' in the staging object.
+            // In readLedger logic, we constructed 'record'. Did we add 'time'?
+            // If not, we found the bug.
+            // As a workaround, let's try to parse dateSent if possible, but it lacks precision.
+            // BETTER FIX: We will ensure readLedger adds 'time' to the staging record.
+            // For now, let's log if t is missing.
+            console.warn("Missing raw time for entry:", e);
+            return false;
+          }
+          return t >= startTs && t <= endTs;
+        })
         .sort((a, b) => a.time - b.time); // Oldest first
 
       if (entries.length === 0) {
-        alert("No transactions found in this date range.");
+        // Debugging Aid
+        console.log("Filter Range:", startTs, endTs);
+        if (cacheData.withdrawals.length > 0) {
+          console.log("First Entry Time:", cacheData.withdrawals[0].time);
+        }
+        alert("No transactions found in this date range.\nCheck console for debug info.");
         btn.innerText = `Kraken Statement ${formatTimestamp(startTs)} to ${formatTimestamp(endTs)}`;
         return;
       }
