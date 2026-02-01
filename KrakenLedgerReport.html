@@ -7,7 +7,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-  <title>Kraken Ledger Report v4.00-20</title>
+  <title>Kraken Ledger Report v4.00-43</title>
   <script async defer src="https://accounts.google.com/gsi/client"></script>
   <script async defer src="https://apis.google.com/js/api.js"></script>
   <style>
@@ -495,7 +495,7 @@
 
 
   <script>
-    const APP_VERSION = "v4.00-42";
+    const APP_VERSION = "v4.00-43";
   </script>
 
 
@@ -3049,6 +3049,14 @@
       return a;
     }
 
+    function isVerifiedAddress(a) {
+      // Kraken may omit `verified` or provide it as string/number depending on proxy/cache.
+      // Missing => treat as verified to avoid suppressing legitimate bank addresses.
+      if (!a || a.verified === undefined || a.verified === null) return true;
+      return a.verified === true || a.verified === "true" || a.verified === 1 || a.verified === "1";
+    }
+
+
     // Set true temporarily when debugging bank label joins (no UI changes; results go to window.bankLabelDiagnostics)
     const ENABLE_BANK_LABEL_DIAGNOSTICS = false;
 
@@ -3060,7 +3068,7 @@
 
         if (ENABLE_BANK_LABEL_DIAGNOSTICS) {
           try {
-            const candCount = krakenAddresses.filter(a => normalizeAsset(a.asset) === normAsset && a.verified === true).length;
+            const candCount = krakenAddresses.filter(a => normalizeAsset(a.asset) === normAsset && isVerifiedAddress(a)).length;
             const hasKey = Boolean(w && w.key);
             window.bankLabelDiagnostics = window.bankLabelDiagnostics || [];
             window.bankLabelDiagnostics.push({ refid: refid || null, asset: asset || null, normAsset, candidateCount: candCount, hasKey, info: (w && w.info) ? w.info : null });
@@ -3084,7 +3092,7 @@
         }
 
         // Last-resort fallback: ONLY if there is exactly one verified address for this asset
-        const candidates = krakenAddresses.filter(a => normalizeAsset(a.asset) === normAsset && a.verified === true);
+        const candidates = krakenAddresses.filter(a => normalizeAsset(a.asset) === normAsset && isVerifiedAddress(a));
         if (candidates.length === 1) return trimLabel(candidates[0].key);
 
         // Ambiguous: multiple candidates and no key => do not guess
