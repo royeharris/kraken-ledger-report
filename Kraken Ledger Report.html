@@ -7,7 +7,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-  <title>Kraken Ledger Report v4.00-06</title>
+  <title>Kraken Ledger Report v4.00-07</title>
   <script async defer src="https://accounts.google.com/gsi/client"></script>
   <script async defer src="https://apis.google.com/js/api.js"></script>
   <style>
@@ -495,7 +495,7 @@
 
 
   <script>
-    const APP_VERSION = "v4.00-06";
+    const APP_VERSION = "v4.00-07";
   </script>
 
 
@@ -773,7 +773,7 @@
     <button id="log_btn" onclick="toggleLog()"
       style="width:100%; padding:8px; margin-top:10px; background:#8e44ad; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Display
       Progress Log</button>
-    <div id="trace_log" onclick="toggleLog()">Trace: v4.00-06 Kraken Ledger Report initialized.</div>
+    <div id="trace_log" onclick="toggleLog()">Trace: v4.00-07 Kraken Ledger Report initialized.</div>
   </div>
 
   <script>
@@ -1465,15 +1465,32 @@
 
         updateStatus("Ledger Read Complete", "success");
 
-        // v4.00-06: Check if we have withdrawals but NO history cache (Common cause of generic labels)
-        const hasWithdrawals = allLedgerEntries.some(e => e.type === 'withdrawal');
+        // v4.00-07: Stale Cache Detection
+        const withdrawals = allLedgerEntries.filter(e => e.type === 'withdrawal');
+        const countW = withdrawals.length;
         const hasHistory = cacheData.withdrawalHistory && cacheData.withdrawalHistory.length > 0;
 
-        if (hasWithdrawals && !hasHistory) {
-          alert("⚠️ Data Verification Needed\n\nLedger contains Withdrawals, but 'Withdrawal History' is missing from cache.\n\nBank Names will appear generic (e.g. 'Withdrawal').\n\nPlease click 'Pull Addresses' (requires 2FA) ONCE to sync this data.\nIt will be cached for future runs.");
-          logTrace("WARNING: Withdrawals found but History Cache is empty. Names will be unresolved.");
-        } else if (hasWithdrawals && hasHistory) {
-          logTrace("Validation: Withdrawal History present (" + cacheData.withdrawalHistory.length + " entries). Bank names should resolve.");
+        if (countW > 0) {
+          // Check relevance: How many of these new withdrawals exist in our history?
+          let matchCount = 0;
+          if (cacheData.withdrawalHistoryByRefid) {
+            matchCount = withdrawals.filter(w => cacheData.withdrawalHistoryByRefid[w.refid]).length;
+          }
+
+          if (!hasHistory) {
+            // Case 1: No history at all
+            alert("⚠️ Data Missing\n\nBank Names will be missing because you have no Withdrawal History.\n\nPlease click 'Pull Addresses' (requires 2FA) to sync.");
+            logTrace("WARNING: No Withdrawal History found.");
+          } else if (matchCount === 0) {
+            // Case 2: History exists but matches NOTHING (Stale)
+            alert("⚠️ Data Stale\n\nYou have " + cacheData.withdrawalHistory.length + " history entries, but NONE match the current ledger.\n\nBank Names will be missing.\n\nPlease click 'Pull Addresses' (requires 2FA) to update your history.");
+            logTrace("WARNING: Stale History detected. 0/" + countW + " withdrawals matched.");
+          } else if (matchCount < countW) {
+            // Case 3: Partial mismatch
+            logTrace("Validation: Partial Match. " + matchCount + "/" + countW + " withdrawals resolved.");
+          } else {
+            logTrace("Validation: SUCCESS. All " + countW + " withdrawals resolved.");
+          }
         }
 
         logTrace("SUCCESS: Fetched " + allLedgerEntries.length + " USDT/XRP entries (from " + offset + " total entries)");
