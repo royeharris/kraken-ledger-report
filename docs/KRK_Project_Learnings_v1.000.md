@@ -49,4 +49,16 @@
 ### Address Book "Wiped" on Reload
 - **Symptom:** Address book works in session, but is empty after page reload.
 - **Cause:** `saveLocalData` writes to `v2` keys, but `loadLocalData` reads from `v3` keys (or vice-versa).
-- **Fix:** Verify `localStorage.getItem("kraken_v2_addresses")` is used.
+
+### Syntax & Merge Artifacts (Duplicate Code / Brackets)
+- **Symptom:** UI completely unresponsive; Console shows `Unexpected token` or `Identifier 'record' has already been declared`.
+- **Cause:**  AI or Manual Merges effectively "stamping" a code block twice, resulting in:
+  ```javascript
+  const record = {
+    const record = { ... } 
+  }
+  ```
+  Or missing closing brackets `}` at the end of functions after large edits.
+- **Fix:**
+  - **Always** collapse the modified function in the IDE to ensure the structure is valid before saving.
+  - **Strict Verification:** If a tool output shows "Replaced X lines", verify the *edges* of the replacement didn't duplicate the start/end lines.
