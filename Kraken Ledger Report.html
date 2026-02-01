@@ -7,7 +7,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-  <title>Kraken Ledger Report v4.00-05</title>
+  <title>Kraken Ledger Report v4.00-06</title>
   <script async defer src="https://accounts.google.com/gsi/client"></script>
   <script async defer src="https://apis.google.com/js/api.js"></script>
   <style>
@@ -495,7 +495,7 @@
 
 
   <script>
-    const APP_VERSION = "v4.00-05";
+    const APP_VERSION = "v4.00-06";
   </script>
 
 
@@ -773,7 +773,7 @@
     <button id="log_btn" onclick="toggleLog()"
       style="width:100%; padding:8px; margin-top:10px; background:#8e44ad; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Display
       Progress Log</button>
-    <div id="trace_log" onclick="toggleLog()">Trace: v4.00-05 Kraken Ledger Report initialized.</div>
+    <div id="trace_log" onclick="toggleLog()">Trace: v4.00-06 Kraken Ledger Report initialized.</div>
   </div>
 
   <script>
@@ -1017,9 +1017,14 @@
 
       // Clear LocalStorage
       localStorage.removeItem("kraken_staging");
+      localStorage.removeItem("kraken_v3_withdrawals");
+      localStorage.removeItem("kraken_v3_history");
+      localStorage.removeItem("kraken_v3_addresses");
+      localStorage.removeItem("kraken_v3_rates_" + APP_VERSION);
+      // Legacy cleanup
       localStorage.removeItem("kraken_v2_withdrawals");
-      localStorage.removeItem("kraken_v2_rates_" + APP_VERSION);
-      localStorage.removeItem("kraken_summary_staging_" + APP_VERSION);
+      localStorage.removeItem("kraken_v2_history");
+      localStorage.removeItem("kraken_v2_addresses");
 
       // Clear Views
       renderPreview();
@@ -1457,6 +1462,19 @@
 
         updateStatusCounts();
         renderLedgerTable();
+
+        updateStatus("Ledger Read Complete", "success");
+
+        // v4.00-06: Check if we have withdrawals but NO history cache (Common cause of generic labels)
+        const hasWithdrawals = allLedgerEntries.some(e => e.type === 'withdrawal');
+        const hasHistory = cacheData.withdrawalHistory && cacheData.withdrawalHistory.length > 0;
+
+        if (hasWithdrawals && !hasHistory) {
+          alert("⚠️ Data Verification Needed\n\nLedger contains Withdrawals, but 'Withdrawal History' is missing from cache.\n\nBank Names will appear generic (e.g. 'Withdrawal').\n\nPlease click 'Pull Addresses' (requires 2FA) ONCE to sync this data.\nIt will be cached for future runs.");
+          logTrace("WARNING: Withdrawals found but History Cache is empty. Names will be unresolved.");
+        } else if (hasWithdrawals && hasHistory) {
+          logTrace("Validation: Withdrawal History present (" + cacheData.withdrawalHistory.length + " entries). Bank names should resolve.");
+        }
 
         logTrace("SUCCESS: Fetched " + allLedgerEntries.length + " USDT/XRP entries (from " + offset + " total entries)");
         updateStatus("Ledger: " + allLedgerEntries.length, "active");
@@ -3997,15 +4015,6 @@
               krakenAddresses: cacheData.krakenAddresses,
               withdrawalHistoryByRefid: cacheData.withdrawalHistoryByRefid
             });
-
-            // DIAGNOSTIC LOGGING (v4.00-04)
-            if (e.type === 'withdrawal' && (normalizedAsset === 'GBP' || normalizedAsset === 'EUR' || normalizedAsset === 'USDT')) {
-              const w = cacheData.withdrawalHistoryByRefid ? cacheData.withdrawalHistoryByRefid[e.refid] : "N/A";
-              console.log(`[Resolution Debug] RefID=${e.refid} Asset=${normalizedAsset}`);
-              console.log(` -> HistoryMatch Found? ${!!w}`);
-              if (w) console.log(` -> W.Key=${w.key} W.Info=${w.info} W.Address=${w.address}`);
-              console.log(` -> Resolved Label: "${label}"`);
-            }
 
             // Default Detail
             detail = (e.type === 'withdrawal') ? `Withdrawal` : `Deposit`;
