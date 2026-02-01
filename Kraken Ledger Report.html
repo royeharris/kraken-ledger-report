@@ -495,7 +495,7 @@
 
 
   <script>
-    const APP_VERSION = "v4.00-22";
+    const APP_VERSION = "v4.01";
   </script>
 
 
@@ -2972,7 +2972,7 @@
     async function fetchWithdrawalHistory(otp) {
       const withdrawCreds = getWithdrawCredentials();
 
-      // Try both USDT, XRP, ZGBP, ZEUR (Phase III-1: Full Asset Coverage)
+      // Patch 1: Full Asset Coverage - Try both USDT, XRP, ZGBP, ZEUR
       const assets = ["USDT", "XXRP", "ZGBP", "ZEUR"];
       const allWithdrawals = [];
 
@@ -2988,11 +2988,6 @@
                 ...w,
                 queriedAsset: asset
               });
-
-              // Phase III-1 Verification Probe
-              if (asset === "ZGBP" || asset === "ZEUR") {
-                logTrace(`Verification Probe (${asset}): RefID=${w.refid}, Key=${w.key || "MISSING"}, Method=${w.method}, Info=${w.info}`);
-              }
             }
             logTrace("Found " + result.length + " withdrawals for " + asset);
           }
@@ -3003,7 +2998,7 @@
 
       cacheData.withdrawalHistory = allWithdrawals;
 
-      // Patch 1 Part 2: Build RefID Index for fast lookup
+      // Patch 1 Part 2: Build RefID Index for fast lookup (Critical for Multi-Bank)
       cacheData.withdrawalHistoryByRefid = {};
       for (const w of allWithdrawals) {
         if (w && w.refid) cacheData.withdrawalHistoryByRefid[w.refid] = w;
@@ -3014,7 +3009,7 @@
     }
 
     // -----------------------------------------------------
-    // RECIPIENT RESOLUTION HELPERS (Phase III-1)
+    // RECIPIENT RESOLUTION HELPERS (Phase III-1 Canonical)
     // -----------------------------------------------------
 
     function resolveRecipientLabel({ asset, refid, historyMatch, krakenAddresses, withdrawalHistoryByRefid, currentInfo }) {
@@ -3032,7 +3027,7 @@
           if (k) return trimLabel(k);
         }
 
-        // Priority 2: Current Ledger Info (Live Data) - v4.00-09
+        // Priority 2: Current Ledger Info (Live Data)
         if (currentInfo) {
           const k2 = tryMatchKeyFromInfo(currentInfo, krakenAddresses, asset);
           if (k2) return trimLabel(k2);
@@ -3801,6 +3796,8 @@
       }
       // Populate global cache for Summary reuse
       cacheData.withdrawalCache = [...stagingRecords];
+      // FIX: Also update the main cache variable used by Generate Bank Report
+      cacheData.withdrawals = [...stagingRecords];
 
       localStorage.setItem("kraken_staging", JSON.stringify(stagingRecords));
       renderPreview();
@@ -4125,15 +4122,15 @@
             // v4.00-09: Use Pre-calculated recipient from readLedger if available (Ensures consistency)
             let label = e.recipient;
 
+            // Patch 4: Apply resolver in Statement row construction
             if (!label) {
-              // Try to resolve again if missing
               label = resolveRecipientLabel({
                 asset: normalizedAsset,
                 refid: e.refid,
                 historyMatch: cacheData.withdrawalHistory.find(h => h.refid === e.refid),
                 krakenAddresses: cacheData.krakenAddresses,
                 withdrawalHistoryByRefid: cacheData.withdrawalHistoryByRefid,
-                currentInfo: e.info // v4.00-09 passed fallback
+                currentInfo: e.info
               });
             }
 
@@ -4143,28 +4140,12 @@
             // If we resolved a canonical label, Use it.
             if (label) {
               detail = label;
-
               // Persist for Summary Report
               row.recipient = label;
             } else {
               // FALLBACK: Use info if available (e.g. "Revolut Ltd")
               if (e.info && e.info !== "Withdrawal" && e.info !== "Deposit") {
                 detail = e.info;
-              }
-              // DEBUG TRACE PROBE: Check why Crypto Withdrawals lose their name
-              if (e.type === 'withdrawal' && Math.abs(e.amount) > 0) {
-                // Only log if it's Crypto (USDT/XRP) to reduce noise, or if it FAILED
-                const isCrypto = e.asset.includes("USDT") || e.asset.includes("XRP");
-
-                if (isCrypto || !label) {
-                  const msg = `TRACE: RefID ${e.refid.substring(0, 8)} (${e.asset}) -> Label='${label || "NULL"}' Recip='${e.recipient || "NULL"}' Info='${e.info}'`;
-                  logTrace(msg);
-                }
-
-                if (!label) {
-                  const safeRef = (e.refid && typeof e.refid === 'string') ? e.refid.substring(0, 6) : "???";
-                  updateStatus(`Unresolved: ${e.asset} RefID ${safeRef}...`, "error");
-                }
               }
             }
 
@@ -4173,21 +4154,18 @@
 
             // Patch 5: Only append asset if NO label was found, OR if the detail doesn't include it.
             // If we found a label (e.g. "Revolut Business"), we do NOT append (EUR).
-            // But if we fell back to "Withdrawal", we DO append (EUR).
-            if (!label && !detail.includes("(" + cleanAsset + ")")) {
+            if (!label && detail && !detail.includes(cleanAsset)) {
               detail += ` (${cleanAsset})`;
             }
 
             row.details = detail;
-            // Also helpful: Save the raw info if needed (legacy)
             if (e.info) row.rawInfo = e.info;
 
           } else {
-            // Use e.type or fallback. If type is missing, use "Transfer"
+            // Use e.type or fallback
             const typeLabel = e.type || "Transfer";
             row.details = `${typeLabel} (${e.asset})`;
 
-            // Fix: Ensure Balance rows have correct labels if somehow falling here
             if (e.type === 'balance') row.details = "Balance Adjustment";
           }
           i += 1;
