@@ -7,7 +7,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-  <title>Kraken Ledger Report v4.00-03</title>
+  <title>Kraken Ledger Report v4.00-04</title>
   <script async defer src="https://accounts.google.com/gsi/client"></script>
   <script async defer src="https://apis.google.com/js/api.js"></script>
   <style>
@@ -495,7 +495,7 @@
 
 
   <script>
-    const APP_VERSION = "v4.00-03";
+    const APP_VERSION = "v4.00-04";
   </script>
 
 
@@ -773,7 +773,7 @@
     <button id="log_btn" onclick="toggleLog()"
       style="width:100%; padding:8px; margin-top:10px; background:#8e44ad; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Display
       Progress Log</button>
-    <div id="trace_log" onclick="toggleLog()">Trace: v4.000 Kraken Ledger Report initialized.</div>
+    <div id="trace_log" onclick="toggleLog()">Trace: v4.00-04 Kraken Ledger Report initialized.</div>
   </div>
 
   <script>
@@ -3985,6 +3985,15 @@
               krakenAddresses: cacheData.krakenAddresses,
               withdrawalHistoryByRefid: cacheData.withdrawalHistoryByRefid
             });
+
+            // DIAGNOSTIC LOGGING (v4.00-04)
+            if (e.type === 'withdrawal' && (normalizedAsset === 'GBP' || normalizedAsset === 'EUR' || normalizedAsset === 'USDT')) {
+              const w = cacheData.withdrawalHistoryByRefid ? cacheData.withdrawalHistoryByRefid[e.refid] : "N/A";
+              console.log(`[Resolution Debug] RefID=${e.refid} Asset=${normalizedAsset}`);
+              console.log(` -> HistoryMatch Found? ${!!w}`);
+              if (w) console.log(` -> W.Key=${w.key} W.Info=${w.info} W.Address=${w.address}`);
+              console.log(` -> Resolved Label: "${label}"`);
+            }
 
             // Default Detail
             detail = (e.type === 'withdrawal') ? `Withdrawal` : `Deposit`;
