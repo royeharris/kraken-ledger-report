@@ -3800,7 +3800,8 @@
           asset: normalizedAsset,
           amount: Math.abs(w.amount).toFixed(6),
           fee: Math.abs(w.fee).toFixed(6),
-          balance: w.balance.toFixed(6),
+          // v4.00-36 Fix: Ensure balance is a number before calling toFixed
+          balance: parseFloat(w.balance || 0).toFixed(6),
           conversionCurrency: conversionCurrency,
           conversionRate: conversionRate,
           gbpSent: gbpSent,
