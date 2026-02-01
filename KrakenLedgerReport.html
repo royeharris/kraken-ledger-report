@@ -7,7 +7,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-  <title>Kraken Ledger Report v4.00-46</title>
+  <title>Kraken Ledger Report v4.00-47</title>
   <script async defer src="https://accounts.google.com/gsi/client"></script>
   <script async defer src="https://apis.google.com/js/api.js"></script>
   <style>
@@ -495,7 +495,7 @@
 
 
   <script>
-    const APP_VERSION = "v4.00-46";
+    const APP_VERSION = "v4.00-47";
   </script>
 
 
@@ -1446,7 +1446,8 @@
                 }),
                   asset: asset,
                   info: entry.info || ""
-                }) : });
+                }) : ""
+              });
             }
           }
 
@@ -1698,7 +1699,8 @@
             }),
               asset: w.asset,
               info: w.info
-            });}
+            });
+          }
         });
       }
 
@@ -1718,7 +1720,8 @@
             }),
               asset: r.asset,
               info: r.info
-            });}
+            });
+          }
         });
       }
 
