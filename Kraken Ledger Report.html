@@ -7,7 +7,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-  <title>Kraken Ledger Report v4.00-47</title>
+  <title>Kraken Ledger Report v4.00-48</title>
   <script async defer src="https://accounts.google.com/gsi/client"></script>
   <script async defer src="https://apis.google.com/js/api.js"></script>
   <style>
@@ -495,7 +495,7 @@
 
 
   <script>
-    const APP_VERSION = "v4.00-47";
+    const APP_VERSION = "v4.00-48";
   </script>
 
 
@@ -4665,10 +4665,13 @@
               if (asset === "XRP") cryptoTotals[recipient].XRP_GBP += gbpEq;
 
             } else if (asset === "GBP" || asset === "EUR") {
-              // FIAT EXPENSE
-              if (!fMap[recipient]) fMap[recipient] = { GBP: 0, EUR: 0, EUR_GBP: 0 };
+              // FIAT EXPENSE (bank withdrawals)
+              // IMPORTANT: Keep GBP and EUR on separate summary rows by suffixing the label with currency.
+              // This prevents merged rows when Kraken 'info' uses the same institution string (e.g. 'Revolut Ltd') for both currencies.
+              const fiatKey = `${recipient} (${asset})`;
+              if (!fMap[fiatKey]) fMap[fiatKey] = { GBP: 0, EUR: 0, EUR_GBP: 0 };
 
-              fMap[recipient][asset] += absVal;
+              fMap[fiatKey][asset] += absVal;
 
               if (asset === "EUR") {
                 let gbpEq = 0;
@@ -4678,7 +4681,7 @@
                   const r = getDailyRate("EUR", rawTime);
                   if (r) gbpEq = absVal * r;
                 }
-                if (gbpEq) fMap[recipient].EUR_GBP += gbpEq;
+                if (gbpEq) fMap[fiatKey].EUR_GBP += gbpEq;
               }
             }
           } else {
