@@ -495,7 +495,7 @@
 
 
   <script>
-    const APP_VERSION = "v4.00-21";
+    const APP_VERSION = "v4.00-22";
   </script>
 
 
@@ -509,7 +509,44 @@
       if (traceEl && v) traceEl.textContent = `Trace: ${v} Kraken Withdrawals Report initialized.`;
 
       if (v) document.title = `Kraken Reports ${v}`;
+
+      // v4.00-22: Auto-load persistent data (Addresses/History) on startup
+      loadPersistentDataSilent();
     });
+
+    function loadPersistentDataSilent() {
+      try {
+        const addr = localStorage.getItem("kraken_v2_addresses");
+        const hist = localStorage.getItem("kraken_v2_history");
+
+        if (addr) {
+          cacheData.krakenAddresses = JSON.parse(addr);
+        }
+        if (hist) {
+          cacheData.withdrawalHistory = JSON.parse(hist);
+          // Rebuild Index
+          cacheData.withdrawalHistoryByRefid = {};
+          for (const w of cacheData.withdrawalHistory) {
+            if (w && w.refid) cacheData.withdrawalHistoryByRefid[w.refid] = w;
+          }
+        }
+
+        if (addr || hist) {
+          // We need to delay logging slightly or just log immediately if element exists
+          const log = document.getElementById("trace_log");
+          if (log) {
+            const now = new Date().toLocaleTimeString();
+            const msg = `[Auto-Load] Restored ${cacheData.krakenAddresses.length} addresses and ${cacheData.withdrawalHistory.length} history items.`;
+            log.textContent += "\n[" + now + "] " + msg;
+
+            // Update status counts silently
+            setTimeout(updateStatusCounts, 500);
+          }
+        }
+      } catch (e) {
+        console.error("Silent load failed", e);
+      }
+    }
   </script>
 
 </head>
@@ -1018,13 +1055,13 @@
       // Clear LocalStorage
       localStorage.removeItem("kraken_staging");
       localStorage.removeItem("kraken_v3_withdrawals");
-      localStorage.removeItem("kraken_v3_history");
-      localStorage.removeItem("kraken_v3_addresses");
+      // localStorage.removeItem("kraken_v3_history"); // Keep History
+      // localStorage.removeItem("kraken_v3_addresses"); // Keep Addresses
       localStorage.removeItem("kraken_v3_rates_" + APP_VERSION);
       // Legacy cleanup
       localStorage.removeItem("kraken_v2_withdrawals");
-      localStorage.removeItem("kraken_v2_history");
-      localStorage.removeItem("kraken_v2_addresses");
+      // localStorage.removeItem("kraken_v2_history"); // Keep History
+      // localStorage.removeItem("kraken_v2_addresses"); // Keep Addresses
 
       // Clear Views
       renderPreview();
