@@ -7,7 +7,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-  <title>Kraken Ledger Report v4.00-11</title>
+  <title>Kraken Ledger Report v4.00-12</title>
   <script async defer src="https://accounts.google.com/gsi/client"></script>
   <script async defer src="https://apis.google.com/js/api.js"></script>
   <style>
@@ -495,7 +495,7 @@
 
 
   <script>
-    const APP_VERSION = "v4.00-11";
+    const APP_VERSION = "v4.00-12";
   </script>
 
 
@@ -773,7 +773,7 @@
     <button id="log_btn" onclick="toggleLog()"
       style="width:100%; padding:8px; margin-top:10px; background:#8e44ad; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Display
       Progress Log</button>
-    <div id="trace_log" onclick="toggleLog()">Trace: v4.00-11 Kraken Ledger Report initialized.</div>
+    <div id="trace_log" onclick="toggleLog()">Trace: v4.00-12 Kraken Ledger Report initialized.</div>
   </div>
 
   <script>
@@ -1621,6 +1621,23 @@
               krakenAddresses: cacheData.krakenAddresses,
               withdrawalHistoryByRefid: cacheData.withdrawalHistoryByRefid,
               currentInfo: w.info
+            });
+          }
+        });
+      }
+
+      // v4.00-12: ALSO Update stagingRecords (Main Report Data)
+      // This ensures the "Main Report" (Top Table) reflects the same resolved names as the Statement
+      if (stagingRecords) {
+        stagingRecords.forEach(r => {
+          if (r.type === 'withdrawal') {
+            r.recipient = resolveRecipientLabel({
+              asset: r.asset,
+              refid: r.refid, // stagingRecords has refid
+              historyMatch: cacheData.withdrawalHistoryByRefid ? cacheData.withdrawalHistoryByRefid[r.refid] : null,
+              krakenAddresses: cacheData.krakenAddresses,
+              withdrawalHistoryByRefid: cacheData.withdrawalHistoryByRefid,
+              currentInfo: r.info // stagingRecords needs to have captured info! (v4.00-08 did this)
             });
           }
         });
