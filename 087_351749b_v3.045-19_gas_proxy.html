@@ -7,7 +7,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-  <title>Kraken Ledger Report v4.00-08</title>
+  <title>Kraken Ledger Report v4.00-09</title>
   <script async defer src="https://accounts.google.com/gsi/client"></script>
   <script async defer src="https://apis.google.com/js/api.js"></script>
   <style>
@@ -495,7 +495,7 @@
 
 
   <script>
-    const APP_VERSION = "v4.00-08";
+    const APP_VERSION = "v4.00-09";
   </script>
 
 
@@ -773,7 +773,7 @@
     <button id="log_btn" onclick="toggleLog()"
       style="width:100%; padding:8px; margin-top:10px; background:#8e44ad; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Display
       Progress Log</button>
-    <div id="trace_log" onclick="toggleLog()">Trace: v4.00-08 Kraken Ledger Report initialized.</div>
+    <div id="trace_log" onclick="toggleLog()">Trace: v4.00-09 Kraken Ledger Report initialized.</div>
   </div>
 
   <script>
@@ -2934,19 +2934,25 @@
     // RECIPIENT RESOLUTION HELPERS (Phase III-1)
     // -----------------------------------------------------
 
-    function resolveRecipientLabel({ asset, refid, historyMatch, krakenAddresses, withdrawalHistoryByRefid }) {
+    function resolveRecipientLabel({ asset, refid, historyMatch, krakenAddresses, withdrawalHistoryByRefid, currentInfo }) {
       // --- 1) Fiat bank withdrawals (ZGBP/ZEUR): prefer refid -> key ---
-      if (asset === "ZGBP" || asset === "ZEUR") {
-        const w = (refid && withdrawalHistoryByRefid) ? withdrawalHistoryByRefid[refid] : null;
+      if (asset === "ZGBP" || asset === "ZEUR" || asset === "GBP" || asset === "EUR") {
+        const w = (refid && withdrawalHistoryByRefid) ? withdrawalHistoryByRefid[refid] : historyMatch;
 
         // If WithdrawStatus provides a withdrawal key (common for fiat), use it
         if (w && w.key) return trimLabel(w.key);
 
         // If key is not present, try to resolve by matching info/address fields to address book key
-        // (best-effort; may be empty for fiat)
+        // Priority 1: History Info (if cached)
         if (w && w.info) {
           const k = tryMatchKeyFromInfo(w.info, krakenAddresses, asset);
           if (k) return trimLabel(k);
+        }
+
+        // Priority 2: Current Ledger Info (Live Data) - v4.00-09
+        if (currentInfo) {
+          const k2 = tryMatchKeyFromInfo(currentInfo, krakenAddresses, asset);
+          if (k2) return trimLabel(k2);
         }
 
         // Last-resort fallback: ONLY if there is exactly one verified address for this asset
@@ -4033,14 +4039,20 @@
             if (!row.gbpValues) row.gbpValues = {};
             if (foundGbp) row.gbpValues[normalizedAsset] = parseFloat(foundGbp);
 
-            // v4.00-03 Phase III-1: Canonical Label Resolution
-            const label = resolveRecipientLabel({
-              asset: normalizedAsset,
-              refid: e.refid,
-              historyMatch: cacheData.withdrawalHistory.find(h => h.refid === e.refid),
-              krakenAddresses: cacheData.krakenAddresses,
-              withdrawalHistoryByRefid: cacheData.withdrawalHistoryByRefid
-            });
+            // v4.00-09: Use Pre-calculated recipient from readLedger if available (Ensures consistency)
+            let label = e.recipient;
+
+            if (!label) {
+              // Try to resolve again if missing
+              label = resolveRecipientLabel({
+                asset: normalizedAsset,
+                refid: e.refid,
+                historyMatch: cacheData.withdrawalHistory.find(h => h.refid === e.refid),
+                krakenAddresses: cacheData.krakenAddresses,
+                withdrawalHistoryByRefid: cacheData.withdrawalHistoryByRefid,
+                currentInfo: e.info // v4.00-09 passed fallback
+              });
+            }
 
             // Default Detail
             detail = (e.type === 'withdrawal') ? `Withdrawal` : `Deposit`;
