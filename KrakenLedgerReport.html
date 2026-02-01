@@ -495,7 +495,7 @@
 
 
   <script>
-    const APP_VERSION = "v4.00-49";
+    const APP_VERSION = "v4.00-50";
   </script>
 
 
@@ -3518,6 +3518,24 @@
       // Sort ALL ledger entries by time (ascending) for trade matching
       const sortedLedger = [...cacheData.withdrawals].sort((a, b) => a.time - b.time);
 
+
+      // Phase III-1: Fiat institution labels for Trade/Withdrawal report (TWD)
+      // Use withdrawal history 'info' as institution name per fiat currency so DEPOSIT rows can be labelled too.
+      const fiatInstitutionByCurrency_twd = { GBP: null, EUR: null };
+      try {
+        const hist = (cacheData && Array.isArray(cacheData.withdrawalHistory)) ? cacheData.withdrawalHistory : [];
+        for (const h of hist) {
+          if (!h) continue;
+          const aU = String(h.asset || "").toUpperCase();
+          const ccy = (aU.includes("GBP") || aU === "ZGBP") ? "GBP" : ((aU.includes("EUR") || aU === "ZEUR") ? "EUR" : null);
+          if (!ccy) continue;
+          if (fiatInstitutionByCurrency_twd[ccy]) continue;
+          if (h.info) fiatInstitutionByCurrency_twd[ccy] = trimLabel(String(h.info).trim());
+        }
+      } catch (e) {}
+
+
+
       // Helper: Find immediately preceding trade that matches a withdrawal
       function findMatchingTrade(withdrawalIndex, withdrawal) {
         // Look for a trade immediately before this withdrawal (same asset, amount matches withdrawal + fee)
@@ -3722,6 +3740,20 @@
           } else {
             recipientName = words[0] + " " + words[1];
             sentTo = words.slice(2).join(" ").trim();
+          }
+        }
+
+        // Phase III-1: Fiat withdrawals/deposits must be labelled as Institution (Currency)
+        // Do NOT use first-two-words splitting for fiat; always append currency suffix to avoid GBP/EUR merging.
+        const _assetUpper = (w.asset || "").toUpperCase();
+        const _isFiatRow = (_assetUpper.includes("GBP") || _assetUpper === "ZGBP" || _assetUpper.includes("EUR") || _assetUpper === "ZEUR");
+        if (_isFiatRow && (w.type === "withdrawal" || w.type === "deposit")) {
+          const _ccy = _assetUpper.includes("GBP") || _assetUpper === "ZGBP" ? "GBP" :
+                       (_assetUpper.includes("EUR") || _assetUpper === "ZEUR" ? "EUR" : "");
+          if (_ccy) {
+            const inst = (fullRecipient || "").trim() || (historyMatch && historyMatch.info ? String(historyMatch.info).trim() : "") || (fiatInstitutionByCurrency_twd[_ccy] ? String(fiatInstitutionByCurrency_twd[_ccy]).trim() : "");
+            recipientName = inst ? (inst + " (" + _ccy + ")") : ("Bank (" + _ccy + ")");
+            sentTo = "";
           }
         }
 
@@ -4034,6 +4066,31 @@
         return;
       }
 
+
+      // Phase III-1: Fiat institution labels (for Deposits alignment)
+      // Kraken fiat DEPOSIT rows often have no reliable join-key; use in-period fiat WITHDRAWAL 'info' as authoritative institution name per currency.
+      const fiatInstitutionByCurrency_stmt = { GBP: null, EUR: null };
+      try {
+        for (const e of entries) {
+          if (!e || e.type !== "withdrawal") continue;
+          const aU = (e.asset || "").toUpperCase();
+          const ccy = (aU.includes("GBP") || aU === "ZGBP") ? "GBP" : ((aU.includes("EUR") || aU === "ZEUR") ? "EUR" : null);
+          if (!ccy) continue;
+          if (fiatInstitutionByCurrency_stmt[ccy]) continue;
+
+          let inst = (e.info && String(e.info).trim()) ? String(e.info).trim() : "";
+          if (!inst && cacheData && cacheData.withdrawalHistoryByRefid && e.refid) {
+            const hm = cacheData.withdrawalHistoryByRefid[e.refid];
+            if (hm && hm.info) inst = String(hm.info).trim();
+          }
+          if (inst) {
+            fiatInstitutionByCurrency_stmt[ccy] = trimLabel(inst);
+          }
+        }
+      } catch (e) {
+        // non-fatal; deposits will fall back to address-book key if needed
+      }
+
       // 2. Calculate Opening Balances (Back-Calculation)
       // We need a starting balance for each tracked asset.
       // Strategy: Find the FIRST occurrence of each asset in the filtered list.
@@ -4312,6 +4369,23 @@
             if (e.type === 'withdrawal') {
               const fin = finalizeWithdrawalRecipientLabel({ label, asset: normalizedAsset, info: e.info });
               if (fin) label = fin;
+            }
+
+
+            // Phase III-1: Fiat deposit/withdrawal labels must be currency-disambiguated and institution-based.
+            // - Withdrawals: prefer existing resolver/finalizer output
+            // - Deposits: override address-book key label using in-period fiat withdrawal institution if available
+            if (normalizedAsset === "GBP" || normalizedAsset === "EUR") {
+              const inst = fiatInstitutionByCurrency_stmt[normalizedAsset];
+              if (inst) {
+                label = applyFiatSuffix(trimLabel(inst), normalizedAsset);
+                // Persist for Summary Report
+                row.recipient = label;
+              } else if (label) {
+                // Ensure suffix is present even if label came from address book
+                label = applyFiatSuffix(trimLabel(label), normalizedAsset);
+                row.recipient = label;
+              }
             }
 
             // Default Detail
@@ -4609,7 +4683,14 @@
         }
 
         // --- 2. PROCESS AMOUNTS ---
-        for (const [asset, val] of Object.entries(item.amounts)) {
+        for (const [rawAsset, val] of Object.entries(item.amounts)) {
+          // Phase III-1: Normalize Kraken internal asset codes (ZEUR/ZGBP/XXRP)
+          let asset = rawAsset;
+          if (asset === "ZEUR" || asset === "EUR.HOLD") asset = "EUR";
+          else if (asset === "ZGBP" || asset === "GBP.HOLD") asset = "GBP";
+          else if (asset === "XXRP" || asset === "XRP.HOLD") asset = "XRP";
+          else if (asset === "ZUSD" || asset === "USD.HOLD") asset = "USD";
+
           if (!val || val === 0) continue;
 
           // v3.045-18.3: Track Net Trade Flows for Reconciliation
