@@ -2831,8 +2831,8 @@
     async function fetchWithdrawalHistory(otp) {
       const withdrawCreds = getWithdrawCredentials();
 
-      // Try both USDT and XRP (common assets for withdrawals)
-      const assets = ["USDT", "XXRP", "ZUSD", "ZGBP"];
+      // Try both USDT, XRP, ZGBP, ZEUR (Phase III-1: Full Asset Coverage)
+      const assets = ["USDT", "XXRP", "ZGBP", "ZEUR"];
       const allWithdrawals = [];
 
       for (const asset of assets) {
@@ -2847,6 +2847,11 @@
                 ...w,
                 queriedAsset: asset
               });
+
+              // Phase III-1 Verification Probe
+              if (asset === "ZGBP" || asset === "ZEUR") {
+                logTrace(`Verification Probe (${asset}): RefID=${w.refid}, Key=${w.key || "MISSING"}, Method=${w.method}, Info=${w.info}`);
+              }
             }
             logTrace("Found " + result.length + " withdrawals for " + asset);
           }
