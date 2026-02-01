@@ -495,7 +495,7 @@
 
 
   <script>
-    const APP_VERSION = "v4.00-26";
+    const APP_VERSION = "v4.00-27";
   </script>
 
 
@@ -2972,8 +2972,8 @@
     async function fetchWithdrawalHistory(otp) {
       const withdrawCreds = getWithdrawCredentials();
 
-      // Patch 1: Full Asset Coverage - Try both USDT, XRP, ZGBP, ZEUR
-      const assets = ["USDT", "XXRP", "ZGBP", "ZEUR"];
+      // Patch 1: Full Asset Coverage - Try both USDT, XRP, ZGBP, ZEUR, AND ISO codes (GBP, EUR)
+      const assets = ["USDT", "XXRP", "ZGBP", "ZEUR", "GBP", "EUR"];
       const allWithdrawals = [];
 
       for (const asset of assets) {
