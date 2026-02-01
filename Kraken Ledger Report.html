@@ -7,7 +7,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-  <title>Kraken Ledger Report v4.00-04</title>
+  <title>Kraken Ledger Report v4.00-05</title>
   <script async defer src="https://accounts.google.com/gsi/client"></script>
   <script async defer src="https://apis.google.com/js/api.js"></script>
   <style>
@@ -495,7 +495,7 @@
 
 
   <script>
-    const APP_VERSION = "v4.00-04";
+    const APP_VERSION = "v4.00-05";
   </script>
 
 
@@ -773,7 +773,7 @@
     <button id="log_btn" onclick="toggleLog()"
       style="width:100%; padding:8px; margin-top:10px; background:#8e44ad; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Display
       Progress Log</button>
-    <div id="trace_log" onclick="toggleLog()">Trace: v4.00-04 Kraken Ledger Report initialized.</div>
+    <div id="trace_log" onclick="toggleLog()">Trace: v4.00-05 Kraken Ledger Report initialized.</div>
   </div>
 
   <script>
@@ -1220,10 +1220,10 @@
     // v3.043-2: Internal cache saver used by Summary/Closing Balances (silent, no alerts)
     function saveCacheToLocalStorage() {
       try {
-        localStorage.setItem("kraken_v2_withdrawals", JSON.stringify(cacheData.withdrawals || []));
-        localStorage.setItem("kraken_v2_history", JSON.stringify(cacheData.withdrawalHistory || []));
-        localStorage.setItem("kraken_v2_addresses", JSON.stringify(cacheData.krakenAddresses || []));
-        localStorage.setItem("kraken_v2_rates_" + APP_VERSION, JSON.stringify(cacheData.ratesCache || {}));
+        localStorage.setItem("kraken_v3_withdrawals", JSON.stringify(cacheData.withdrawals || []));
+        localStorage.setItem("kraken_v3_history", JSON.stringify(cacheData.withdrawalHistory || []));
+        localStorage.setItem("kraken_v3_addresses", JSON.stringify(cacheData.krakenAddresses || []));
+        localStorage.setItem("kraken_v3_rates_" + APP_VERSION, JSON.stringify(cacheData.ratesCache || {}));
         // Optional: store computed withdrawalCache (used for GBP fallbacks)
         if (cacheData && Array.isArray(cacheData.withdrawalCache)) {
           localStorage.setItem("kraken_v3_withdrawal_cache", JSON.stringify(cacheData.withdrawalCache));
@@ -1250,17 +1250,29 @@
     }
 
     function loadLocalData() {
-      const cached = localStorage.getItem("kraken_v2_withdrawals");
+      // v4.00-05: Bumped cache key to v3 to force bad cache invalidation (ensure ZGBP/ZEUR is present)
+      const cached = localStorage.getItem("kraken_v3_withdrawals");
       if (!cached) {
-        alert("No saved data found. Use 'Fetch & Generate Report' first.");
+        // Try v2 fallback? No, let's force a clean slate for safety.
+        alert("No saved data found (Cache Version v3). Please 'Fetch & Generate Report' again.");
         return;
       }
       cacheData.withdrawals = JSON.parse(cached || "[]");
-      cacheData.withdrawalHistory = JSON.parse(localStorage.getItem("kraken_v2_history") || "[]");
-      cacheData.krakenAddresses = JSON.parse(localStorage.getItem("kraken_v2_addresses") || "[]");
-      cacheData.ratesCache = JSON.parse(localStorage.getItem("kraken_v2_rates_" + APP_VERSION) || "{}");
+      cacheData.withdrawalHistory = JSON.parse(localStorage.getItem("kraken_v3_history") || "[]");
+      cacheData.krakenAddresses = JSON.parse(localStorage.getItem("kraken_v3_addresses") || "[]");
+      cacheData.ratesCache = JSON.parse(localStorage.getItem("kraken_v3_rates_" + APP_VERSION) || "{}");
+
+      // CRITICAL FIX: Rebuild RefID Index after loading from Cache
+      cacheData.withdrawalHistoryByRefid = {};
+      if (cacheData.withdrawalHistory && cacheData.withdrawalHistory.length > 0) {
+        for (const w of cacheData.withdrawalHistory) {
+          if (w && w.refid) cacheData.withdrawalHistoryByRefid[w.refid] = w;
+        }
+        logTrace(`[Cache Load] Rebuilt RefID Index for ${Object.keys(cacheData.withdrawalHistoryByRefid).length} entries.`);
+      }
+
       updateStatusCounts();
-      logTrace("Loaded from localStorage. Withdrawals=" + cacheData.withdrawals.length);
+      logTrace("Loaded from localStorage (v3). Withdrawals=" + cacheData.withdrawals.length);
 
       // Regenerate report from cached data
       generateReportFromCache();
