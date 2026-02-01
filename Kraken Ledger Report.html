@@ -495,7 +495,7 @@
 
 
   <script>
-    const APP_VERSION = "v4.00-40";
+    const APP_VERSION = "v4.00-41";
   </script>
 
 
@@ -1509,10 +1509,10 @@
         cacheData.withdrawals = allLedgerEntries;  // Still use withdrawals key for compatibility
 
         // Re-enable Generate Button
-        if (genBtn) {
-          genBtn.disabled = false;
-          genBtn.innerText = "Generate Report"; // Reset text if needed
-          genBtn.style.opacity = "1.0";
+        if (btnGen) {
+          btnGen.disabled = false;
+          btnGen.innerText = "Generate Report"; // Reset text if needed
+          btnGen.style.opacity = "1.0";
         }
 
         updateStatusCounts();
@@ -1772,10 +1772,10 @@
         html += '<td style="padding:4px; border:1px solid #90caf9;">' + escHtml(dateStr) + "</td>";
         html += '<td style="padding:4px 4px 4px 1px; border:1px solid #90caf9;">' + escHtml(w.type || "") + "</td>";
         html += '<td style="padding:4px; border:1px solid #90caf9;">' + escHtml(timeStr) + "</td>";
-        html += '<td style="padding:4px; border:1px solid #90caf9;">' + w.amount.toFixed(6) + "</td>";
-        html += '<td style="padding:4px; border:1px solid #90caf9;">' + Math.abs(w.fee).toFixed(6) + "</td>";
+        html += '<td style="padding:4px; border:1px solid #90caf9;">' + parseFloat(w.rawAmount ?? w.amount ?? 0).toFixed(6) + "</td>";
+        html += '<td style="padding:4px; border:1px solid #90caf9;">' + Math.abs(parseFloat(w.rawFee ?? w.fee ?? 0)).toFixed(6) + "</td>";
         html += '<td style="padding:4px; border:1px solid #90caf9;">' + escHtml(w.asset) + "</td>";
-        html += '<td style="padding:4px; border:1px solid #90caf9;">' + w.balance.toFixed(6) + "</td>";
+        html += '<td style="padding:4px; border:1px solid #90caf9;">' + parseFloat(w.rawBalance ?? w.balance ?? 0).toFixed(6) + "</td>";
         html += '<td style="padding:4px; border:1px solid #90caf9; word-break:break-all;">' + escHtml(w.ledgerId || "") + "</td>";
         html += '<td style="padding:4px; border:1px solid #90caf9; word-break:break-all;">' + escHtml(w.refid || "") + "</td>";
         // v4.00-28: Show Info column to reveal source of "Revolut Ltd"
