@@ -495,7 +495,7 @@
 
 
   <script>
-    const APP_VERSION = "v4.00-53";
+    const APP_VERSION = "v4.00-54";
   </script>
 
 
@@ -4614,8 +4614,8 @@
     }
 
     async function generateStatementSummary(customRecords) {
-      // v4.00-53 Fix: Declare at top to avoid ReferenceError
-      const bankDepositTotals = {};
+      // v4.00-54 Fix: Use 'var' and rename to avoid any scope/shadowing issues
+      var stmtBankDepositTotals = {};
 
       const sDateVal = document.getElementById("startDate").value;
       const eDateVal = document.getElementById("endDate").value;
@@ -4779,19 +4779,19 @@
               const label = fiatBankLabel(baseLabel, asset);
 
               // Initialize structure if needed
-              if (!bankDepositTotals[label]) {
-                bankDepositTotals[label] = { GBP: 0, EUR: 0, gbpEq: 0 };
+              if (!stmtBankDepositTotals[label]) {
+                stmtBankDepositTotals[label] = { GBP: 0, EUR: 0, gbpEq: 0 };
               }
 
               const c = normalizeAsset(asset);
               // Accumulate into the granular label bucket AND global totals (for fee heuristics)
               if (c === "GBP") {
                 const amt = Math.abs(val);
-                bankDepositTotals[label].GBP += amt;
+                stmtBankDepositTotals[label].GBP += amt;
                 depositTotals.GBP += amt;
               } else if (c === "EUR") {
                 const amt = Math.abs(val);
-                bankDepositTotals[label].EUR += amt;
+                stmtBankDepositTotals[label].EUR += amt;
                 depositTotals.EUR += amt;
 
                 // Calculate GBP Equivalent for this specific entry
@@ -4802,7 +4802,7 @@
                   const r = getDailyRate("EUR", rawTime);
                   if (r) entryGbpEq = amt * r;
                 }
-                bankDepositTotals[label].gbpEq += entryGbpEq;
+                stmtBankDepositTotals[label].gbpEq += entryGbpEq;
                 depositGbpTotals.EUR += entryGbpEq;
               }
             }
@@ -5257,10 +5257,10 @@
       html += '<th style="padding:4px; border:1px solid #ddd; text-align:right;">Total Amount</th><th style="padding:4px; border:1px solid #ddd; text-align:right;">GBP Equivalent</th>';
       html += '</tr></thead><tbody>';
 
-      // v4.00-52: Use bankDepositTotals (Aggregation from Statement Rows)
-      const depLabels = Object.keys(bankDepositTotals || {});
+      // v4.00-52: Use stmtBankDepositTotals (Aggregation from Statement Rows)
+      const depLabels = Object.keys(stmtBankDepositTotals || {});
       const hasDeposits = depLabels.some(l => {
-        const d = bankDepositTotals[l];
+        const d = stmtBankDepositTotals[l];
         return (d.GBP + d.EUR) > 0;
       });
 
@@ -5268,7 +5268,7 @@
         html += '<tr><td colspan="3" style="padding:8px; border:1px solid #ddd; text-align:center; color:#666; font-style:italic;">No deposits found for this period.</td></tr>';
       } else {
         for (const label of depLabels) {
-          const d = bankDepositTotals[label];
+          const d = stmtBankDepositTotals[label];
           // Skip zero rows
           if ((d.GBP + d.EUR) === 0) continue;
 
@@ -5500,11 +5500,11 @@
 
       // A) Opening balance (from statement "Opening Balance" snapshot section if available; otherwise 0)
 
-      // B) Deposits from Haricom Bank Accounts (v4.00-52: Uses bankDepositTotals from Statement Rows)
+      // B) Deposits from Haricom Bank Accounts (v4.00-52: Uses stmtBankDepositTotals from Statement Rows)
       let depGBP = 0;
       let depEUR = 0; // Note: This variable holds the GBP EQUIVALENT of EUR deposits, matching the Recon table semantics
 
-      for (const v of Object.values(bankDepositTotals)) {
+      for (const v of Object.values(stmtBankDepositTotals)) {
         depGBP += v.GBP;
         depEUR += v.gbpEq;
       }
