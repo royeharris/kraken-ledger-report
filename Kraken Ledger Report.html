@@ -1,5 +1,5 @@
 <!--
-Version: 4.00-01
+Version: 4.00-02
 Objective: Bank Label Normalisation (GBP/EUR)
 Source: Phase III-1 Bank Withdrawal Label Normalisation
 Constraint: NO REFACTOR
@@ -2133,12 +2133,13 @@ Purpose: GitHub Pages testing
             }
 
             // S3: Deposits
-            let s3Headers = ["Deposits from Haricom Bank Accounts  GBP | EUR", "", ""];
-            let s3ColHeaders = ["Currency", "Total Amount", "GBP Equivalent"];
+            let s3Headers = ["Deposits from Haricom Bank Accounts  GBP | EUR", "", "", ""];
+            let s3ColHeaders = ["Haricom Bank Account", "GBP Amount", "EUR Amount", "EUR (GBP Eq)"];
             const s3Rows = (summaryRecords.deposits || []).map(r => [
-              r.asset,
-              fmt(r.total, 2),
-              (r.asset === "GBP") ? "n/a" : fmt(r.gbpEq || 0, 2)
+              r.recipient,
+              fmt(r.GBP, 2),
+              fmt(r.EUR, 2),
+              (r.EUR > 0 && r.EUR_GBP > 0) ? fmt(r.EUR_GBP, 2) : "-"
             ]);
 
             // S4: Fees
@@ -3919,7 +3920,10 @@ Purpose: GitHub Pages testing
 
             if (recipient) {
               // Take first 2 words
-              const words = recipient.split(/\s+/).slice(0, 2).join(" ");
+              const _m = recipient.match(/\s*\((GBP|EUR)\)\s*$/);
+              const _suf = _m ? " (" + _m[1] + ")" : "";
+              const _base = recipient.replace(/\s*\((GBP|EUR)\)\s*$/, "");
+              const words = _base.split(/\s+/).slice(0, 2).join(" ") + _suf;
               // Clean common suffixes if needed, or just trust words
               detail = `${words}`;
 
@@ -4086,7 +4090,7 @@ Purpose: GitHub Pages testing
     // STATEMENT SUMMARY REPORT (v2.50)
     // ===========================================
     let summaryRecords = { crypto: [], fiat: [], deposits: [], fees: [] };
-    let depositTotals = { GBP: 0, EUR: 0 }; // v3.015: Global for access in render helpers
+    let depositTotals = {}; // v4.00-02: per-recipient (with GBP/EUR suffix) deposit totals for Haricom bank accounts
 
 
     function toggleSummaryReport() {
@@ -4141,7 +4145,7 @@ Purpose: GitHub Pages testing
       const fMap = {};         // { recipient: { GBP: 0, EUR: 0, EUR_GBP: 0 } }
 
       // Global reset
-      depositTotals = { GBP: 0, EUR: 0 };
+      depositTotals = {};
       const depositGbpTotals = { GBP: 0, EUR: 0 };
 
       const feeTotals = { GBP: 0, EUR: 0, USDT: 0, XRP: 0 };
@@ -4195,9 +4199,14 @@ Purpose: GitHub Pages testing
 
         // v3.045-19.40: Enforce "First Two Words" rule for better formatting
         // This fixes "Revolut Business" showing as just "Withdrawal" if the logic previously failed.
-        const words = recipient.split(/\s+/);
+        const _m2 = recipient.match(/\s*\((GBP|EUR)\)\s*$/);
+        const _suf2 = _m2 ? " (" + _m2[1] + ")" : "";
+        const _base2 = recipient.replace(/\s*\((GBP|EUR)\)\s*$/, "");
+        const words = _base2.split(/\s+/);
         if (words.length > 2) {
-          recipient = words.slice(0, 2).join(" ");
+          recipient = words.slice(0, 2).join(" ") + _suf2;
+        } else {
+          recipient = _base2.trim() + _suf2;
         }
 
         // Specific Fix: If it's still just "Withdrawal" and we have a specific known bank pattern, or if it was overridden??
@@ -4251,7 +4260,9 @@ Purpose: GitHub Pages testing
           if (lType === "deposit" && val > 0) {
             // DEPOSIT
             if (asset === "GBP" || asset === "EUR") {
-              depositTotals[asset] += absVal;
+              const _dKey = recipient + ((asset === "GBP" || asset === "EUR") ? " (" + asset + ")" : "");
+              if (!depositTotals[_dKey]) depositTotals[_dKey] = { GBP: 0, EUR: 0, EUR_GBP: 0 };
+              depositTotals[_dKey][asset] += absVal;
 
               // EUR Deposit -> GBP Equivalent
               if (asset === "EUR") {
@@ -4265,6 +4276,7 @@ Purpose: GitHub Pages testing
                   if (r) gbpEq = absVal * r;
                 }
                 if (gbpEq) depositGbpTotals.EUR += gbpEq;
+                if (_dKey && depositTotals[_dKey]) depositTotals[_dKey].EUR_GBP += gbpEq;
               }
             }
 
@@ -4290,9 +4302,10 @@ Purpose: GitHub Pages testing
 
             } else if (asset === "GBP" || asset === "EUR") {
               // FIAT EXPENSE
-              if (!fMap[recipient]) fMap[recipient] = { GBP: 0, EUR: 0, EUR_GBP: 0 };
+              const _rKey = recipient + ((asset === "GBP" || asset === "EUR") ? " (" + asset + ")" : "");
+              if (!fMap[_rKey]) fMap[_rKey] = { GBP: 0, EUR: 0, EUR_GBP: 0 };
 
-              fMap[recipient][asset] += absVal;
+              fMap[_rKey][asset] += absVal;
 
               if (asset === "EUR") {
                 let gbpEq = 0;
@@ -4302,7 +4315,7 @@ Purpose: GitHub Pages testing
                   const r = getDailyRate("EUR", rawTime);
                   if (r) gbpEq = absVal * r;
                 }
-                if (gbpEq) fMap[recipient].EUR_GBP += gbpEq;
+                if (gbpEq) fMap[_rKey].EUR_GBP += gbpEq;
               }
             }
           } else {
@@ -4366,10 +4379,9 @@ Purpose: GitHub Pages testing
       const cryptoRows = Object.keys(cryptoTotals).map(r => ({ recipient: r, ...cryptoTotals[r] })).sort((a, b) => a.recipient.localeCompare(b.recipient));
       const fiatRows = Object.keys(fMap).map(r => ({ recipient: r, ...fMap[r] })).sort((a, b) => a.recipient.localeCompare(b.recipient));
 
-      const depositRows = [
-        { asset: "GBP", total: depositTotals.GBP, gbpEq: null },
-        { asset: "EUR", total: depositTotals.EUR, gbpEq: depositGbpTotals.EUR }
-      ];
+      const depositRows = Object.keys(depositTotals)
+        .map(r => ({ recipient: r, ...depositTotals[r] }))
+        .sort((a, b) => a.recipient.localeCompare(b.recipient));
 
       const feeRows = [
         { asset: "GBP", total: feeTotals.GBP, gbpEq: null },
