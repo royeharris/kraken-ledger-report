@@ -1438,12 +1438,12 @@
                 // v4.00-08: Resolve Label immediately for Main Report consistency
                 recipient: (entry.type === 'withdrawal') ? finalizeWithdrawalRecipientLabel({
                   label: resolveRecipientLabel({
-                    asset: asset,
-                    refid: entry.refid,
-                    historyMatch: cacheData.withdrawalHistoryByRefid ? cacheData.withdrawalHistoryByRefid[entry.refid] : null,
-                    krakenAddresses: cacheData.krakenAddresses,
-                    withdrawalHistoryByRefid: cacheData.withdrawalHistoryByRefid
-                  }),
+                  asset: asset,
+                  refid: entry.refid,
+                  historyMatch: cacheData.withdrawalHistoryByRefid ? cacheData.withdrawalHistoryByRefid[entry.refid] : null,
+                  krakenAddresses: cacheData.krakenAddresses,
+                  withdrawalHistoryByRefid: cacheData.withdrawalHistoryByRefid
+                }),
                   asset: asset,
                   info: entry.info || ""
                 }) : ""
@@ -1690,13 +1690,13 @@
             // Re-run resolution with arguably better data availability
             w.recipient = finalizeWithdrawalRecipientLabel({
               label: resolveRecipientLabel({
-                asset: w.asset,
-                refid: w.refid,
-                historyMatch: cacheData.withdrawalHistoryByRefid ? cacheData.withdrawalHistoryByRefid[w.refid] : null,
-                krakenAddresses: cacheData.krakenAddresses,
-                withdrawalHistoryByRefid: cacheData.withdrawalHistoryByRefid,
-                currentInfo: w.info
-              }),
+              asset: w.asset,
+              refid: w.refid,
+              historyMatch: cacheData.withdrawalHistoryByRefid ? cacheData.withdrawalHistoryByRefid[w.refid] : null,
+              krakenAddresses: cacheData.krakenAddresses,
+              withdrawalHistoryByRefid: cacheData.withdrawalHistoryByRefid,
+              currentInfo: w.info
+            }),
               asset: w.asset,
               info: w.info
             });
@@ -1711,13 +1711,13 @@
           if (r.type === 'withdrawal') {
             r.recipient = finalizeWithdrawalRecipientLabel({
               label: resolveRecipientLabel({
-                asset: r.asset,
-                refid: r.refid, // stagingRecords has refid
-                historyMatch: cacheData.withdrawalHistoryByRefid ? cacheData.withdrawalHistoryByRefid[r.refid] : null,
-                krakenAddresses: cacheData.krakenAddresses,
-                withdrawalHistoryByRefid: cacheData.withdrawalHistoryByRefid,
-                currentInfo: r.info // stagingRecords needs to have captured info! (v4.00-08 did this)
-              }),
+              asset: r.asset,
+              refid: r.refid, // stagingRecords has refid
+              historyMatch: cacheData.withdrawalHistoryByRefid ? cacheData.withdrawalHistoryByRefid[r.refid] : null,
+              krakenAddresses: cacheData.krakenAddresses,
+              withdrawalHistoryByRefid: cacheData.withdrawalHistoryByRefid,
+              currentInfo: r.info // stagingRecords needs to have captured info! (v4.00-08 did this)
+            }),
               asset: r.asset,
               info: r.info
             });
@@ -3103,7 +3103,7 @@
             const hasKey = Boolean(w && w.key);
             window.bankLabelDiagnostics = window.bankLabelDiagnostics || [];
             window.bankLabelDiagnostics.push({ refid: refid || null, asset: asset || null, normAsset, candidateCount: candCount, hasKey, info: (w && w.info) ? w.info : null });
-          } catch (e) { }
+          } catch (e) {}
         }
 
         // If WithdrawStatus provides a withdrawal key (common for fiat), use it
@@ -3162,8 +3162,8 @@
       // For fiat withdrawals, always produce a currency-disambiguated label.
       if (a === "GBP" || a === "EUR") {
         const base = (label && String(label).trim()) ? String(label).trim() :
-          (info && String(info).trim()) ? trimLabel(String(info).trim()) :
-            "Withdrawal";
+                     (info && String(info).trim()) ? trimLabel(String(info).trim()) :
+                     "Withdrawal";
         return applyFiatSuffix(trimLabel(base), a);
       }
       // For crypto withdrawals, keep label as-is (no asset suffix).
@@ -3532,7 +3532,7 @@
           if (fiatInstitutionByCurrency_twd[ccy]) continue;
           if (h.info) fiatInstitutionByCurrency_twd[ccy] = trimLabel(String(h.info).trim());
         }
-      } catch (e) { }
+      } catch (e) {}
 
 
 
@@ -3749,7 +3749,7 @@
         const _isFiatRow = (_assetUpper.includes("GBP") || _assetUpper === "ZGBP" || _assetUpper.includes("EUR") || _assetUpper === "ZEUR");
         if (_isFiatRow && (w.type === "withdrawal" || w.type === "deposit")) {
           const _ccy = _assetUpper.includes("GBP") || _assetUpper === "ZGBP" ? "GBP" :
-            (_assetUpper.includes("EUR") || _assetUpper === "ZEUR" ? "EUR" : "");
+                       (_assetUpper.includes("EUR") || _assetUpper === "ZEUR" ? "EUR" : "");
           if (_ccy) {
             const inst = (fullRecipient || "").trim() || (historyMatch && historyMatch.info ? String(historyMatch.info).trim() : "") || (fiatInstitutionByCurrency_twd[_ccy] ? String(fiatInstitutionByCurrency_twd[_ccy]).trim() : "");
             recipientName = inst ? (inst + " (" + _ccy + ")") : ("Bank (" + _ccy + ")");
@@ -4550,33 +4550,33 @@
     // ===========================================
     let summaryRecords = { crypto: [], fiat: [], deposits: [], fees: [] };
     let depositTotals = { GBP: 0, EUR: 0 };
-    // Phase III-1 Fix: Derive fiat deposit totals directly from statement rows (sourceData),
-    // rather than relying on per-asset iteration that can miss deposits depending on row shape.
-    // This guarantees the Statement Summary deposit section reflects deposits visible in the Statement.
-    try {
-      for (const row of sourceData) {
-        if (!row || row.type !== "deposit" || !row.amounts) continue;
-        const t = (row._raw && row._raw.time) ? row._raw.time : null;
+      // Phase III-1 Fix: Derive fiat deposit totals directly from statement rows (sourceData),
+      // rather than relying on per-asset iteration that can miss deposits depending on row shape.
+      // This guarantees the Statement Summary deposit section reflects deposits visible in the Statement.
+      try {
+        for (const row of sourceData) {
+          if (!row || row.type !== "deposit" || !row.amounts) continue;
+          const t = (row._raw && row._raw.time) ? row._raw.time : null;
 
-        const g = Number(row.amounts.GBP || 0);
-        if (g > 0) depositTotals.GBP += g;
+          const g = Number(row.amounts.GBP || 0);
+          if (g > 0) depositTotals.GBP += g;
 
-        const e = Number(row.amounts.EUR || 0);
-        if (e > 0) {
-          depositTotals.EUR += e;
+          const e = Number(row.amounts.EUR || 0);
+          if (e > 0) {
+            depositTotals.EUR += e;
 
-          // EUR -> GBP equivalent for summary
-          let gbpEq = 0;
-          if (row.gbpValues && row.gbpValues.EUR) gbpEq = Number(row.gbpValues.EUR) || 0;
-          else if (t) {
-            const r = getDailyRate("EUR", t);
-            if (r) gbpEq = e * r;
+            // EUR -> GBP equivalent for summary
+            let gbpEq = 0;
+            if (row.gbpValues && row.gbpValues.EUR) gbpEq = Number(row.gbpValues.EUR) || 0;
+            else if (t) {
+              const r = getDailyRate("EUR", t);
+              if (r) gbpEq = e * r;
+            }
+            depositGbpTotals.EUR += gbpEq;
           }
-          depositGbpTotals.EUR += gbpEq;
         }
-      }
-    } catch (_) { }
-    // v3.015: Global for access in render helpers
+      } catch (_) {}
+ // v3.015: Global for access in render helpers
 
 
     function toggleSummaryReport() {
@@ -5822,296 +5822,247 @@
 
 
 </body>
-
 </html>`);
-w.document.close();
-w.focus();
-setTimeout(() => { w.print(); }, 250);
-}
+      w.document.close();
+      w.focus();
+      setTimeout(() => { w.print(); }, 250);
+    }
 
-function printKrakenStatement() {
-// Ensure the bank statement report is generated for the current date range
-try {
-if (typeof generateBankReport === "function") {
-generateBankReport();
-}
-} catch (e) {
-// proceed to print whatever is present
-}
-
-const src = document.querySelector("#bankReportArea");
-if (!src || !src.innerHTML || src.innerHTML.trim().length < 20) { alert("Kraken Statement is empty.
-  Click 'Kraken Statement (Select Dates)' first, then try again."); return; } const clone=src.cloneNode(true); // Force
-  the statement section to be expanded in the clone (if collapsed by CSS) clone.style.display="block" ; const
-  start=document.getElementById("startDate")?.value || "" ; const end=document.getElementById("endDate")?.value || "" ;
-  const pdfTitle=`Kraken Statement ${start} to ${end}`; // For filename const pdfHeaderDate=`${formatDateForPDF(start)}
-  - ${formatDateForPDF(end)}`; const w=window.open("", "_blank" ); w.document.open(); w.document.write(` <html>
-
-  <head>
-    <title>${pdfTitle}</title>
-    <style>
-      body {
-        font-family: Arial, sans-serif;
-        margin: 18px;
-      }
-
-      .hdr {
-        text-align: center;
-        margin-bottom: 25px;
-      }
-
-      .hdr .t1 {
-        font-size: 22px;
-        font-weight: 700;
-        margin-bottom: 8px;
-      }
-
-      .hdr .t2 {
-        font-size: 14px;
-        font-weight: 700;
-        color: #333;
-      }
-
-      /* Hide any on-screen headers that might be cloned */
-      .subhdr,
-      .report-header,
-      h1,
-      h2,
-      h3 {
-        display: none;
-      }
-
-      table {
-        width: 100%;
-        border-collapse: collapse;
-        margin: 10px 0 18px 0;
-      }
-
-      th,
-      td {
-        border: 1px solid #ddd;
-        padding: 6px 8px;
-        font-size: 12px;
-        vertical-align: top;
-      }
-
-      th {
-        background: #f2f2f2;
-      }
-
-      .section-title {
-        margin: 16px 0 8px 0;
-        font-weight: 700;
-      }
-
-      /* Page breaking helpers for long tables */
-      thead {
-        display: table-header-group;
-      }
-
-      tfoot {
-        display: table-footer-group;
-      }
-
-      tr {
-        page-break-inside: avoid;
-      }
-
-      .page-break {
-        page-break-before: always;
-      }
-
-      @media print {
-        button {
-          display: none;
+    function printKrakenStatement() {
+      // Ensure the bank statement report is generated for the current date range
+      try {
+        if (typeof generateBankReport === "function") {
+          generateBankReport();
         }
-
-        a {
-          color: inherit;
-          text-decoration: none;
-        }
+      } catch (e) {
+        // proceed to print whatever is present
       }
-    </style>
-  </head>
 
-  <body>
-    <div
-      style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; border-bottom:1px solid #eee; padding-bottom:5px;">
-      <div style="font-size:16px; font-weight:bold; color:#333;">Kraken Reports</div>
-      <div style="font-size:12px; color:#666;">${APP_VERSION}</div>
-    </div>
-    <div class="hdr">
-      <div class="t1">Kraken Statement</div>
-      <div class="t2">${pdfHeaderDate}</div>
-    </div>
-    <!-- Original PDF Subtitle logic removed -->
+      const src = document.querySelector("#bankReportArea");
+      if (!src || !src.innerHTML || src.innerHTML.trim().length < 20) {
+        alert("Kraken Statement is empty. Click 'Kraken Statement (Select Dates)' first, then try again.");
+        return;
+      }
 
+      const clone = src.cloneNode(true);
 
-  </body>
+      // Force the statement section to be expanded in the clone (if collapsed by CSS)
+      clone.style.display = "block";
 
-  </html>
+      const start = document.getElementById("startDate")?.value || "";
+      const end = document.getElementById("endDate")?.value || "";
+
+      const pdfTitle = `Kraken Statement ${start} to ${end}`; // For filename
+      const pdfHeaderDate = `${formatDateForPDF(start)} - ${formatDateForPDF(end)}`;
+
+      const w = window.open("", "_blank");
+      w.document.open();
+      w.document.write(`
+    <html>
+      <head>
+        <title>${pdfTitle}</title>
+        <style>
+          body { font-family: Arial, sans-serif; margin: 18px; }
+          .hdr { text-align: center; margin-bottom: 25px; }
+          .hdr .t1 { font-size: 22px; font-weight: 700; margin-bottom: 8px; }
+          .hdr .t2 { font-size: 14px; font-weight: 700; color:#333; }
+          
+          /* Hide any on-screen headers that might be cloned */
+          .subhdr, .report-header, h1, h2, h3 { display: none; }
+          
+          table { width: 100%; border-collapse: collapse; margin: 10px 0 18px 0; }
+          th, td { border: 1px solid #ddd; padding: 6px 8px; font-size: 12px; vertical-align: top; }
+          th { background: #f2f2f2; }
+          .section-title { margin: 16px 0 8px 0; font-weight: 700; }
+          /* Page breaking helpers for long tables */
+          thead { display: table-header-group; }
+          tfoot { display: table-footer-group; }
+          tr { page-break-inside: avoid; }
+          .page-break { page-break-before: always; }
+          @media print {
+            button { display: none; }
+            a { color: inherit; text-decoration: none; }
+          }
+        </style>
+      </head>
+      <body>
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; border-bottom:1px solid #eee; padding-bottom:5px;">
+          <div style="font-size:16px; font-weight:bold; color:#333;">Kraken Reports</div>
+          <div style="font-size:12px; color:#666;">${APP_VERSION}</div>
+        </div>
+        <div class="hdr">
+          <div class="t1">Kraken Statement</div>
+          <div class="t2">${pdfHeaderDate}</div>
+        </div>
+        <!-- Original PDF Subtitle logic removed -->
+      
+
+</body>
+    </html>
   `);
-  w.document.body.appendChild(clone);
-  w.document.close();
-  w.focus();
-  setTimeout(() => {
-  w.print();
-  setTimeout(() => w.close(), 250);
-  }, 150);
-  }
+      w.document.body.appendChild(clone);
+      w.document.close();
+      w.focus();
+      setTimeout(() => {
+        w.print();
+        setTimeout(() => w.close(), 250);
+      }, 150);
+    }
 
 
-  function filterDetails(query) {
-  const filter = query.toUpperCase();
-  const area = document.getElementById("bankReportArea");
-  if (!area) return;
+    function filterDetails(query) {
+      const filter = query.toUpperCase();
+      const area = document.getElementById("bankReportArea");
+      if (!area) return;
 
-  const rows = area.getElementsByTagName("tr");
-  // Skip headers (first 2 rows usually, checking th vs td)
-  for (let i = 0; i < rows.length; i++) { const row=rows[i]; const cells=row.getElementsByTagName("td"); if
-    (cells.length> 3) {
-    // Description is usually index 3 (Date, Time, Type, Desc...)
-    // Using class 'w-bank-details' is safer? row.querySelector(".w-bank-details")
-    const descCell = row.querySelector(".w-bank-details");
-    if (descCell) {
-    const txt = descCell.textContent || descCell.innerText;
-    if (txt.toUpperCase().indexOf(filter) > -1) {
-    row.style.display = "";
-    } else {
-    row.style.display = "none";
-    }
-    }
-    }
-    }
+      const rows = area.getElementsByTagName("tr");
+      // Skip headers (first 2 rows usually, checking th vs td)
+      for (let i = 0; i < rows.length; i++) {
+        const row = rows[i];
+        const cells = row.getElementsByTagName("td");
+        if (cells.length > 3) {
+          // Description is usually index 3 (Date, Time, Type, Desc...)
+          // Using class 'w-bank-details' is safer? row.querySelector(".w-bank-details")
+          const descCell = row.querySelector(".w-bank-details");
+          if (descCell) {
+            const txt = descCell.textContent || descCell.innerText;
+            if (txt.toUpperCase().indexOf(filter) > -1) {
+              row.style.display = "";
+            } else {
+              row.style.display = "none";
+            }
+          }
+        }
+      }
     }
 
     function copyNodeText(node) {
-    if (!node) return;
-    const selection = window.getSelection();
-    const range = document.createRange();
-    range.selectNodeContents(node);
-    selection.removeAllRanges();
-    selection.addRange(range);
+      if (!node) return;
+      const selection = window.getSelection();
+      const range = document.createRange();
+      range.selectNodeContents(node);
+      selection.removeAllRanges();
+      selection.addRange(range);
 
-    try {
-    document.execCommand('copy');
-    alert("Table copied to clipboard!");
-    } catch (e) {
-    alert("Failed to copy.");
-    }
-    selection.removeAllRanges();
+      try {
+        document.execCommand('copy');
+        alert("Table copied to clipboard!");
+      } catch (e) {
+        alert("Failed to copy.");
+      }
+      selection.removeAllRanges();
     }
 
     // ---------- Boot ----------
     async function waitFor(cond, timeoutMs) {
-    const t0 = Date.now();
-    return new Promise((resolve, reject) => {
-    const tick = () => {
-    if (cond()) return resolve(true);
-    if (Date.now() - t0 > timeoutMs) return reject(new Error("Timeout"));
-    setTimeout(tick, 50);
-    };
-    tick();
-    });
+      const t0 = Date.now();
+      return new Promise((resolve, reject) => {
+        const tick = () => {
+          if (cond()) return resolve(true);
+          if (Date.now() - t0 > timeoutMs) return reject(new Error("Timeout"));
+          setTimeout(tick, 50);
+        };
+        tick();
+      });
     }
 
     async function boot() {
-    // Load saved staging
-    const savedStaging = localStorage.getItem("kraken_staging");
-    if (savedStaging) {
-    try {
-    stagingRecords = JSON.parse(savedStaging);
-    } catch (e) { }
-    }
+      // Load saved staging
+      const savedStaging = localStorage.getItem("kraken_staging");
+      if (savedStaging) {
+        try {
+          stagingRecords = JSON.parse(savedStaging);
+        } catch (e) { }
+      }
 
-    // Load saved Bank Staging
-    const savedBank = localStorage.getItem("kraken_bank_staging");
-    if (savedBank) {
-    try {
-    bankRecords = JSON.parse(savedBank);
-    // We do not auto-render or auto-show, but data is ready.
-    } catch (e) { }
-    }
+      // Load saved Bank Staging
+      const savedBank = localStorage.getItem("kraken_bank_staging");
+      if (savedBank) {
+        try {
+          bankRecords = JSON.parse(savedBank);
+          // We do not auto-render or auto-show, but data is ready.
+        } catch (e) { }
+      }
 
-    // Load saved Summary Staging
-    const savedSummary = localStorage.getItem("kraken_summary_staging_v3.045-18");
-    if (savedSummary) {
-    try {
-    summaryRecords = JSON.parse(savedSummary);
-    } catch (e) { }
-    }
+      // Load saved Summary Staging
+      const savedSummary = localStorage.getItem("kraken_summary_staging_v3.045-18");
+      if (savedSummary) {
+        try {
+          summaryRecords = JSON.parse(savedSummary);
+        } catch (e) { }
+      }
 
-    // Load cached data from localStorage (so Generate Report works without re-pulling)
-    const savedWithdrawals = localStorage.getItem("kraken_v2_withdrawals");
-    const savedAddresses = localStorage.getItem("kraken_v2_addresses");
-    const savedHistory = localStorage.getItem("kraken_v2_history");
-    const savedRates = localStorage.getItem("kraken_v2_rates_" + APP_VERSION);
-    if (savedWithdrawals) cacheData.withdrawals = JSON.parse(savedWithdrawals);
-    if (savedAddresses) cacheData.krakenAddresses = JSON.parse(savedAddresses);
-    if (savedHistory) cacheData.withdrawalHistory = JSON.parse(savedHistory);
-    if (savedRates) cacheData.ratesCache = JSON.parse(savedRates);
+      // Load cached data from localStorage (so Generate Report works without re-pulling)
+      const savedWithdrawals = localStorage.getItem("kraken_v2_withdrawals");
+      const savedAddresses = localStorage.getItem("kraken_v2_addresses");
+      const savedHistory = localStorage.getItem("kraken_v2_history");
+      const savedRates = localStorage.getItem("kraken_v2_rates_" + APP_VERSION);
+      if (savedWithdrawals) cacheData.withdrawals = JSON.parse(savedWithdrawals);
+      if (savedAddresses) cacheData.krakenAddresses = JSON.parse(savedAddresses);
+      if (savedHistory) cacheData.withdrawalHistory = JSON.parse(savedHistory);
+      if (savedRates) cacheData.ratesCache = JSON.parse(savedRates);
 
-    renderPreview();
-    updateStatusCounts();
+      renderPreview();
+      updateStatusCounts();
 
-    // Auto-load API credentials from localStorage
-    const savedKey = localStorage.getItem("kraken_api_key");
-    const savedPrivate = localStorage.getItem("kraken_private_key");
-    const savedProxyType = localStorage.getItem("kraken_cors_proxy_type");
-    const savedProxy = localStorage.getItem("kraken_cors_proxy");
-    const savedGasUrl = localStorage.getItem("kraken_gas_proxy_url");
-    const savedWithdrawKey = localStorage.getItem("kraken_withdraw_api_key");
-    const savedWithdrawPrivate = localStorage.getItem("kraken_withdraw_private_key");
-    const savedSheetId = localStorage.getItem("kraken_sheet_id");
+      // Auto-load API credentials from localStorage
+      const savedKey = localStorage.getItem("kraken_api_key");
+      const savedPrivate = localStorage.getItem("kraken_private_key");
+      const savedProxyType = localStorage.getItem("kraken_cors_proxy_type");
+      const savedProxy = localStorage.getItem("kraken_cors_proxy");
+      const savedGasUrl = localStorage.getItem("kraken_gas_proxy_url");
+      const savedWithdrawKey = localStorage.getItem("kraken_withdraw_api_key");
+      const savedWithdrawPrivate = localStorage.getItem("kraken_withdraw_private_key");
+      const savedSheetId = localStorage.getItem("kraken_sheet_id");
 
-    // Force update of date-dependent buttons on boot (in case of browser autofill)
-    setTimeout(() => updateBankButtonLabel(), 500);
-    if (savedKey) document.getElementById("krakenApiKey").value = savedKey;
-    if (savedPrivate) document.getElementById("krakenPrivateKey").value = savedPrivate;
+      // Force update of date-dependent buttons on boot (in case of browser autofill)
+      setTimeout(() => updateBankButtonLabel(), 500);
+      if (savedKey) document.getElementById("krakenApiKey").value = savedKey;
+      if (savedPrivate) document.getElementById("krakenPrivateKey").value = savedPrivate;
 
-    if (savedProxyType) {
-    document.getElementById("corsProxySelect").value = savedProxyType;
-    } else {
-    // Default to GAS if nothing saved
-    document.getElementById("corsProxySelect").value = "gas";
-    }
+      if (savedProxyType) {
+        document.getElementById("corsProxySelect").value = savedProxyType;
+      } else {
+        // Default to GAS if nothing saved
+        document.getElementById("corsProxySelect").value = "gas";
+      }
 
-    if (savedGasUrl) document.getElementById("gasProxyUrl").value = savedGasUrl;
-    if (savedProxy && savedProxy !== "custom") {
-    // Legacy handling or specific url
-    }
-    if (savedProxyType === "custom" && savedProxy) {
-    document.getElementById("corsProxy").value = savedProxy;
-    }
+      if (savedGasUrl) document.getElementById("gasProxyUrl").value = savedGasUrl;
+      if (savedProxy && savedProxy !== "custom") {
+        // Legacy handling or specific url
+      }
+      if (savedProxyType === "custom" && savedProxy) {
+        document.getElementById("corsProxy").value = savedProxy;
+      }
 
-    // Initialize UI visibility based on values
-    handleProxyChange();
+      // Initialize UI visibility based on values
+      handleProxyChange();
 
-    if (savedWithdrawKey) document.getElementById("withdrawApiKey").value = savedWithdrawKey;
-    if (savedWithdrawPrivate) document.getElementById("withdrawPrivateKey").value = savedWithdrawPrivate;
-    if (savedSheetId) document.getElementById("googleSheetId").value = savedSheetId;
+      if (savedWithdrawKey) document.getElementById("withdrawApiKey").value = savedWithdrawKey;
+      if (savedWithdrawPrivate) document.getElementById("withdrawPrivateKey").value = savedWithdrawPrivate;
+      if (savedSheetId) document.getElementById("googleSheetId").value = savedSheetId;
 
-    try {
-    await waitFor(() => typeof gapi !== "undefined", 8000);
-    gapiLoaded();
-    } catch (_) {
-    logTrace("GAPI not available.");
-    }
+      try {
+        await waitFor(() => typeof gapi !== "undefined", 8000);
+        gapiLoaded();
+      } catch (_) {
+        logTrace("GAPI not available.");
+      }
 
-    try {
-    await waitFor(() => typeof google !== "undefined" && google.accounts && google.accounts.oauth2, 8000);
-    gisLoaded();
-    } catch (_) {
-    logTrace("GIS not available.");
-    }
+      try {
+        await waitFor(() => typeof google !== "undefined" && google.accounts && google.accounts.oauth2, 8000);
+        gisLoaded();
+      } catch (_) {
+        logTrace("GIS not available.");
+      }
 
-    logTrace(APP_VERSION + " Ready. Set date range, then click 'Fetch & Generate Report'.");
+      logTrace(APP_VERSION + " Ready. Set date range, then click 'Fetch & Generate Report'.");
     }
 
     window.addEventListener("load", boot);
-    </script>
+  </script>
 
-    <script>
+<script>
 // v4.00-52 Patch: Canonical deposit aggregation from Statement table
 (function(){
 function normalizeAsset(a){return String(a||"").replace(/^[ZX]/,"");}
@@ -6119,7 +6070,7 @@ function isFiatCurrency(a){const c=normalizeAsset(a);return c==="GBP"||c==="EUR"
 function fiatBankLabel(base,assetRaw){
  const c=normalizeAsset(assetRaw);
  const b=(base&&String(base).trim())?String(base).trim():"Bank";
- return `${ b }(${ c })`;
+ return `${b} (${c})`;
 }
 
 function extractStatementRows(){
@@ -6165,7 +6116,7 @@ function rebuildDeposits(){
    for(const [label,v] of Object.entries(bankDepositTotals)){
      if(v.GBP===0 && v.EUR===0) continue;
      const tr=document.createElement("tr");
-     tr.innerHTML=`< td > ${ label }</td ><td>${v.GBP.toFixed(2)}</td><td>${v.EUR.toFixed(2)}</td><td>${(v.GBP+v.gbpEq).toFixed(2)}</td>`;
+     tr.innerHTML=`<td>${label}</td><td>${v.GBP.toFixed(2)}</td><td>${v.EUR.toFixed(2)}</td><td>${(v.GBP+v.gbpEq).toFixed(2)}</td>`;
      tbl.appendChild(tr);
    }
  }
@@ -6183,8 +6134,8 @@ function rebuildDeposits(){
 
 document.addEventListener("DOMContentLoaded",rebuildDeposits);
 })();
-    </script>
+</script>
 
-    </body>
+</body>
 
-    </html>
+</html>
