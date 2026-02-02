@@ -495,7 +495,7 @@
 
 
   <script>
-    const APP_VERSION = "v4.00-52";
+    const APP_VERSION = "v4.00-53";
   </script>
 
 
@@ -4614,6 +4614,9 @@
     }
 
     async function generateStatementSummary(customRecords) {
+      // v4.00-53 Fix: Declare at top to avoid ReferenceError
+      const bankDepositTotals = {};
+
       const sDateVal = document.getElementById("startDate").value;
       const eDateVal = document.getElementById("endDate").value;
 
@@ -4650,8 +4653,8 @@
       // Populated from actual fiat withdrawal rows in the selected period (transaction evidence), not by frequency.
       const fiatInstitutionByCurrency = { GBP: null, EUR: null };
 
-      // v4.00-52: New Aggregation Container for Bank Deposits
-      const bankDepositTotals = {}; // { Label: { GBP: 0, EUR: 0, gbpEq: 0 } }
+      // v4.00-52: New Aggregation Container for Bank Deposits (Moved to top)
+      // const bankDepositTotals = {}; 
 
       // Global reset
       depositTotals = { GBP: 0, EUR: 0 };
