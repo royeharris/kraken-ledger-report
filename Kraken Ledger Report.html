@@ -1,5 +1,5 @@
 <!--
-Version: 4.00-11
+Version: 4.00-12
 Objective: Bank Label Normalisation (GBP/EUR)
 Source: Phase III-1 Bank Withdrawal Label Normalisation
 Constraint: NO REFACTOR
@@ -503,7 +503,7 @@ Purpose: GitHub Pages testing
 
 
   <script>
-    const APP_VERSION = "v4.00-11";
+    const APP_VERSION = "v4.00-12";
   </script>
 
 
@@ -615,6 +615,21 @@ Purpose: GitHub Pages testing
             style="font-size:0.6rem; color:#000; text-decoration:none;">Open Google Sheets ↗</a>
         </div>
         <input type="text" id="googleSheetId" placeholder="e.g. 1Vf0iqthwHv0kFqTRJkYShH..." style="margin-bottom:2px;">
+
+<div class="col-md-6">
+              <label for="googleSheetsApiKey" class="form-label">Google Sheets API Key</label>
+              <input autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off" data-1p-ignore="true" data-lpignore="true" type="text" class="form-control" id="googleSheetsApiKey" placeholder="AIza... (stored locally)">
+
+            <div class="col-md-6">
+              <label for="googleOAuthClientId" class="form-label">Google OAuth Client ID</label>
+              <input autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off" data-1p-ignore="true" data-lpignore="true" type="text" class="form-control" id="googleOAuthClientId" placeholder="xxxxx-xxxxxxxx.apps.googleusercontent.com (stored locally)">
+            </div>
+
+<div class="col-md-6">
+              <label for="googleOAuthClientId" class="form-label">Google OAuth Client ID</label>
+              <input autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off" data-1p-ignore="true" data-lpignore="true" type="text" class="form-control" id="googleOAuthClientId" placeholder="xxxxx-xxxxxxxx.apps.googleusercontent.com (stored locally)">
+            </div>
+
         <div style="font-size:0.6rem; color:#95a5a6; margin-bottom:10px; line-height:1.2;">
           Found in URL: .../spreadsheets/d/<b>ID_IS_HERE</b>/edit
         </div>
@@ -626,14 +641,7 @@ Purpose: GitHub Pages testing
         <input autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off" data-1p-ignore="true" data-lpignore="true" type="text" id="withdrawApiKey" placeholder="API Key with Withdraw permissions"
           style="margin-bottom:4px;">
 
-            <div class="col-md-6">
-              <label for="googleSheetsApiKey" class="form-label">Google Sheets API Key</label>
-              <input autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off" data-1p-ignore="true" data-lpignore="true" type="text" class="form-control" id="googleSheetsApiKey" placeholder="AIza... (stored locally)">
-
-            <div class="col-md-6">
-              <label for="googleOAuthClientId" class="form-label">Google OAuth Client ID</label>
-              <input autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off" data-1p-ignore="true" data-lpignore="true" type="text" class="form-control" id="googleOAuthClientId" placeholder="xxxxx-xxxxxxxx.apps.googleusercontent.com (stored locally)">
-            </div>
+            
 
             </div>
 
@@ -3680,6 +3688,18 @@ function gapiLoaded() {
     const TRACKED_ASSETS = ["GBP", "EUR", "USDT", "XRP"];
 
     async function generateBankReport() {
+      // v4.00-12 Objective D: bank label lookup by fiat asset (GBP/EUR) from Kraken address book
+      const bankLabelByAsset = {};
+      if (cacheData && cacheData.krakenAddresses && cacheData.krakenAddresses.length) {
+        for (const a of cacheData.krakenAddresses) {
+          if (!a || !a.asset) continue;
+          if (a.asset !== "GBP" && a.asset !== "EUR") continue;
+          if (bankLabelByAsset[a.asset]) continue;
+          const _lbl = ((a.key || a.info || "").trim());
+          if (_lbl) bankLabelByAsset[a.asset] = _lbl + " (" + a.asset + ")";
+        }
+      }
+
       const btn = document.getElementById("btn_bank_statement");
       const sDateVal = document.getElementById("startDate").value;
       const eDateVal = document.getElementById("endDate").value;
@@ -3923,7 +3943,7 @@ function gapiLoaded() {
                   // Stop if we go back too many rows (e.g. 10) to avoid performance hit
                   if ((bankRecords.length - k) > 10) break;
 
-                  if (prevRow.type === "trade") {
+                  if (prevRoe.type === "trade") {
                     const prevAmt = prevRow.amounts[normalizedAsset];
                     // Check if this trade involved BUYING the asset we are withdrawing
                     if (prevAmt > 0) { // Positive amount = Bought/Received
@@ -3973,7 +3993,7 @@ function gapiLoaded() {
 
             
               // v4.00-03 Objective D: ensure fiat deposits have bank recipient label for propagation
-              if (w.type === "deposit" && (!recipient || recipient === "Unknown")) {
+              if (e.type === "deposit" && (!recipient || recipient === "Unknown")) {
                 const _fa = (asset || "").replace(/^Z/, "");
                 if ((_fa === "GBP" || _fa === "EUR") && bankLabelByAsset && bankLabelByAsset[_fa]) {
                   recipient = bankLabelByAsset[_fa];
