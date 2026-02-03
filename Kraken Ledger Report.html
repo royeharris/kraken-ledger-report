@@ -15,7 +15,7 @@ Purpose: GitHub Pages testing
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-  <title>Kraken Ledger Report v4.00</title>
+  <title>Kraken Ledger Report v4.00-05</title>
   <script async defer src="https://accounts.google.com/gsi/client"></script>
   <script async defer src="https://apis.google.com/js/api.js"></script>
   <style>
@@ -618,6 +618,8 @@ Purpose: GitHub Pages testing
         <div style="font-size:0.6rem; color:#95a5a6; margin-bottom:10px; line-height:1.2;">
           Found in URL: .../spreadsheets/d/<b>ID_IS_HERE</b>/edit
         </div>
+        <label>Google API Key (Optional)</label>
+        <input type="password" id="googleApiKey" placeholder="AIza..." style="margin-bottom:2px;">
 
         <div
           style="font-size:0.7rem; font-weight:700; color:var(--kraken); margin-bottom:4px; padding-top:8px; border-top:1px solid #ddd;">
@@ -1280,6 +1282,7 @@ Purpose: GitHub Pages testing
       const withdrawKey = document.getElementById("withdrawApiKey").value;
       const withdrawPrivate = document.getElementById("withdrawPrivateKey").value;
       const sheetId = document.getElementById("googleSheetId").value;
+      const googleKey = document.getElementById("googleApiKey").value;
       const proxy = getSelectedProxy();
       const gasUrl = document.getElementById("gasProxyUrl").value;
 
@@ -1287,7 +1290,9 @@ Purpose: GitHub Pages testing
       localStorage.setItem("kraken_private_key", privateKey);
       localStorage.setItem("kraken_withdraw_api_key", withdrawKey);
       localStorage.setItem("kraken_withdraw_private_key", withdrawPrivate);
+      localStorage.setItem("kraken_withdraw_private_key", withdrawPrivate);
       if (sheetId && sheetId.trim()) localStorage.setItem("kraken_sheet_id", sheetId.trim());
+      if (googleKey && googleKey.trim()) localStorage.setItem("kraken_google_api_key", googleKey.trim());
 
       localStorage.setItem("kraken_cors_proxy", proxy);
       localStorage.setItem("kraken_cors_proxy_type", document.getElementById("corsProxySelect").value);
@@ -1892,13 +1897,14 @@ Purpose: GitHub Pages testing
     // ---------- Google Auth / Sheets ----------
     function gapiLoaded() {
       gapi.load("client", async () => {
-        // v4.00-04 SECURITY FIX: Google API key removed from source
-// Google Sheets access now requires user-supplied key via API Config UI or OAuth only
-if (!window.__googleApiKeyProvided) {
-  throw new Error("Google Sheets API key not configured. Use API Config.");
-}
-await gapi.client.load("sheets", "v4");
-        logTrace("GAPI Ready.");
+        const apiKey = localStorage.getItem("kraken_google_api_key") || "";
+        if (apiKey) {
+          await gapi.client.init({ apiKey: apiKey });
+          await gapi.client.load("sheets", "v4");
+          logTrace("GAPI Ready (Custom Key).");
+        } else {
+          logTrace("GAPI Init Skipped (No Google API Key).");
+        }
       });
     }
 
@@ -3926,15 +3932,15 @@ await gapi.client.load("sheets", "v4");
             // Enriched Logic: First 2 words of recipient
             let recipient = null;
 
-            
-              // v4.00-03 Objective D: ensure fiat deposits have bank recipient label for propagation
-              if (w.type === "deposit" && (!recipient || recipient === "Unknown")) {
-                const _fa = (asset || "").replace(/^Z/, "");
-                if ((_fa === "GBP" || _fa === "EUR") && bankLabelByAsset && bankLabelByAsset[_fa]) {
-                  recipient = bankLabelByAsset[_fa];
-                }
+
+            // v4.00-03 Objective D: ensure fiat deposits have bank recipient label for propagation
+            if (w.type === "deposit" && (!recipient || recipient === "Unknown")) {
+              const _fa = (asset || "").replace(/^Z/, "");
+              if ((_fa === "GBP" || _fa === "EUR") && bankLabelByAsset && bankLabelByAsset[_fa]) {
+                recipient = bankLabelByAsset[_fa];
               }
-// 1. History Lookup
+            }
+            // 1. History Lookup
             const historyMatch = cacheData.withdrawalHistory.find(h => h.refid === e.refid);
             if (historyMatch) {
               const addr = historyMatch.info || historyMatch.address;
@@ -5492,6 +5498,7 @@ await gapi.client.load("sheets", "v4");
       const savedWithdrawKey = localStorage.getItem("kraken_withdraw_api_key");
       const savedWithdrawPrivate = localStorage.getItem("kraken_withdraw_private_key");
       const savedSheetId = localStorage.getItem("kraken_sheet_id");
+      const savedGoogleKey = localStorage.getItem("kraken_google_api_key");
 
       // Force update of date-dependent buttons on boot (in case of browser autofill)
       setTimeout(() => updateBankButtonLabel(), 500);
