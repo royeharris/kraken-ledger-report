@@ -15,7 +15,7 @@ Purpose: GitHub Pages testing
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-  <title>Kraken Ledger Report v4.00</title>
+  <title>Kraken Ledger Report v4.00-06</title>
   <script async defer src="https://accounts.google.com/gsi/client"></script>
   <script async defer src="https://apis.google.com/js/api.js"></script>
   <style>
@@ -503,7 +503,7 @@ Purpose: GitHub Pages testing
 
 
   <script>
-    const APP_VERSION = "v4.00";
+    const APP_VERSION = "v4.00-06";
   </script>
 
 
@@ -626,16 +626,17 @@ Purpose: GitHub Pages testing
         <input type="text" id="withdrawApiKey" placeholder="API Key with Withdraw permissions"
           style="margin-bottom:4px;">
 
-            <div class="col-md-6">
-              <label for="googleSheetsApiKey" class="form-label">Google Sheets API Key</label>
-              <input type="password" class="form-control" id="googleSheetsApiKey" placeholder="AIza... (stored locally)">
+        <div class="col-md-6">
+          <label for="googleSheetsApiKey" class="form-label">Google Sheets API Key</label>
+          <input type="password" class="form-control" id="googleSheetsApiKey" placeholder="AIza... (stored locally)">
 
-            <div class="col-md-6">
-              <label for="googleOAuthClientId" class="form-label">Google OAuth Client ID</label>
-              <input type="text" class="form-control" id="googleOAuthClientId" placeholder="xxxxx-xxxxxxxx.apps.googleusercontent.com (stored locally)">
-            </div>
+          <div class="col-md-6">
+            <label for="googleOAuthClientId" class="form-label">Google OAuth Client ID</label>
+            <input type="text" class="form-control" id="googleOAuthClientId"
+              placeholder="xxxxx-xxxxxxxx.apps.googleusercontent.com (stored locally)">
+          </div>
 
-            </div>
+        </div>
 
         <label>Private Key</label>
         <input type="password" id="withdrawPrivateKey" placeholder="Private Key (Base64)" style="margin-bottom:10px;">
@@ -3946,15 +3947,15 @@ Purpose: GitHub Pages testing
             // Enriched Logic: First 2 words of recipient
             let recipient = null;
 
-            
-              // v4.00-03 Objective D: ensure fiat deposits have bank recipient label for propagation
-              if (w.type === "deposit" && (!recipient || recipient === "Unknown")) {
-                const _fa = (asset || "").replace(/^Z/, "");
-                if ((_fa === "GBP" || _fa === "EUR") && bankLabelByAsset && bankLabelByAsset[_fa]) {
-                  recipient = bankLabelByAsset[_fa];
-                }
+
+            // v4.00-03 Objective D: ensure fiat deposits have bank recipient label for propagation
+            if (w.type === "deposit" && (!recipient || recipient === "Unknown")) {
+              const _fa = (asset || "").replace(/^Z/, "");
+              if ((_fa === "GBP" || _fa === "EUR") && bankLabelByAsset && bankLabelByAsset[_fa]) {
+                recipient = bankLabelByAsset[_fa];
               }
-// 1. History Lookup
+            }
+            // 1. History Lookup
             const historyMatch = cacheData.withdrawalHistory.find(h => h.refid === e.refid);
             if (historyMatch) {
               const addr = historyMatch.info || historyMatch.address;
