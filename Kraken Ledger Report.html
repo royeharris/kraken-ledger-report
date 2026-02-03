@@ -1,5 +1,5 @@
 <!--
-Version: 4.00-10
+Version: 4.00-11
 Objective: Bank Label Normalisation (GBP/EUR)
 Source: Phase III-1 Bank Withdrawal Label Normalisation
 Constraint: NO REFACTOR
@@ -503,7 +503,7 @@ Purpose: GitHub Pages testing
 
 
   <script>
-    const APP_VERSION = "v4.00-10";
+    const APP_VERSION = "v4.00-11";
   </script>
 
 
@@ -1294,17 +1294,22 @@ Purpose: GitHub Pages testing
       const sheetId = document.getElementById("googleSheetId").value;
       const proxy = getSelectedProxy();
       const gasUrl = document.getElementById("gasProxyUrl").value;
+      const googleSheetsApiKey = document.getElementById("googleSheetsApiKey").value;
+      const googleOAuthClientId = document.getElementById("googleOAuthClientId").value;
 
       localStorage.setItem("kraken_api_key", apiKey);
       localStorage.setItem("kraken_private_key", privateKey);
       localStorage.setItem("kraken_withdraw_api_key", withdrawKey);
       localStorage.setItem("kraken_withdraw_private_key", withdrawPrivate);
+      localStorage.setItem("krk_google_sheets_api_key", googleSheetsApiKey || "");
+      localStorage.setItem("krk_google_oauth_client_id", googleOAuthClientId || "");
       if (sheetId && sheetId.trim()) localStorage.setItem("kraken_sheet_id", sheetId.trim());
 
       localStorage.setItem("kraken_cors_proxy", proxy);
       localStorage.setItem("kraken_cors_proxy_type", document.getElementById("corsProxySelect").value);
       localStorage.setItem("kraken_gas_proxy_url", gasUrl ? gasUrl.trim() : "");
 
+      initGoogleFromConfig(false);
       logTrace("API credentials saved (Query + Withdraw).");
       alert("API keys saved.");
     }
