@@ -1,5 +1,5 @@
 <!--
-Version: 4.00-09
+Version: 4.00-10
 Objective: Bank Label Normalisation (GBP/EUR)
 Source: Phase III-1 Bank Withdrawal Label Normalisation
 Constraint: NO REFACTOR
@@ -503,7 +503,7 @@ Purpose: GitHub Pages testing
 
 
   <script>
-    const APP_VERSION = "v4.00-09";
+    const APP_VERSION = "v4.00-10";
   </script>
 
 
@@ -1940,12 +1940,6 @@ Purpose: GitHub Pages testing
 function gapiLoaded() {
       // v4.00-08: keep startup silent; init happens after API Config save/load
       initGoogleFromConfig(true);
-    }
-
-await gapi.client.init({ apiKey: apiKey });
-        await gapi.client.load("sheets", "v4");
-        logTrace("GAPI Ready.");
-      });
     }
 
     function gisLoaded() {
