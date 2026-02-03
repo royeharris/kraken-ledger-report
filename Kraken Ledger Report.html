@@ -1,5 +1,5 @@
 <!--
-Version: 4.00-04
+Version: 4.00-06
 Objective: Bank Label Normalisation (GBP/EUR)
 Source: Phase III-1 Bank Withdrawal Label Normalisation
 Constraint: NO REFACTOR
@@ -625,6 +625,18 @@ Purpose: GitHub Pages testing
         <label>API Key</label>
         <input type="text" id="withdrawApiKey" placeholder="API Key with Withdraw permissions"
           style="margin-bottom:4px;">
+
+            <div class="col-md-6">
+              <label for="googleSheetsApiKey" class="form-label">Google Sheets API Key</label>
+              <input type="password" class="form-control" id="googleSheetsApiKey" placeholder="AIza... (stored locally)">
+
+            <div class="col-md-6">
+              <label for="googleOAuthClientId" class="form-label">Google OAuth Client ID</label>
+              <input type="text" class="form-control" id="googleOAuthClientId" placeholder="xxxxx-xxxxxxxx.apps.googleusercontent.com (stored locally)">
+            </div>
+
+            </div>
+
         <label>Private Key</label>
         <input type="password" id="withdrawPrivateKey" placeholder="Private Key (Base64)" style="margin-bottom:10px;">
 
@@ -1892,19 +1904,25 @@ Purpose: GitHub Pages testing
     // ---------- Google Auth / Sheets ----------
     function gapiLoaded() {
       gapi.load("client", async () => {
-        // v4.00-04 SECURITY FIX: Google API key removed from source
-// Google Sheets access now requires user-supplied key via API Config UI or OAuth only
-if (!window.__googleApiKeyProvided) {
-  throw new Error("Google Sheets API key not configured. Use API Config.");
-}
-await gapi.client.load("sheets", "v4");
+        const apiKey = localStorage.getItem("krk_google_sheets_api_key") || "";
+        if (!apiKey) {
+          logTrace("Google Sheets API key not configured. Use API Config.");
+          return;
+        }
+        await gapi.client.init({ apiKey: apiKey });
+        await gapi.client.load("sheets", "v4");
         logTrace("GAPI Ready.");
       });
     }
 
     function gisLoaded() {
+      const _cid = (localStorage.getItem("krk_google_oauth_client_id") || "");
+      if (!_cid) {
+        logTrace("Google OAuth Client ID not configured. Use API Config.");
+        return;
+      }
       tokenClient = google.accounts.oauth2.initTokenClient({
-        client_id: "23231735212-jtgur3sn2ndh798ke00pm2a1d5rkd4eu.apps.googleusercontent.com",
+        client_id: _cid,
         scope: "https://www.googleapis.com/auth/spreadsheets",
         prompt: "consent", // Force re-consent to clear stale tokens
         callback: () => { }
@@ -2480,6 +2498,8 @@ await gapi.client.load("sheets", "v4");
         }
       }
       if (savedWithdrawKey) document.getElementById("withdrawApiKey").value = savedWithdrawKey;
+      document.getElementById("googleSheetsApiKey").value = (localStorage.getItem("krk_google_sheets_api_key") || "");
+      document.getElementById("googleOAuthClientId").value = (localStorage.getItem("krk_google_oauth_client_id") || "");
       if (savedWithdrawPrivate) document.getElementById("withdrawPrivateKey").value = savedWithdrawPrivate;
       if (savedSheetId) document.getElementById("googleSheetId").value = savedSheetId;
 
