@@ -503,7 +503,7 @@ Purpose: GitHub Pages testing
 
 
   <script>
-    const APP_VERSION = "v4.00-12";
+    const APP_VERSION = "v4.00-13-00";
   </script>
 
 
@@ -602,7 +602,9 @@ Purpose: GitHub Pages testing
         <div style="font-size:0.7rem; font-weight:700; color:var(--primary); margin-bottom:4px;">Query API (for Ledger
           data)</div>
         <label>API Key</label>
-        <input autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off" data-1p-ignore="true" data-lpignore="true" type="text" id="krakenApiKey" placeholder="API Key with Query permissions" style="margin-bottom:4px;">
+        <input autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off" data-1p-ignore="true"
+          data-lpignore="true" type="text" id="krakenApiKey" placeholder="API Key with Query permissions"
+          style="margin-bottom:4px;">
         <label>Private Key</label>
         <input type="password" id="krakenPrivateKey" placeholder="Private Key (Base64)" style="margin-bottom:10px;">
 
@@ -616,34 +618,41 @@ Purpose: GitHub Pages testing
         </div>
         <input type="text" id="googleSheetId" placeholder="e.g. 1Vf0iqthwHv0kFqTRJkYShH..." style="margin-bottom:2px;">
 
-<div class="col-md-6">
-              <label for="googleSheetsApiKey" class="form-label">Google Sheets API Key</label>
-              <input autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off" data-1p-ignore="true" data-lpignore="true" type="text" class="form-control" id="googleSheetsApiKey" placeholder="AIza... (stored locally)">
+        <div class="col-md-6">
+          <label for="googleSheetsApiKey" class="form-label">Google Sheets API Key</label>
+          <input autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off" data-1p-ignore="true"
+            data-lpignore="true" type="text" class="form-control" id="googleSheetsApiKey"
+            placeholder="AIza... (stored locally)">
 
-            <div class="col-md-6">
-              <label for="googleOAuthClientId" class="form-label">Google OAuth Client ID</label>
-              <input autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off" data-1p-ignore="true" data-lpignore="true" type="text" class="form-control" id="googleOAuthClientId" placeholder="xxxxx-xxxxxxxx.apps.googleusercontent.com (stored locally)">
-            </div>
+          <div class="col-md-6">
+            <label for="googleOAuthClientId" class="form-label">Google OAuth Client ID</label>
+            <input autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off" data-1p-ignore="true"
+              data-lpignore="true" type="text" class="form-control" id="googleOAuthClientId"
+              placeholder="xxxxx-xxxxxxxx.apps.googleusercontent.com (stored locally)">
+          </div>
 
-<div class="col-md-6">
-              <label for="googleOAuthClientId" class="form-label">Google OAuth Client ID</label>
-              <input autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off" data-1p-ignore="true" data-lpignore="true" type="text" class="form-control" id="googleOAuthClientId" placeholder="xxxxx-xxxxxxxx.apps.googleusercontent.com (stored locally)">
-            </div>
+          <div class="col-md-6">
+            <label for="googleOAuthClientId" class="form-label">Google OAuth Client ID</label>
+            <input autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off" data-1p-ignore="true"
+              data-lpignore="true" type="text" class="form-control" id="googleOAuthClientId"
+              placeholder="xxxxx-xxxxxxxx.apps.googleusercontent.com (stored locally)">
+          </div>
 
-        <div style="font-size:0.6rem; color:#95a5a6; margin-bottom:10px; line-height:1.2;">
-          Found in URL: .../spreadsheets/d/<b>ID_IS_HERE</b>/edit
+          <div style="font-size:0.6rem; color:#95a5a6; margin-bottom:10px; line-height:1.2;">
+            Found in URL: .../spreadsheets/d/<b>ID_IS_HERE</b>/edit
+          </div>
+
+          <div
+            style="font-size:0.7rem; font-weight:700; color:var(--kraken); margin-bottom:4px; padding-top:8px; border-top:1px solid #ddd;">
+            Withdraw API (for Addresses - requires 2FA)</div>
+          <label>API Key</label>
+          <input autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off" data-1p-ignore="true"
+            data-lpignore="true" type="text" id="withdrawApiKey" placeholder="API Key with Withdraw permissions"
+            style="margin-bottom:4px;">
+
+
+
         </div>
-
-        <div
-          style="font-size:0.7rem; font-weight:700; color:var(--kraken); margin-bottom:4px; padding-top:8px; border-top:1px solid #ddd;">
-          Withdraw API (for Addresses - requires 2FA)</div>
-        <label>API Key</label>
-        <input autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off" data-1p-ignore="true" data-lpignore="true" type="text" id="withdrawApiKey" placeholder="API Key with Withdraw permissions"
-          style="margin-bottom:4px;">
-
-            
-
-            </div>
 
         <label>Private Key</label>
         <input type="password" id="withdrawPrivateKey" placeholder="Private Key (Base64)" style="margin-bottom:10px;">
@@ -1915,7 +1924,7 @@ Purpose: GitHub Pages testing
     }
 
     // ---------- Google Auth / Sheets ----------
-    
+
     // v4.00-08: Initialise Google clients from saved config (prevents misleading 'not configured' logs at startup)
     function initGoogleFromConfig(silent) {
       try {
@@ -1950,7 +1959,7 @@ Purpose: GitHub Pages testing
       }
     }
 
-function gapiLoaded() {
+    function gapiLoaded() {
       // v4.00-08: keep startup silent; init happens after API Config save/load
       initGoogleFromConfig(true);
     }
@@ -2898,7 +2907,7 @@ function gapiLoaded() {
       const withdrawCreds = getWithdrawCredentials();
 
       // Try both USDT and XRP (common assets for withdrawals)
-      const assets = ["USDT", "XXRP", "ZUSD", "ZGBP"];
+      const assets = ["USDT", "XXRP", "ZUSD", "ZGBP", "ZEUR", "GBP", "EUR"];
       const allWithdrawals = [];
 
       for (const asset of assets) {
@@ -2924,6 +2933,27 @@ function gapiLoaded() {
       cacheData.withdrawalHistory = allWithdrawals;
       logTrace("Total withdrawal history entries: " + allWithdrawals.length);
       return allWithdrawals;
+    }
+
+    // v4.00-13 Helper: Get Bank Label from Address Book by Asset
+    // Used for consistent label propagation across TWD, Statement, and Summary reports.
+    function getBankLabel(asset) {
+      if (!cacheData.krakenAddresses || !cacheData.krakenAddresses.length) return null;
+      // Normalize asset (e.g. ZGBP -> GBP)
+      const cleanAsset = (asset || "").replace(/^Z/, "").toUpperCase();
+      if (cleanAsset !== "GBP" && cleanAsset !== "EUR") return null;
+
+      // Find address book entry with matching asset
+      const entry = cacheData.krakenAddresses.find(a => {
+        const aAsset = (a.asset || "").toUpperCase().replace(/^Z/, "");
+        return aAsset === cleanAsset;
+      });
+
+      if (entry) {
+        const label = (entry.key || entry.info || "").trim();
+        if (label) return label + " (" + cleanAsset + ")";
+      }
+      return null;
     }
 
     // Get historical exchange rate from Kraken public API
@@ -3249,17 +3279,8 @@ function gapiLoaded() {
       // Sort ALL ledger entries by time (ascending) for trade matching
       const sortedLedger = [...cacheData.withdrawals].sort((a, b) => a.time - b.time);
 
-      // v4.00-03 Objective D: bank label lookup by fiat asset (GBP/EUR) from Kraken address book
-      const bankLabelByAsset = {};
-      if (cacheData.krakenAddresses && cacheData.krakenAddresses.length) {
-        for (const a of cacheData.krakenAddresses) {
-          if (!a || !a.asset) continue;
-          if (a.asset !== "GBP" && a.asset !== "EUR") continue;
-          if (bankLabelByAsset[a.asset]) continue;
-          const _lbl = ((a.key || a.info || "").trim());
-          if (_lbl) bankLabelByAsset[a.asset] = _lbl + " (" + a.asset + ")";
-        }
-      }
+      // v4.00-13 Objective D: Bank label logic moved to getBankLabel() helper
+      // const bankLabelByAsset = {}; REMOVED
 
 
       // Helper: Find immediately preceding trade that matches a withdrawal
@@ -3407,6 +3428,12 @@ function gapiLoaded() {
 
         // Find recipient from krakenAddresses
         let fullRecipient = "";
+
+        // v4.00-13: For Deposits, use the Bank Label helper (Asset-based lookup)
+        if (w.type === "deposit") {
+          const lbl = getBankLabel(w.asset);
+          if (lbl) fullRecipient = lbl;
+        }
 
         // Helper to normalize string for matching (remove spaces, symbols, lowercase)
         const normalize = (s) => (s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -3688,17 +3715,8 @@ function gapiLoaded() {
     const TRACKED_ASSETS = ["GBP", "EUR", "USDT", "XRP"];
 
     async function generateBankReport() {
-      // v4.00-12 Objective D: bank label lookup by fiat asset (GBP/EUR) from Kraken address book
-      const bankLabelByAsset = {};
-      if (cacheData && cacheData.krakenAddresses && cacheData.krakenAddresses.length) {
-        for (const a of cacheData.krakenAddresses) {
-          if (!a || !a.asset) continue;
-          if (a.asset !== "GBP" && a.asset !== "EUR") continue;
-          if (bankLabelByAsset[a.asset]) continue;
-          const _lbl = ((a.key || a.info || "").trim());
-          if (_lbl) bankLabelByAsset[a.asset] = _lbl + " (" + a.asset + ")";
-        }
-      }
+      // v4.00-13 Objective D: Bank label logic moved to getBankLabel() helper
+      // const bankLabelByAsset = {}; REMOVED
 
       const btn = document.getElementById("btn_bank_statement");
       const sDateVal = document.getElementById("startDate").value;
@@ -3943,7 +3961,7 @@ function gapiLoaded() {
                   // Stop if we go back too many rows (e.g. 10) to avoid performance hit
                   if ((bankRecords.length - k) > 10) break;
 
-                  if (prevRoe.type === "trade") {
+                  if (prevRow.type === "trade") {
                     const prevAmt = prevRow.amounts[normalizedAsset];
                     // Check if this trade involved BUYING the asset we are withdrawing
                     if (prevAmt > 0) { // Positive amount = Bought/Received
@@ -3991,15 +4009,13 @@ function gapiLoaded() {
             // Enriched Logic: First 2 words of recipient
             let recipient = null;
 
-            
-              // v4.00-03 Objective D: ensure fiat deposits have bank recipient label for propagation
-              if (e.type === "deposit" && (!recipient || recipient === "Unknown")) {
-                const _fa = (asset || "").replace(/^Z/, "");
-                if ((_fa === "GBP" || _fa === "EUR") && bankLabelByAsset && bankLabelByAsset[_fa]) {
-                  recipient = bankLabelByAsset[_fa];
-                }
-              }
-// 1. History Lookup
+
+            // v4.00-13 Objective D: ensure fiat deposits have bank recipient label for propagation
+            if (e.type === "deposit" && (!recipient || recipient === "Unknown")) {
+              const lbl = getBankLabel(e.asset);
+              if (lbl) recipient = lbl;
+            }
+            // 1. History Lookup
             const historyMatch = cacheData.withdrawalHistory.find(h => h.refid === e.refid);
             if (historyMatch) {
               const addr = historyMatch.info || historyMatch.address;
@@ -4772,28 +4788,54 @@ function gapiLoaded() {
       if (!_hasDeposits) {
         html += '<tr><td colspan="3" style="padding:8px; border:1px solid #ddd; text-align:center; color:#666; font-style:italic;">No deposits found for this period.</td></tr>';
       }
+      // v4.00-13 Phase 5: Recipient-based Deposit Rendering
       for (const r of (summaryRecords.deposits || [])) {
         if (!_hasDeposits) break;
-        const asset = r.asset;
-        const total = parseFloat(r.total || 0);
-        const totalShow = total.toFixed(2);
+        // r structure is { recipient, GBP, EUR, EUR_GBP, ... }
+        const recipient = r.recipient || "Unknown";
+
+        // Check for activity in this row
+        const totalGBP = r.GBP || 0;
+        const totalEUR = r.EUR || 0;
+        if (totalGBP === 0 && totalEUR === 0) continue;
+
+        const totalShow = totalGBP > 0 ? fmtGBPAmount(totalGBP) : (totalEUR > 0 ? fmtAmount(totalEUR, 2) : "0.00");
+        const currencyLabel = totalGBP > 0 ? "GBP" : "EUR"; // Simplified for display if single currency, but row can have both? 
+        // Actually, Summary Deposits are aggregated by Recipient. A recipient could hypothetically have both GBP and EUR?
+        // But usually they are separate bank accounts.
+        // The table columns are: Currency | Total Amount | GBP Equivalent
+        // But we want to show Bank Name.
+        // We should probably change the first column to "Bank / Asset" or similar?
+        // But let's stick to the existing columns for now, maybe put Bank Name in first column?
+
+        // Re-aligning with Requirement: "Show bank names"
+        // Let's use the first column for Bank Name + Currency
 
         let gbpEqShow = "-";
-        if (asset === "GBP") {
-          gbpEqShow = "n/a";
-        } else if (asset === "EUR") {
-          const eq = (typeof r.gbpEq === "number") ? r.gbpEq : parseFloat(r.gbpEq || 0);
-          gbpEqShow = (eq || total === 0) ? (eq || 0).toFixed(2) : "0.00";
+
+        // Strategy: Output one row per currency present in the Recipient group? 
+        // Or output the Recipient name in Col 1.
+
+        // If we have GBP:
+        if (totalGBP > 0) {
+          html += '<tr>';
+          html += `<td style="padding:4px; border:1px solid #ddd;">${escHtml(recipient)}</td>`;
+          html += `<td style="padding:4px; border:1px solid #ddd; text-align:right; font-weight:bold;">${fmtGBPAmount(totalGBP)}</td>`;
+          html += `<td style="padding:4px; border:1px solid #ddd; text-align:right; color:#7f8c8d;">n/a</td>`;
+          html += '</tr>';
         }
 
-        const totalStyle = (asset === "GBP") ? "font-weight:bold;" : "";
-        const eqStyle = (asset === "EUR") ? "font-weight:bold; color:#000;" : "color:#7f8c8d;";
-
-        html += '<tr>';
-        html += `<td style="padding:4px; border:1px solid #ddd;">${asset}</td>`;
-        html += `<td style="padding:4px; border:1px solid #ddd; text-align:right; ${totalStyle}">${totalShow}</td>`;
-        html += `<td style="padding:4px; border:1px solid #ddd; text-align:right; ${eqStyle}">${gbpEqShow}</td>`;
-        html += '</tr>';
+        // If we have EUR:
+        if (totalEUR > 0) {
+          const eurEq = r.EUR_GBP || 0;
+          html += '<tr>';
+          // If we also had GBP, maybe repeat name or leave empty? Let's repeat for clarity or append (EUR)
+          // Actually recipient label likely has (EUR) in it already!
+          html += `<td style="padding:4px; border:1px solid #ddd;">${escHtml(recipient)}</td>`;
+          html += `<td style="padding:4px; border:1px solid #ddd; text-align:right;">${fmtAmount(totalEUR, 2)}</td>`;
+          html += `<td style="padding:4px; border:1px solid #ddd; text-align:right; font-weight:bold; color:#000;">${fmtGBPAmount(eurEq)}</td>`;
+          html += '</tr>';
+        }
       }
       html += '</tbody></table>';
 
