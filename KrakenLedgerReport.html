@@ -495,7 +495,7 @@
 
 
   <script>
-    const APP_VERSION = "v4.00-52-JulesFinal";
+    const APP_VERSION = "v4.00-52-JulesFinal-FixDate";
   </script>
 
 
@@ -940,32 +940,6 @@
     // ---------- Date Handling ----------
     // ---------- Date Handling ----------
     function handleDateChange(id) {
-      const sInput = document.getElementById("startDate");
-      const eInput = document.getElementById("endDate");
-      const sVal = sInput.value;
-      const eVal = eInput.value;
-      const today = new Date().toISOString().split("T")[0];
-
-      // Set MAX to today for both (proactive UX)
-      if (!sInput.max) sInput.max = today;
-      if (!eInput.max) eInput.max = today;
-
-      // 1. Future Check
-      if (eVal && eVal > today) {
-        alert("End Date cannot be in the future.");
-        eInput.value = "";
-        return;
-      }
-
-      // 2. Sequence Check (Only if both present)
-      if (sVal && eVal) {
-        if (eVal < sVal) {
-          alert("End Date cannot be before Start Date.");
-          eInput.value = ""; // Reset End Date
-          return;
-        }
-      }
-
       // Update Bank Report Button Label (Always run this)
       updateBankButtonLabel();
 
@@ -1366,11 +1340,6 @@
 
     // ========== STEP 1: Read Ledger (Query API - no 2FA needed) ==========
     async function readLedger() {
-      // v4.00-38 Fix: Define buttons in outer scope for 'finally' block access
-      const btnRead = document.getElementById("read_ledger_btn");
-      const btnPull = document.getElementById("pull_btn");
-      const btnGen = document.getElementById("generate_btn");
-
       // Validate date range
       const startDate = document.getElementById("startDate").value;
       const endDate = document.getElementById("endDate").value;
@@ -1382,6 +1351,11 @@
         logTrace("ERROR: Date range not set");
         return;
       }
+
+      // v4.00-38 Fix: Define buttons in outer scope for 'finally' block access
+      const btnRead = document.getElementById("read_ledger_btn");
+      const btnPull = document.getElementById("pull_btn");
+      const btnGen = document.getElementById("generate_btn");
 
       const startTime = new Date(startDate).getTime() / 1000;
       const endTime = new Date(endDate + "T23:59:59").getTime() / 1000;
@@ -5893,79 +5867,6 @@
   </div>
   <div class="wrap">${tablesHtml}</div>
 
-<script>
-// v4.00-52 Patch: Canonical deposit aggregation from Statement table
-(function(){
-function normalizeAsset(a){return String(a||"").replace(/^[ZX]/,"");}
-function isFiatCurrency(a){const c=normalizeAsset(a);return c==="GBP"||c==="EUR";}
-function fiatBankLabel(base,assetRaw){
- const c=normalizeAsset(assetRaw);
- const b=(base&&String(base).trim())?String(base).trim():"Bank";
- return `${b} (${c})`;
-}
-
-function extractStatementRows(){
- const rows=[];
- document.querySelectorAll("#statement-table tbody tr").forEach(tr=>{
-   const tds=tr.querySelectorAll("td");
-   if(tds.length<6) return;
-   rows.push({
-     type: tds[2].innerText.toLowerCase().includes("deposit")?"deposit":"other",
-     asset: tds[4].innerText.trim(),
-     amount: parseFloat(tds[5].innerText.replace(/[^0-9.-]/g,""))||0,
-     gbpEquivalent: parseFloat(tds[6]?.innerText.replace(/[^0-9.-]/g,""))||0,
-     bankInstitution: tds[2].innerText.replace(/^deposit\s*/i,"").trim()
-   });
- });
- return rows;
-}
-
-function rebuildDeposits(){
- const statementRows=extractStatementRows();
- const bankDepositTotals={};
- let hasDeposits=false;
-
- for(const row of statementRows){
-   if(row.type!=="deposit") continue;
-   if(!isFiatCurrency(row.asset)) continue;
-   const label=fiatBankLabel(row.bankInstitution,row.asset);
-   bankDepositTotals[label] ||= {GBP:0,EUR:0,gbpEq:0};
-   const c=normalizeAsset(row.asset);
-   if(c==="GBP") bankDepositTotals[label].GBP+=row.amount;
-   if(c==="EUR"){bankDepositTotals[label].EUR+=row.amount; bankDepositTotals[label].gbpEq+=row.gbpEquivalent;}
-   hasDeposits=true;
- }
-
- const tbl=document.querySelector("#summary-deposits tbody");
- if(!tbl) return;
- tbl.innerHTML="";
- if(!hasDeposits){
-   const tr=document.createElement("tr");
-   tr.innerHTML='<td colspan="4">No deposits found for this period.</td>';
-   tbl.appendChild(tr);
- } else {
-   for(const [label,v] of Object.entries(bankDepositTotals)){
-     if(v.GBP===0 && v.EUR===0) continue;
-     const tr=document.createElement("tr");
-     tr.innerHTML=`<td>${label}</td><td>${v.GBP.toFixed(2)}</td><td>${v.EUR.toFixed(2)}</td><td>${(v.GBP+v.gbpEq).toFixed(2)}</td>`;
-     tbl.appendChild(tr);
-   }
- }
-
- // Reconciliation
- let depGBP=0, depEURgbpEq=0;
- for(const v of Object.values(bankDepositTotals)){depGBP+=v.GBP; depEURgbpEq+=v.gbpEq;}
- const rec=document.querySelector("#recon-deposits");
- if(rec){
-   rec.querySelector(".gbp").innerText=depGBP.toFixed(2);
-   rec.querySelector(".eur").innerText=depEURgbpEq.toFixed(2);
-   rec.querySelector(".total").innerText=(depGBP+depEURgbpEq).toFixed(2);
- }
-}
-
-document.addEventListener("DOMContentLoaded",rebuildDeposits);
-})();
-</script>
 
 </body>
 </html>`);
@@ -6281,79 +6182,6 @@ document.addEventListener("DOMContentLoaded",rebuildDeposits);
     window.addEventListener("load", boot);
   </script>
 
-<script>
-// v4.00-52 Patch: Canonical deposit aggregation from Statement table
-(function(){
-function normalizeAsset(a){return String(a||"").replace(/^[ZX]/,"");}
-function isFiatCurrency(a){const c=normalizeAsset(a);return c==="GBP"||c==="EUR";}
-function fiatBankLabel(base,assetRaw){
- const c=normalizeAsset(assetRaw);
- const b=(base&&String(base).trim())?String(base).trim():"Bank";
- return `${b} (${c})`;
-}
-
-function extractStatementRows(){
- const rows=[];
- document.querySelectorAll("#statement-table tbody tr").forEach(tr=>{
-   const tds=tr.querySelectorAll("td");
-   if(tds.length<6) return;
-   rows.push({
-     type: tds[2].innerText.toLowerCase().includes("deposit")?"deposit":"other",
-     asset: tds[4].innerText.trim(),
-     amount: parseFloat(tds[5].innerText.replace(/[^0-9.-]/g,""))||0,
-     gbpEquivalent: parseFloat(tds[6]?.innerText.replace(/[^0-9.-]/g,""))||0,
-     bankInstitution: tds[2].innerText.replace(/^deposit\s*/i,"").trim()
-   });
- });
- return rows;
-}
-
-function rebuildDeposits(){
- const statementRows=extractStatementRows();
- const bankDepositTotals={};
- let hasDeposits=false;
-
- for(const row of statementRows){
-   if(row.type!=="deposit") continue;
-   if(!isFiatCurrency(row.asset)) continue;
-   const label=fiatBankLabel(row.bankInstitution,row.asset);
-   bankDepositTotals[label] ||= {GBP:0,EUR:0,gbpEq:0};
-   const c=normalizeAsset(row.asset);
-   if(c==="GBP") bankDepositTotals[label].GBP+=row.amount;
-   if(c==="EUR"){bankDepositTotals[label].EUR+=row.amount; bankDepositTotals[label].gbpEq+=row.gbpEquivalent;}
-   hasDeposits=true;
- }
-
- const tbl=document.querySelector("#summary-deposits tbody");
- if(!tbl) return;
- tbl.innerHTML="";
- if(!hasDeposits){
-   const tr=document.createElement("tr");
-   tr.innerHTML='<td colspan="4">No deposits found for this period.</td>';
-   tbl.appendChild(tr);
- } else {
-   for(const [label,v] of Object.entries(bankDepositTotals)){
-     if(v.GBP===0 && v.EUR===0) continue;
-     const tr=document.createElement("tr");
-     tr.innerHTML=`<td>${label}</td><td>${v.GBP.toFixed(2)}</td><td>${v.EUR.toFixed(2)}</td><td>${(v.GBP+v.gbpEq).toFixed(2)}</td>`;
-     tbl.appendChild(tr);
-   }
- }
-
- // Reconciliation
- let depGBP=0, depEURgbpEq=0;
- for(const v of Object.values(bankDepositTotals)){depGBP+=v.GBP; depEURgbpEq+=v.gbpEq;}
- const rec=document.querySelector("#recon-deposits");
- if(rec){
-   rec.querySelector(".gbp").innerText=depGBP.toFixed(2);
-   rec.querySelector(".eur").innerText=depEURgbpEq.toFixed(2);
-   rec.querySelector(".total").innerText=(depGBP+depEURgbpEq).toFixed(2);
- }
-}
-
-document.addEventListener("DOMContentLoaded",rebuildDeposits);
-})();
-</script>
 
 </body>
 
