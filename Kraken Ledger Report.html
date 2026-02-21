@@ -503,7 +503,7 @@ Purpose: GitHub Pages testing
 
 
   <script>
-    const APP_VERSION = "v4.00-13-00";
+    const APP_VERSION = "v4.00-53-Math-Fixed";
   </script>
 
 
@@ -4250,8 +4250,12 @@ Purpose: GitHub Pages testing
       const cryptoTotals = {}; // { recipient: { USDT: 0, XRP: 0, USDT_GBP: 0, XRP_GBP: 0 } }
       const fMap = {};         // { recipient: { GBP: 0, EUR: 0, EUR_GBP: 0 } }
 
+      // Phase III-1: Canonical institution label per fiat currency for consistent Deposits/Withdrawals presentation
+      // Populated from actual fiat withdrawal rows in the selected period (transaction evidence), not by frequency.
+      const fiatInstitutionByCurrency = { GBP: null, EUR: null };
+
       // Global reset
-      depositTotals = {};
+      depositTotals = { GBP: 0, EUR: 0 };
       const depositGbpTotals = { GBP: 0, EUR: 0 };
 
       const feeTotals = { GBP: 0, EUR: 0, USDT: 0, XRP: 0 };
@@ -4289,7 +4293,8 @@ Purpose: GitHub Pages testing
         const rawTime = (item._raw && item._raw.time) ? item._raw.time : null;
 
         // --- 1. RECIPIENT IDENTIFICATION ---
-        let recipient = item.details || "Unknown";
+        // v4.00-03: Prioritize authoritative recipient from Canonical Resolver
+        let recipient = item.recipient || item.details || "Unknown";
 
         // v3.045-19.40: Smart Name Extraction
         // If details is just "Withdrawal" (common for Bank Transfers), try to use the raw address label if available
@@ -4298,21 +4303,16 @@ Purpose: GitHub Pages testing
         // Let's refine the cleanup to ensure "Revolut Ltd" etc comes through.
 
         // Cleanup: remove parenthetical assets e.g. " (USDT)"
-        recipient = recipient.replace(/\((?!GBP\b|EUR\b)[^)]*\)/, "").trim();
+        recipient = recipient.replace(/\(.*\)/, "").trim();
 
         // Cleanup: remove known asset keywords if they appear floating
         recipient = recipient.replace(/\s*(XRP|USDT|TRC20|ERC20|BTC|ETH)\s*/gi, "").trim();
 
         // v3.045-19.40: Enforce "First Two Words" rule for better formatting
         // This fixes "Revolut Business" showing as just "Withdrawal" if the logic previously failed.
-        const _m2 = recipient.match(/\s*\((GBP|EUR)\)\s*$/);
-        const _suf2 = _m2 ? " (" + _m2[1] + ")" : "";
-        const _base2 = recipient.replace(/\s*\((GBP|EUR)\)\s*$/, "");
-        const words = _base2.split(/\s+/);
+        const words = recipient.split(/\s+/);
         if (words.length > 2) {
-          recipient = words.slice(0, 2).join(" ") + _suf2;
-        } else {
-          recipient = _base2.trim() + _suf2;
+          recipient = words.slice(0, 2).join(" ");
         }
 
         // Specific Fix: If it's still just "Withdrawal" and we have a specific known bank pattern, or if it was overridden??
@@ -4330,7 +4330,14 @@ Purpose: GitHub Pages testing
         }
 
         // --- 2. PROCESS AMOUNTS ---
-        for (const [asset, val] of Object.entries(item.amounts)) {
+        for (const [rawAsset, val] of Object.entries(item.amounts)) {
+          // Phase III-1: Normalize Kraken internal asset codes (ZEUR/ZGBP/XXRP)
+          let asset = rawAsset;
+          if (asset === "ZEUR" || asset === "EUR.HOLD") asset = "EUR";
+          else if (asset === "ZGBP" || asset === "GBP.HOLD") asset = "GBP";
+          else if (asset === "XXRP" || asset === "XRP.HOLD") asset = "XRP";
+          else if (asset === "ZUSD" || asset === "USD.HOLD") asset = "USD";
+
           if (!val || val === 0) continue;
 
           // v3.045-18.3: Track Net Trade Flows for Reconciliation
@@ -4364,11 +4371,10 @@ Purpose: GitHub Pages testing
           const absVal = Math.abs(val);
 
           if (lType === "deposit" && val > 0) {
+            if (asset === "GBP" || asset === "EUR") { continue; }
             // DEPOSIT
             if (asset === "GBP" || asset === "EUR") {
-              const _dKey = recipient + ((asset === "GBP" || asset === "EUR") ? " (" + asset + ")" : "");
-              if (!depositTotals[_dKey]) depositTotals[_dKey] = { GBP: 0, EUR: 0, EUR_GBP: 0 };
-              depositTotals[_dKey][asset] += absVal;
+              depositTotals[asset] += absVal;
 
               // EUR Deposit -> GBP Equivalent
               if (asset === "EUR") {
@@ -4382,7 +4388,6 @@ Purpose: GitHub Pages testing
                   if (r) gbpEq = absVal * r;
                 }
                 if (gbpEq) depositGbpTotals.EUR += gbpEq;
-                if (_dKey && depositTotals[_dKey]) depositTotals[_dKey].EUR_GBP += gbpEq;
               }
             }
 
@@ -4407,11 +4412,14 @@ Purpose: GitHub Pages testing
               if (asset === "XRP") cryptoTotals[recipient].XRP_GBP += gbpEq;
 
             } else if (asset === "GBP" || asset === "EUR") {
-              // FIAT EXPENSE
-              const _rKey = recipient + ((asset === "GBP" || asset === "EUR") ? " (" + asset + ")" : "");
-              if (!fMap[_rKey]) fMap[_rKey] = { GBP: 0, EUR: 0, EUR_GBP: 0 };
+              // FIAT EXPENSE (bank withdrawals)
+              // IMPORTANT: Keep GBP and EUR on separate summary rows by suffixing the label with currency.
+              // This prevents merged rows when Kraken 'info' uses the same institution string (e.g. 'Revolut Ltd') for both currencies.
+              if (!fiatInstitutionByCurrency[asset]) fiatInstitutionByCurrency[asset] = recipient;
+              const fiatKey = `${recipient} (${asset})`;
+              if (!fMap[fiatKey]) fMap[fiatKey] = { GBP: 0, EUR: 0, EUR_GBP: 0 };
 
-              fMap[_rKey][asset] += absVal;
+              fMap[fiatKey][asset] += absVal;
 
               if (asset === "EUR") {
                 let gbpEq = 0;
@@ -4421,7 +4429,7 @@ Purpose: GitHub Pages testing
                   const r = getDailyRate("EUR", rawTime);
                   if (r) gbpEq = absVal * r;
                 }
-                if (gbpEq) fMap[_rKey].EUR_GBP += gbpEq;
+                if (gbpEq) fMap[fiatKey].EUR_GBP += gbpEq;
               }
             }
           } else {
@@ -4485,9 +4493,58 @@ Purpose: GitHub Pages testing
       const cryptoRows = Object.keys(cryptoTotals).map(r => ({ recipient: r, ...cryptoTotals[r] })).sort((a, b) => a.recipient.localeCompare(b.recipient));
       const fiatRows = Object.keys(fMap).map(r => ({ recipient: r, ...fMap[r] })).sort((a, b) => a.recipient.localeCompare(b.recipient));
 
-      const depositRows = Object.keys(depositTotals)
-        .map(r => ({ recipient: r, ...depositTotals[r] }))
-        .sort((a, b) => a.recipient.localeCompare(b.recipient));
+      const depositRows = (() => {
+        // Phase III-1: Deposits summary must align with bank-withdrawal labelling:
+        // - left column is bank account label (institution + currency suffix)
+        // - only include currencies that actually have deposits in the selected period
+        // - never emit zero-value placeholder rows
+        const rows = [];
+
+        const normAsset = (a) => (a || "").replace(/^Z/, "").replace(/^X/, "");
+
+        const firstTwoWords = (s) => {
+          if (!s) return "";
+          const w = String(s).trim().split(/\s+/).filter(Boolean);
+          return (w.length <= 2) ? w.join(" ") : w.slice(0, 2).join(" ");
+        };
+
+        const isVerifiedAddress = (a) => {
+          const v = a && a.verified;
+          if (v === undefined || v === null) return true; // treat missing as verified for display purposes
+          if (v === true) return true;
+          const s = String(v).toLowerCase();
+          return (s === "true" || s === "1");
+        };
+
+        const fallbackInstitutionFromAddressBook = (ccy) => {
+          try {
+            const addrs = (cacheData && cacheData.krakenAddresses) ? cacheData.krakenAddresses : [];
+            const hits = addrs.filter(a => normAsset(a.asset) === ccy && isVerifiedAddress(a) && a.key);
+            if (!hits.length) return null;
+            return firstTwoWords(hits[0].key);
+          } catch (_) {
+            return null;
+          }
+        };
+
+        for (const ccy of ["GBP", "EUR"]) {
+          const total = (ccy === "GBP") ? depositTotals.GBP : depositTotals.EUR;
+          if (!total || total <= 0) continue;
+
+          // Prefer institution label evidenced by fiat withdrawals in-period (e.g., "Revolut Ltd"),
+          // otherwise fallback to the configured address-book key (e.g., "Revolut Business"/"Revolut B").
+          const inst = fiatInstitutionByCurrency[ccy] || fallbackInstitutionFromAddressBook(ccy) || "Bank";
+          const label = `${inst} (${ccy})`;
+
+          rows.push({
+            recipient: label,
+            GBP: (ccy === "GBP") ? total : 0,
+            EUR: (ccy === "EUR") ? total : 0,
+            EUR_GBP: (ccy === "EUR") ? (depositGbpTotals.EUR || 0) : 0
+          });
+        }
+        return rows;
+      })();
 
       const feeRows = [
         { asset: "GBP", total: feeTotals.GBP, gbpEq: null },
@@ -4788,54 +4845,28 @@ Purpose: GitHub Pages testing
       if (!_hasDeposits) {
         html += '<tr><td colspan="3" style="padding:8px; border:1px solid #ddd; text-align:center; color:#666; font-style:italic;">No deposits found for this period.</td></tr>';
       }
-      // v4.00-13 Phase 5: Recipient-based Deposit Rendering
       for (const r of (summaryRecords.deposits || [])) {
         if (!_hasDeposits) break;
-        // r structure is { recipient, GBP, EUR, EUR_GBP, ... }
-        const recipient = r.recipient || "Unknown";
-
-        // Check for activity in this row
-        const totalGBP = r.GBP || 0;
-        const totalEUR = r.EUR || 0;
-        if (totalGBP === 0 && totalEUR === 0) continue;
-
-        const totalShow = totalGBP > 0 ? fmtGBPAmount(totalGBP) : (totalEUR > 0 ? fmtAmount(totalEUR, 2) : "0.00");
-        const currencyLabel = totalGBP > 0 ? "GBP" : "EUR"; // Simplified for display if single currency, but row can have both? 
-        // Actually, Summary Deposits are aggregated by Recipient. A recipient could hypothetically have both GBP and EUR?
-        // But usually they are separate bank accounts.
-        // The table columns are: Currency | Total Amount | GBP Equivalent
-        // But we want to show Bank Name.
-        // We should probably change the first column to "Bank / Asset" or similar?
-        // But let's stick to the existing columns for now, maybe put Bank Name in first column?
-
-        // Re-aligning with Requirement: "Show bank names"
-        // Let's use the first column for Bank Name + Currency
+        const asset = r.asset;
+        const total = parseFloat(r.total || 0);
+        const totalShow = total.toFixed(2);
 
         let gbpEqShow = "-";
-
-        // Strategy: Output one row per currency present in the Recipient group? 
-        // Or output the Recipient name in Col 1.
-
-        // If we have GBP:
-        if (totalGBP > 0) {
-          html += '<tr>';
-          html += `<td style="padding:4px; border:1px solid #ddd;">${escHtml(recipient)}</td>`;
-          html += `<td style="padding:4px; border:1px solid #ddd; text-align:right; font-weight:bold;">${fmtGBPAmount(totalGBP)}</td>`;
-          html += `<td style="padding:4px; border:1px solid #ddd; text-align:right; color:#7f8c8d;">n/a</td>`;
-          html += '</tr>';
+        if (asset === "GBP") {
+          gbpEqShow = "n/a";
+        } else if (asset === "EUR") {
+          const eq = (typeof r.gbpEq === "number") ? r.gbpEq : parseFloat(r.gbpEq || 0);
+          gbpEqShow = (eq || total === 0) ? (eq || 0).toFixed(2) : "0.00";
         }
 
-        // If we have EUR:
-        if (totalEUR > 0) {
-          const eurEq = r.EUR_GBP || 0;
-          html += '<tr>';
-          // If we also had GBP, maybe repeat name or leave empty? Let's repeat for clarity or append (EUR)
-          // Actually recipient label likely has (EUR) in it already!
-          html += `<td style="padding:4px; border:1px solid #ddd;">${escHtml(recipient)}</td>`;
-          html += `<td style="padding:4px; border:1px solid #ddd; text-align:right;">${fmtAmount(totalEUR, 2)}</td>`;
-          html += `<td style="padding:4px; border:1px solid #ddd; text-align:right; font-weight:bold; color:#000;">${fmtGBPAmount(eurEq)}</td>`;
-          html += '</tr>';
-        }
+        const totalStyle = (asset === "GBP") ? "font-weight:bold;" : "";
+        const eqStyle = (asset === "EUR") ? "font-weight:bold; color:#000;" : "color:#7f8c8d;";
+
+        html += '<tr>';
+        html += `<td style="padding:4px; border:1px solid #ddd;">${asset}</td>`;
+        html += `<td style="padding:4px; border:1px solid #ddd; text-align:right; ${totalStyle}">${totalShow}</td>`;
+        html += `<td style="padding:4px; border:1px solid #ddd; text-align:right; ${eqStyle}">${gbpEqShow}</td>`;
+        html += '</tr>';
       }
       html += '</tbody></table>';
 
