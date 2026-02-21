@@ -495,7 +495,7 @@
 
 
   <script>
-    const APP_VERSION = "v4.00-52";
+    const APP_VERSION = "v4.00-52-JulesFinal";
   </script>
 
 
@@ -647,6 +647,19 @@
         <div style="font-size:0.6rem; color:#95a5a6; margin-bottom:10px; line-height:1.2;">
           Found in URL: .../spreadsheets/d/<b>ID_IS_HERE</b>/edit
         </div>
+        <div class="col-md-6">
+          <label for="googleSheetsApiKey" class="form-label">Google Sheets API Key</label>
+          <input autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off" data-1p-ignore="true"
+            data-lpignore="true" type="text" class="form-control" id="googleSheetsApiKey"
+            placeholder="AIza... (stored locally)">
+
+          <div class="col-md-6">
+            <label for="googleOAuthClientId" class="form-label">Google OAuth Client ID</label>
+            <input autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off" data-1p-ignore="true"
+              data-lpignore="true" type="text" class="form-control" id="googleOAuthClientId"
+              placeholder="xxxxx-xxxxxxxx.apps.googleusercontent.com (stored locally)">
+          </div>
+
 
         <div
           style="font-size:0.7rem; font-weight:700; color:var(--kraken); margin-bottom:4px; padding-top:8px; border-top:1px solid #ddd;">
@@ -1331,17 +1344,22 @@
       const sheetId = document.getElementById("googleSheetId").value;
       const proxy = getSelectedProxy();
       const gasUrl = document.getElementById("gasProxyUrl").value;
+      const googleSheetsApiKey = document.getElementById("googleSheetsApiKey").value;
+      const googleOAuthClientId = document.getElementById("googleOAuthClientId").value;
 
       localStorage.setItem("kraken_api_key", apiKey);
       localStorage.setItem("kraken_private_key", privateKey);
       localStorage.setItem("kraken_withdraw_api_key", withdrawKey);
       localStorage.setItem("kraken_withdraw_private_key", withdrawPrivate);
+      localStorage.setItem("krk_google_sheets_api_key", googleSheetsApiKey || "");
+      localStorage.setItem("krk_google_oauth_client_id", googleOAuthClientId || "");
       if (sheetId && sheetId.trim()) localStorage.setItem("kraken_sheet_id", sheetId.trim());
 
       localStorage.setItem("kraken_cors_proxy", proxy);
       localStorage.setItem("kraken_cors_proxy_type", document.getElementById("corsProxySelect").value);
       localStorage.setItem("kraken_gas_proxy_url", gasUrl ? gasUrl.trim() : "");
 
+      initGoogleFromConfig(false);
       logTrace("API credentials saved (Query + Withdraw).");
       alert("API keys saved.");
     }
@@ -1436,17 +1454,7 @@
                 balance: parseFloat(entry.balance || 0),
                 info: entry.info || "",  // v4.00-08: Capture info
                 // v4.00-08: Resolve Label immediately for Main Report consistency
-                recipient: (entry.type === 'withdrawal') ? finalizeWithdrawalRecipientLabel({
-                  label: resolveRecipientLabel({
-                  asset: asset,
-                  refid: entry.refid,
-                  historyMatch: cacheData.withdrawalHistoryByRefid ? cacheData.withdrawalHistoryByRefid[entry.refid] : null,
-                  krakenAddresses: cacheData.krakenAddresses,
-                  withdrawalHistoryByRefid: cacheData.withdrawalHistoryByRefid
-                }),
-                  asset: asset,
-                  info: entry.info || ""
-                }) : ""
+                recipient: ""
               });
             }
           }
@@ -2066,21 +2074,51 @@
     }
 
     // ---------- Google Auth / Sheets ----------
+
+    // v4.00-08: Initialise Google clients from saved config
+    function initGoogleFromConfig(silent) {
+      try {
+        const apiKey = localStorage.getItem("krk_google_sheets_api_key") || "";
+        if (window.gapi && apiKey) {
+          gapi.load("client", async () => {
+            try {
+              await gapi.client.init({ apiKey: apiKey });
+              await gapi.client.load("sheets", "v4");
+              if (!silent) logTrace("GAPI Ready.");
+            } catch (e) {
+              if (!silent) logTrace("GAPI init error: " + (e && e.message ? e.message : e));
+            }
+          });
+        } else {
+          if (!silent) logTrace("Google Sheets API key not configured. Use API Config.");
+        }
+
+        const cid = localStorage.getItem("krk_google_oauth_client_id") || "";
+        if (window.google && google.accounts && google.accounts.oauth2 && cid) {
+          tokenClient = google.accounts.oauth2.initTokenClient({
+            client_id: cid,
+            scope: "https://www.googleapis.com/auth/spreadsheets",
+            callback: ""
+          });
+          if (!silent) logTrace("GIS Ready.");
+        } else {
+          if (!silent) logTrace("Google OAuth Client ID not configured. Use API Config.");
+        }
+      } catch (e) {
+        if (!silent) logTrace("Google init error: " + (e && e.message ? e.message : e));
+      }
+    }
+
     function gapiLoaded() {
-      gapi.load("client", async () => {
-        await gapi.client.init({ apiKey: "AIzaSyDvZ1XZw5bZgWSB9zaU7h9Vtn7MhDGFMSM" });
-        await gapi.client.load("sheets", "v4");
-        logTrace("GAPI Ready.");
-      });
+      // v4.00-08: keep startup silent; init happens after API Config save/load
+      initGoogleFromConfig(true);
     }
 
     function gisLoaded() {
-      tokenClient = google.accounts.oauth2.initTokenClient({
-        client_id: "23231735212-jtgur3sn2ndh798ke00pm2a1d5rkd4eu.apps.googleusercontent.com",
-        scope: "https://www.googleapis.com/auth/spreadsheets",
-        prompt: "consent", // Force re-consent to clear stale tokens
-        callback: () => { }
-      });
+      // v4.00-08: keep startup silent; init happens after API Config save/load
+      initGoogleFromConfig(true);
+    }
+});
       logTrace("GIS Ready.");
     }
 
@@ -2645,33 +2683,6 @@
     // ---------- Kraken API ----------
 
     // v3.015: Global helper to load credentials (fix for ReferenceError)
-    function loadSavedCredentials() {
-      const savedKey = localStorage.getItem("kraken_api_key");
-      const savedPrivate = localStorage.getItem("kraken_private_key");
-      const savedProxyType = localStorage.getItem("kraken_cors_proxy_type");
-      const savedProxy = localStorage.getItem("kraken_cors_proxy");
-      const savedWithdrawKey = localStorage.getItem("kraken_withdraw_api_key");
-      const savedWithdrawPrivate = localStorage.getItem("kraken_withdraw_private_key");
-      const savedSheetId = localStorage.getItem("kraken_sheet_id");
-
-      if (savedKey) document.getElementById("krakenApiKey").value = savedKey;
-      if (savedPrivate) document.getElementById("krakenPrivateKey").value = savedPrivate;
-      if (savedProxyType) {
-        const sel = document.getElementById("corsProxySelect");
-        if (sel) sel.value = savedProxyType;
-        if (savedProxyType === "custom" && savedProxy) {
-          const inp = document.getElementById("corsProxy");
-          if (inp) { inp.value = savedProxy; inp.style.display = "block"; }
-        }
-      }
-      if (savedWithdrawKey) document.getElementById("withdrawApiKey").value = savedWithdrawKey;
-      if (savedWithdrawPrivate) document.getElementById("withdrawPrivateKey").value = savedWithdrawPrivate;
-      if (savedSheetId) document.getElementById("googleSheetId").value = savedSheetId;
-
-      logTrace("Credentials loaded from storage.");
-    }
-
-
     // v3.015: Global helper to load credentials (fix for ReferenceError)
     function loadSavedCredentials() {
       const savedKey = localStorage.getItem("kraken_api_key");
@@ -2693,10 +2704,45 @@
         }
       }
       if (savedWithdrawKey) document.getElementById("withdrawApiKey").value = savedWithdrawKey;
+      document.getElementById("googleSheetsApiKey").value = (localStorage.getItem("krk_google_sheets_api_key") || "");
+      document.getElementById("googleOAuthClientId").value = (localStorage.getItem("krk_google_oauth_client_id") || "");
       if (savedWithdrawPrivate) document.getElementById("withdrawPrivateKey").value = savedWithdrawPrivate;
       if (savedSheetId) document.getElementById("googleSheetId").value = savedSheetId;
 
       logTrace("Credentials loaded from storage.");
+      initGoogleFromConfig(true);
+    }
+
+
+    // v3.015: Global helper to load credentials (fix for ReferenceError)
+    // v3.015: Global helper to load credentials (fix for ReferenceError)
+    function loadSavedCredentials() {
+      const savedKey = localStorage.getItem("kraken_api_key");
+      const savedPrivate = localStorage.getItem("kraken_private_key");
+      const savedProxyType = localStorage.getItem("kraken_cors_proxy_type");
+      const savedProxy = localStorage.getItem("kraken_cors_proxy");
+      const savedWithdrawKey = localStorage.getItem("kraken_withdraw_api_key");
+      const savedWithdrawPrivate = localStorage.getItem("kraken_withdraw_private_key");
+      const savedSheetId = localStorage.getItem("kraken_sheet_id");
+
+      if (savedKey) document.getElementById("krakenApiKey").value = savedKey;
+      if (savedPrivate) document.getElementById("krakenPrivateKey").value = savedPrivate;
+      if (savedProxyType) {
+        const sel = document.getElementById("corsProxySelect");
+        if (sel) sel.value = savedProxyType;
+        if (savedProxyType === "custom" && savedProxy) {
+          const inp = document.getElementById("corsProxy");
+          if (inp) { inp.value = savedProxy; inp.style.display = "block"; }
+        }
+      }
+      if (savedWithdrawKey) document.getElementById("withdrawApiKey").value = savedWithdrawKey;
+      document.getElementById("googleSheetsApiKey").value = (localStorage.getItem("krk_google_sheets_api_key") || "");
+      document.getElementById("googleOAuthClientId").value = (localStorage.getItem("krk_google_oauth_client_id") || "");
+      if (savedWithdrawPrivate) document.getElementById("withdrawPrivateKey").value = savedWithdrawPrivate;
+      if (savedSheetId) document.getElementById("googleSheetId").value = savedSheetId;
+
+      logTrace("Credentials loaded from storage.");
+      initGoogleFromConfig(true);
     }
 
     function toggleApiConfig() {
@@ -3502,6 +3548,27 @@
     }
 
     // Generate report from cached data (no API calls except for rates)
+
+    // v4.00-13 Helper: Get Bank Label from Address Book by Asset
+    function getBankLabel(asset) {
+      if (!cacheData.krakenAddresses || !cacheData.krakenAddresses.length) return null;
+      // Normalize asset (e.g. ZGBP -> GBP)
+      const cleanAsset = (asset || "").replace(/^Z/, "").toUpperCase();
+      if (cleanAsset !== "GBP" && cleanAsset !== "EUR") return null;
+
+      // Find address book entry with matching asset
+      const entry = cacheData.krakenAddresses.find(a => {
+        const aAsset = (a.asset || "").toUpperCase().replace(/^Z/, "");
+        return aAsset === cleanAsset;
+      });
+
+      if (entry) {
+        const label = (entry.key || entry.info || "").trim();
+        if (label) return label + " (" + cleanAsset + ")";
+      }
+      return null;
+    }
+
     async function generateReportFromCache() {
       if (cacheData.withdrawals.length === 0) {
         alert("No withdrawal data. Please Fetch first.");
@@ -3681,6 +3748,12 @@
 
         // Find recipient from krakenAddresses
         let fullRecipient = "";
+        // v4.00-13: For Deposits, use the Bank Label helper (Asset-based lookup)
+        if (w.type === "deposit") {
+          const lbl = getBankLabel(w.asset);
+          if (lbl) fullRecipient = lbl;
+        }
+
 
         // Helper to normalize string for matching (remove spaces, symbols, lowercase)
         const normalize = (s) => (s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
