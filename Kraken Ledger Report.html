@@ -503,7 +503,7 @@ Purpose: GitHub Pages testing
 
 
   <script>
-    const APP_VERSION = "v4.00-55-Deposits-Render-Fix";
+    const APP_VERSION = "v4.00-56-Deposits-Recon-Fix";
   </script>
 
 
@@ -2229,9 +2229,9 @@ Purpose: GitHub Pages testing
 
             // 1. Calculate Flow Totals (GBP Eq where appropriate for columns)
             // 1. Calculate Flow Totals (GBP Eq where appropriate for columns)
-            // Deposits (Haricom Bank Accounts) - These HAVE r.asset
-            const depGBP = _sumAsset(summaryRecords.deposits, "GBP", "total");
-            const depEUR = _sumAsset(summaryRecords.deposits, "EUR", "gbpEq");
+            // Deposits (Haricom Bank Accounts) - No r.asset, sum fields directly from deposit rows
+            const depGBP = (summaryRecords.deposits || []).reduce((acc, r) => acc + (Number(r.GBP) || 0), 0);
+            const depEUR = (summaryRecords.deposits || []).reduce((acc, r) => acc + (Number(r.EUR_GBP) || 0), 0);
 
             // Withdrawals (Recipients) - USDT/XRP (No r.asset, sum fields directly from crypto rows)
             const sumCryptoField = (arr, field) => {
@@ -5060,8 +5060,8 @@ Purpose: GitHub Pages testing
       if (Array.isArray(summaryRecords.deposits)) {
         for (const r of summaryRecords.deposits) {
           if (!r) continue;
-          if (r.asset === "GBP") depGBP += _n2(r.total);
-          if (r.asset === "EUR") depEUR += _n2(r.gbpEq);
+          depGBP += _n2(r.GBP);
+          depEUR += _n2(r.EUR_GBP);
         }
       }
 
