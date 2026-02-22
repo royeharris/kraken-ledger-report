@@ -503,7 +503,7 @@ Purpose: GitHub Pages testing
 
 
   <script>
-    const APP_VERSION = "v4.00-54-Deposits-Fixed";
+    const APP_VERSION = "v4.00-55-Deposits-Render-Fix";
   </script>
 
 
@@ -4837,35 +4837,31 @@ Purpose: GitHub Pages testing
       html += '<div style="background:#27ae60; color:#fff; padding:5px 10px; font-size:0.7rem; font-weight:bold; border-radius:4px 4px 0 0; margin-bottom:0; margin-top:20px;">Deposits from Haricom Bank Accounts  GBP | EUR</div>';
       html += '<table style="width:100%; border-collapse:collapse; margin-bottom:20px; border:1px solid #ddd;">';
       html += '<thead><tr style="background:#f2f2f2;">';
-      html += '<th style="padding:4px; border:1px solid #ddd; text-align:left;">Currency</th>';
-      html += '<th style="padding:4px; border:1px solid #ddd; text-align:right;">Total Amount</th><th style="padding:4px; border:1px solid #ddd; text-align:right;">GBP Equivalent</th>';
+      html += '<th style="padding:4px; border:1px solid #ddd; text-align:left;">Haricom Bank Account</th>';
+      html += '<th style="padding:4px; border:1px solid #ddd; text-align:right;">GBP</th>';
+      html += '<th style="padding:4px; border:1px solid #ddd; text-align:right;">EUR</th>';
+      html += '<th style="padding:4px; border:1px solid #ddd; text-align:right;">GBP Equivalent</th>';
       html += '</tr></thead><tbody>';
-      const _hasDeposits = (summaryRecords.deposits || []).some(r => (Number(r.total) || 0) !== 0);
-      if (!_hasDeposits) {
-        html += '<tr><td colspan="3" style="padding:8px; border:1px solid #ddd; text-align:center; color:#666; font-style:italic;">No deposits found for this period.</td></tr>';
-      }
-      for (const r of (summaryRecords.deposits || [])) {
-        if (!_hasDeposits) break;
-        const asset = r.asset;
-        const total = parseFloat(r.total || 0);
-        const totalShow = total.toFixed(2);
 
-        let gbpEqShow = "-";
-        if (asset === "GBP") {
-          gbpEqShow = "n/a";
-        } else if (asset === "EUR") {
-          const eq = (typeof r.gbpEq === "number") ? r.gbpEq : parseFloat(r.gbpEq || 0);
-          gbpEqShow = (eq || total === 0) ? (eq || 0).toFixed(2) : "0.00";
+      const depositRecipients = summaryRecords.deposits || [];
+      if (depositRecipients.length === 0) {
+        html += '<tr><td colspan="4" style="padding:8px; border:1px solid #ddd; text-align:center; color:#666; font-style:italic;">No deposits found for this period.</td></tr>';
+      } else {
+        for (const r of depositRecipients) {
+          const gbpShow = (r.GBP && r.GBP > 0) ? r.GBP.toFixed(2) : "-";
+          const eurShow = (r.EUR && r.EUR > 0) ? r.EUR.toFixed(2) : "-";
+          const eqShow = (r.EUR && r.EUR > 0) ? (r.EUR_GBP ? r.EUR_GBP.toFixed(2) : "0.00") : "n/a";
+
+          const gbpStyle = (r.GBP && r.GBP > 0) ? "font-weight:bold; color:#000;" : "";
+          const eqStyle = (r.EUR && r.EUR > 0) ? "font-weight:bold; color:#000;" : "color:#7f8c8d;";
+
+          html += '<tr>';
+          html += `<td style="padding:4px; border:1px solid #ddd; text-align:left;">${escHtml(r.recipient)}</td>`;
+          html += `<td style="padding:4px; border:1px solid #ddd; text-align:right; ${gbpStyle}">${gbpShow}</td>`;
+          html += `<td style="padding:4px; border:1px solid #ddd; text-align:right;">${eurShow}</td>`;
+          html += `<td style="padding:4px; border:1px solid #ddd; text-align:right; ${eqStyle}">${eqShow}</td>`;
+          html += '</tr>';
         }
-
-        const totalStyle = (asset === "GBP") ? "font-weight:bold;" : "";
-        const eqStyle = (asset === "EUR") ? "font-weight:bold; color:#000;" : "color:#7f8c8d;";
-
-        html += '<tr>';
-        html += `<td style="padding:4px; border:1px solid #ddd;">${asset}</td>`;
-        html += `<td style="padding:4px; border:1px solid #ddd; text-align:right; ${totalStyle}">${totalShow}</td>`;
-        html += `<td style="padding:4px; border:1px solid #ddd; text-align:right; ${eqStyle}">${gbpEqShow}</td>`;
-        html += '</tr>';
       }
       html += '</tbody></table>';
 
