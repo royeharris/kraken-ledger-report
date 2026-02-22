@@ -503,7 +503,7 @@ Purpose: GitHub Pages testing
 
 
   <script>
-    const APP_VERSION = "v4.00-53-Math-Fixed";
+    const APP_VERSION = "v4.00-54-Deposits-Fixed";
   </script>
 
 
@@ -4371,7 +4371,6 @@ Purpose: GitHub Pages testing
           const absVal = Math.abs(val);
 
           if (lType === "deposit" && val > 0) {
-            if (asset === "GBP" || asset === "EUR") { continue; }
             // DEPOSIT
             if (asset === "GBP" || asset === "EUR") {
               depositTotals[asset] += absVal;
