@@ -503,7 +503,7 @@ Purpose: GitHub Pages testing
 
 
   <script>
-    const APP_VERSION = "v4.00-58-Labels-Fixed-v2";
+    const APP_VERSION = "v4.00-59-USDT-Regex-Fixed";
   </script>
 
 
@@ -3435,8 +3435,8 @@ Purpose: GitHub Pages testing
         const normalize = (s) => (s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
         const walletAddrNorm = normalize(walletAddr);
 
-        // v4.00-58 NEW FIAT LABEL RULE: Bypass address book entirely for fiat. 
-        const isFiat = w.asset.includes("GBP") || w.asset.includes("EUR") || w.asset.includes("USD") || w.asset.includes("ZGBP") || w.asset.includes("ZEUR") || w.asset.includes("ZUSD");
+        // v4.00-59 NEW FIAT LABEL RULE: Bypass address book entirely for fiat. 
+        const isFiat = ["GBP", "EUR", "USD", "ZGBP", "ZEUR", "ZUSD"].includes(w.asset);
 
         if (isFiat) {
           if (w.type === "deposit") {
@@ -4000,8 +4000,8 @@ Purpose: GitHub Pages testing
             let recipient = null;
 
 
-            // v4.00-58 NEW FIAT LABEL RULE: Bypass address book entirely for fiat withdrawals ONLY. 
-            const isFiat = e.asset.includes("GBP") || e.asset.includes("EUR") || e.asset.includes("USD") || e.asset.includes("ZGBP") || e.asset.includes("ZEUR") || e.asset.includes("ZUSD");
+            // v4.00-59 NEW FIAT LABEL RULE: Strict asset matching to avoid USDT triggering USD.
+            const isFiat = ["GBP", "EUR", "USD", "ZGBP", "ZEUR", "ZUSD"].includes(e.asset);
 
             if (isFiat && e.type === "deposit") {
               // Fiat deposits from Kraken lack 'info' strings containing the bank. Use dynamic history scan.
