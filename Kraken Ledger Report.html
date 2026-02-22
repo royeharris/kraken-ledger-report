@@ -503,7 +503,7 @@ Purpose: GitHub Pages testing
 
 
   <script>
-    const APP_VERSION = "v4.00-56-Deposits-Recon-Fix";
+    const APP_VERSION = "v4.00-57-Labels-Fixed";
   </script>
 
 
@@ -2935,26 +2935,7 @@ Purpose: GitHub Pages testing
       return allWithdrawals;
     }
 
-    // v4.00-13 Helper: Get Bank Label from Address Book by Asset
-    // Used for consistent label propagation across TWD, Statement, and Summary reports.
-    function getBankLabel(asset) {
-      if (!cacheData.krakenAddresses || !cacheData.krakenAddresses.length) return null;
-      // Normalize asset (e.g. ZGBP -> GBP)
-      const cleanAsset = (asset || "").replace(/^Z/, "").toUpperCase();
-      if (cleanAsset !== "GBP" && cleanAsset !== "EUR") return null;
 
-      // Find address book entry with matching asset
-      const entry = cacheData.krakenAddresses.find(a => {
-        const aAsset = (a.asset || "").toUpperCase().replace(/^Z/, "");
-        return aAsset === cleanAsset;
-      });
-
-      if (entry) {
-        const label = (entry.key || entry.info || "").trim();
-        if (label) return label + " (" + cleanAsset + ")";
-      }
-      return null;
-    }
 
     // Get historical exchange rate from Kraken public API
     // Returns { gbpRate, eurRate } for the given asset at the given timestamp
@@ -3429,55 +3410,37 @@ Purpose: GitHub Pages testing
         // Find recipient from krakenAddresses
         let fullRecipient = "";
 
-        // v4.00-13: For Deposits, use the Bank Label helper (Asset-based lookup)
-        if (w.type === "deposit") {
-          const lbl = getBankLabel(w.asset);
-          if (lbl) fullRecipient = lbl;
-        }
-
         // Helper to normalize string for matching (remove spaces, symbols, lowercase)
         const normalize = (s) => (s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
-
         const walletAddrNorm = normalize(walletAddr);
 
-        const addrMatch = cacheData.krakenAddresses.find(a => {
-          // Strict match on address field
-          if (a.address === walletAddr) {
-            return (destTag ? (a.tag === destTag) : (!a.tag));
-          }
-          // v2.48: Fuzzy/Normalized match for Fiat IBANs
-          // Check if normalised address in book matches normalised wallet address
-          // OR if the 'info' field (sometimes matches)
-          if (walletAddrNorm.length > 5 && (normalize(a.address) === walletAddrNorm || normalize(a.info) === walletAddrNorm)) {
-            return true;
-          }
-          return false;
-        });
+        // v4.00-57 NEW FIAT LABEL RULE: Bypass address book entirely for fiat. 
+        // Use historyMatch.info for withdrawals, use w.info for deposits.
+        const isFiat = w.asset.includes("GBP") || w.asset.includes("EUR") || w.asset.includes("USD") || w.asset.includes("ZGBP") || w.asset.includes("ZEUR") || w.asset.includes("ZUSD");
 
-        if (addrMatch) {
-          // Use the Key Name from address book
-          fullRecipient = ((addrMatch.key || addrMatch.info || "").trim()) + ((addrMatch.asset === 'GBP' || addrMatch.asset === 'EUR') ? ' (' + addrMatch.asset + ')' : '');
-        } else {
-          // Fallback 1: Loose match on address only (for crypto non-tag assets)
-          // Fallback 1: Loose match on address only (for crypto non-tag assets)
-          const looseMatch = cacheData.krakenAddresses.find(a => a.address === walletAddr);
-          if (looseMatch) {
-            // If we found a match by address, use it.
-            // (We relax strict tag matching here because sometimes tags appear in "info" or are optional)
-            fullRecipient = (looseMatch.key || "").trim();
+        if (isFiat) {
+          if (w.type === "deposit" && w.info && w.info !== "Deposit") {
+            fullRecipient = w.info;
           } else {
-            // Fallback 2: Use the 'info' field from withdrawal history directly if no book match
-            if (historyMatch && historyMatch.info) {
-              fullRecipient = historyMatch.info;
-            }
+            fullRecipient = walletAddr; // This will hold "Revolut Ltd" from historyMatch.info
           }
-        }
+        } else {
+          // Original crypto Address Book lookup
+          const addrMatch = cacheData.krakenAddresses.find(a => {
+            if (a.address === walletAddr) return (destTag ? (a.tag === destTag) : (!a.tag));
+            if (walletAddrNorm.length > 5 && (normalize(a.address) === walletAddrNorm || normalize(a.info) === walletAddrNorm)) return true;
+            return false;
+          });
 
-        // v2.48 Fallback 2: If still empty and it's a Fiat withdrawal, use the bank name from history
-        if (!fullRecipient && (w.type === "withdrawal")) {
-          const isFiat = w.asset.includes("GBP") || w.asset.includes("EUR") || w.asset.includes("USD") || w.asset.includes("ZGBP") || w.asset.includes("ZEUR") || w.asset.includes("ZUSD");
-          if (isFiat && walletAddr) {
-            fullRecipient = walletAddr; // e.g. "Revolut Ltd"
+          if (addrMatch) {
+            fullRecipient = ((addrMatch.key || addrMatch.info || "").trim()) + ((addrMatch.asset === 'GBP' || addrMatch.asset === 'EUR') ? ' (' + addrMatch.asset + ')' : '');
+          } else {
+            const looseMatch = cacheData.krakenAddresses.find(a => a.address === walletAddr);
+            if (looseMatch) {
+              fullRecipient = (looseMatch.key || "").trim();
+            } else {
+              if (historyMatch && historyMatch.info) fullRecipient = historyMatch.info;
+            }
           }
         }
 
@@ -4010,42 +3973,52 @@ Purpose: GitHub Pages testing
             let recipient = null;
 
 
-            // v4.00-13 Objective D: ensure fiat deposits have bank recipient label for propagation
-            if (e.type === "deposit" && (!recipient || recipient === "Unknown")) {
-              const lbl = getBankLabel(e.asset);
-              if (lbl) recipient = lbl;
+            // v4.00-57 NEW FIAT LABEL RULE: Bypass address book entirely for fiat. 
+            const isFiat = e.asset.includes("GBP") || e.asset.includes("EUR") || e.asset.includes("USD") || e.asset.includes("ZGBP") || e.asset.includes("ZEUR") || e.asset.includes("ZUSD");
+
+            if (isFiat) {
+              // For fiat deposits, the bank name is usually in e.info. For withdrawals, it's often in either e.info or historyMatch.
+              const historyMatch = cacheData.withdrawalHistory.find(h => h.refid === e.refid);
+              // Try historyMatch.info first, then e.info
+              let rawBankName = "";
+              if (historyMatch && historyMatch.info) {
+                rawBankName = historyMatch.info;
+              } else if (e.info && e.info !== "Withdrawal" && e.info !== "Deposit") {
+                rawBankName = e.info;
+              }
+
+              // If we found a name, use it. Otherwise fallback to generic word.
+              if (rawBankName) {
+                // Extract just the first 2 words for brevity (e.g. "Revolut Ltd" or "Clear Junction")
+                const words = String(rawBankName).trim().split(/\s+/).filter(Boolean);
+                detail = (words.length <= 2) ? words.join(" ") : words.slice(0, 2).join(" ");
+                recipient = detail; // Save clean name for downstream
+              }
+            } else {
+              // Original crypto Address Book lookup
+              if (e.type === "deposit" && (!recipient || recipient === "Unknown")) {
+                const lbl = getBankLabel(e.asset);
+                if (lbl) recipient = lbl;
+              }
+              const historyMatch = cacheData.withdrawalHistory.find(h => h.refid === e.refid);
+              if (historyMatch) {
+                const addr = historyMatch.info || historyMatch.address;
+                const addrMatch = cacheData.krakenAddresses.find(a => a.address === addr);
+                if (addrMatch) recipient = addrMatch.key + ((addrMatch.asset === 'GBP' || addrMatch.asset === 'EUR') ? ' (' + addrMatch.asset + ')' : '');
+                else if (addr) recipient = addr;
+              }
+
+              if (recipient) {
+                const _m = recipient.match(/\s*\((GBP|EUR)\)\s*$/);
+                const _suf = _m ? " (" + _m[1] + ")" : "";
+                const _base = recipient.replace(/\s*\((GBP|EUR)\)\s*$/, "");
+                const words = _base.split(/\s+/).slice(0, 2).join(" ") + _suf;
+                detail = `${words}`;
+                row.details = detail;
+              } else if (e.info && e.info !== "Withdrawal" && e.info !== "Deposit") {
+                detail = e.info;
+              }
             }
-            // 1. History Lookup
-            const historyMatch = cacheData.withdrawalHistory.find(h => h.refid === e.refid);
-            if (historyMatch) {
-              const addr = historyMatch.info || historyMatch.address;
-              const addrMatch = cacheData.krakenAddresses.find(a => a.address === addr);
-              if (addrMatch) recipient = addrMatch.key + ((addrMatch.asset === 'GBP' || addrMatch.asset === 'EUR') ? ' (' + addrMatch.asset + ')' : '');
-              else if (addr) recipient = addr;
-            }
-
-            if (recipient) {
-              // Take first 2 words
-              const _m = recipient.match(/\s*\((GBP|EUR)\)\s*$/);
-              const _suf = _m ? " (" + _m[1] + ")" : "";
-              const _base = recipient.replace(/\s*\((GBP|EUR)\)\s*$/, "");
-              const words = _base.split(/\s+/).slice(0, 2).join(" ") + _suf;
-              // Clean common suffixes if needed, or just trust words
-              detail = `${words}`;
-
-              // v3.028: Fix "Withdrawal (EUR)" showing instead of name
-              // Use the detected name as the primary detail
-              row.details = detail;
-
-            } else if (e.info && e.info !== "Withdrawal" && e.info !== "Deposit") {
-              // v3.017: Fallback to ledger info if no address match (e.g. "Revolut Ltd")
-              detail = e.info;
-            }
-
-            // Fix: Override for Revolut GBP
-            // v3.030: User requested NO hardcoding of bank names.
-            // Keeping dynamic logic only.
-            // if (detail === "Revolut Ltd") { detail = "Revolut Business"; }
 
             // Append Asset (cleaned)
             let cleanAsset = normalizedAsset.replace("ZEUR", "EUR").replace("ZGBP", "GBP").replace("ZUSD", "USD");
@@ -4507,32 +4480,15 @@ Purpose: GitHub Pages testing
           return (w.length <= 2) ? w.join(" ") : w.slice(0, 2).join(" ");
         };
 
-        const isVerifiedAddress = (a) => {
-          const v = a && a.verified;
-          if (v === undefined || v === null) return true; // treat missing as verified for display purposes
-          if (v === true) return true;
-          const s = String(v).toLowerCase();
-          return (s === "true" || s === "1");
-        };
-
-        const fallbackInstitutionFromAddressBook = (ccy) => {
-          try {
-            const addrs = (cacheData && cacheData.krakenAddresses) ? cacheData.krakenAddresses : [];
-            const hits = addrs.filter(a => normAsset(a.asset) === ccy && isVerifiedAddress(a) && a.key);
-            if (!hits.length) return null;
-            return firstTwoWords(hits[0].key);
-          } catch (_) {
-            return null;
-          }
-        };
-
+        // v4.00-57 FIAT LABEL RULE: We explicitly do NOT fallback to the address book here anymore.
+        // It simply uses the API-derived name passed from the bank report logic.
         for (const ccy of ["GBP", "EUR"]) {
           const total = (ccy === "GBP") ? depositTotals.GBP : depositTotals.EUR;
           if (!total || total <= 0) continue;
 
-          // Prefer institution label evidenced by fiat withdrawals in-period (e.g., "Revolut Ltd"),
-          // otherwise fallback to the configured address-book key (e.g., "Revolut Business"/"Revolut B").
-          const inst = fiatInstitutionByCurrency[ccy] || fallbackInstitutionFromAddressBook(ccy) || "Bank";
+          // Prefer institution label dynamically generated by fiat withdrawals in-period
+          // otherwise fallback to "Haricom Bank".
+          const inst = fiatInstitutionByCurrency[ccy] || "Haricom Bank";
           const label = `${inst} (${ccy})`;
 
           rows.push({
