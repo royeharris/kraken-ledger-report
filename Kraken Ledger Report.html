@@ -503,7 +503,7 @@ Purpose: GitHub Pages testing
 
 
   <script>
-    const APP_VERSION = "v4.10-03-HOTFIX-OHLC-DIRECT";
+    const APP_VERSION = "v4.10-04-HOTFIX-EURGBP-KRAKEN";
   </script>
 
 
@@ -3406,20 +3406,49 @@ Purpose: GitHub Pages testing
           const usdtRates = await getKrakenRate("USDT", timestamp);
           const xrpRates = await getKrakenRate("XRP", timestamp);
 
-          // Direct EUR/GBP day-rate for fiat GBP-equivalents (avoids USDT cross-rate ambiguity)
+          // v4.10-04: Get EUR/GBP from Kraken OHLC directly (fast, no Frankfurter needed as primary)
           let eurGbpRate = null;
           try {
-            const fxUrl = `https://api.frankfurter.app/${dateStr}?from=EUR&to=GBP`;
-            const fxResp = await fetchWithTimeout(fxUrl);
-            if (fxResp && fxResp.ok) {
-              const fxData = await fxResp.json();
-              if (fxData && fxData.rates && typeof fxData.rates.GBP === "number") {
-                eurGbpRate = fxData.rates.GBP;
+            const eurgbpUrl = "https://api.kraken.com/0/public/OHLC?pair=EURGBP&interval=1440&since=" + Math.floor(timestamp - 86400);
+            const eurgbpResp = await fetchWithTimeout(eurgbpUrl, {}, 8000);
+            if (eurgbpResp && eurgbpResp.ok) {
+              const eurgbpData = await eurgbpResp.json();
+              if (eurgbpData.result && Object.keys(eurgbpData.result).length > 0) {
+                const pairData = Object.values(eurgbpData.result).find(v => Array.isArray(v));
+                if (pairData && pairData.length > 0) {
+                  // Find candle closest to our timestamp
+                  let best = null, bestDiff = Infinity;
+                  for (const candle of pairData) {
+                    const diff = Math.abs(candle[0] - timestamp);
+                    if (diff < bestDiff) { bestDiff = diff; best = candle; }
+                  }
+                  if (best && bestDiff < 7 * 24 * 3600) {
+                    eurGbpRate = parseFloat(best[4]); // close price
+                    logTrace("EUR/GBP via Kraken OHLC: " + eurGbpRate);
+                  }
+                }
               }
             }
           } catch (e) {
-            const msg = (e && e.name === 'AbortError') ? 'Timed out (20s)' : (e.message || e);
-            logTrace("Frankfurter EUR→GBP daily rate failed: " + msg);
+            // Kraken OHLC failed — try Frankfurter with short timeout as fallback
+          }
+
+          // Frankfurter fallback (short timeout — don't let it block for 20s)
+          if (eurGbpRate === null) {
+            try {
+              const fxUrl = `https://api.frankfurter.app/${dateStr}?from=EUR&to=GBP`;
+              const fxResp = await fetchWithTimeout(fxUrl, {}, 5000);
+              if (fxResp && fxResp.ok) {
+                const fxData = await fxResp.json();
+                if (fxData && fxData.rates && typeof fxData.rates.GBP === "number") {
+                  eurGbpRate = fxData.rates.GBP;
+                  logTrace("EUR/GBP via Frankfurter fallback: " + eurGbpRate);
+                }
+              }
+            } catch (e) {
+              const msg = (e && e.name === 'AbortError') ? 'Timed out (5s)' : (e.message || e);
+              logTrace("EUR/GBP all sources failed: " + msg + " — EUR/GBP conversions will be skipped for " + dateStr);
+            }
           }
 
           cacheData.ratesCache[dateStr] = {
