@@ -2960,7 +2960,8 @@ Purpose: GitHub Pages testing
     }
 
     // v4.10-01 HOTFIX: fetch wrapper with hard timeout to prevent hung API calls stalling the loop
-    async function fetchWithTimeout(url, options = {}, timeoutMs = 8000) {
+    // v4.10-02: increased to 20s to accommodate Cloudflare Zero Trust latency on some networks
+    async function fetchWithTimeout(url, options = {}, timeoutMs = 20000) {
       const controller = new AbortController();
       const id = setTimeout(() => controller.abort(), timeoutMs);
       try {
@@ -3086,7 +3087,8 @@ Purpose: GitHub Pages testing
                   }
                 }
               } catch (e) {
-                logTrace("Forex API fallback failed: " + e.message);
+                const msg = (e && e.name === 'AbortError') ? 'Timed out (20s)' : (e.message || e);
+                logTrace("Frankfurter USD→GBP fallback failed: " + msg);
               }
             }
 
@@ -3138,7 +3140,8 @@ Purpose: GitHub Pages testing
             }
           }
         } catch (e) {
-          logTrace("Forex API fallback failed: " + e.message);
+          const msg = (e && e.name === 'AbortError') ? 'Timed out (20s)' : (e.message || e);
+          logTrace("Frankfurter USDT/GBP fallback failed: " + msg);
         }
       }
 
@@ -3162,14 +3165,19 @@ Purpose: GitHub Pages testing
 
               // Now get USD/GBP from forex API
               const forexUrl = `https://api.frankfurter.app/${dateStr}?from=USD&to=GBP`;
-              const forexResp = await fetchWithTimeout(forexUrl);
-              if (forexResp.ok) {
-                const forexData = await forexResp.json();
-                if (forexData.rates && forexData.rates.GBP) {
-                  rates.gbpRate = xrpUsd * forexData.rates.GBP;
-                  rates.rateSource = "CryptoCompare";
-                  logTrace("XRP/GBP via CryptoCompare+Forex: " + rates.gbpRate);
+              try {
+                const forexResp = await fetchWithTimeout(forexUrl);
+                if (forexResp.ok) {
+                  const forexData = await forexResp.json();
+                  if (forexData.rates && forexData.rates.GBP) {
+                    rates.gbpRate = xrpUsd * forexData.rates.GBP;
+                    rates.rateSource = "CryptoCompare";
+                    logTrace("XRP/GBP via CryptoCompare+Forex: " + rates.gbpRate);
+                  }
                 }
+              } catch (fe) {
+                const msg = (fe && fe.name === 'AbortError') ? 'Timed out (20s)' : (fe.message || fe);
+                logTrace("Frankfurter USD→GBP (XRP step 2) failed: " + msg);
               }
             } else {
               logTrace("CryptoCompare returned no data for XRP: " + (ccData.Message || "No data"));
@@ -3179,7 +3187,8 @@ Purpose: GitHub Pages testing
             logTrace("CryptoCompare error: " + ccResp.status + " - " + errText.substring(0, 100));
           }
         } catch (e) {
-          logTrace("CryptoCompare/Forex API fallback for XRP failed: " + e.message);
+          const msg = (e && e.name === 'AbortError') ? 'Timed out (20s)' : (e.message || e);
+          logTrace("CryptoCompare XRP/USD fallback failed: " + msg);
         }
       }
 
@@ -3408,7 +3417,8 @@ Purpose: GitHub Pages testing
               }
             }
           } catch (e) {
-            // Keep eurGbpRate as null; do not block report generation
+            const msg = (e && e.name === 'AbortError') ? 'Timed out (20s)' : (e.message || e);
+            logTrace("Frankfurter EUR→GBP daily rate failed: " + msg);
           }
 
           cacheData.ratesCache[dateStr] = {
