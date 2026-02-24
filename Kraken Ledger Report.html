@@ -503,7 +503,7 @@ Purpose: GitHub Pages testing
 
 
   <script>
-    const APP_VERSION = "v4.10-01-HOTFIX-RATE-FETCH";
+    const APP_VERSION = "v4.10-03-HOTFIX-OHLC-DIRECT";
   </script>
 
 
@@ -3005,7 +3005,8 @@ Purpose: GitHub Pages testing
       async function fetchOHLC(pair, since) {
         if (isOldDate) return null; // v4.10-01: skip proxy call entirely for old dates
         try {
-          const url = proxy + "https://api.kraken.com/0/public/OHLC?pair=" + pair + "&interval=1440&since=" + Math.floor(since);
+          // v4.10-03: Kraken OHLC is a PUBLIC endpoint — call directly, no proxy needed
+          const url = "https://api.kraken.com/0/public/OHLC?pair=" + pair + "&interval=1440&since=" + Math.floor(since);
           const response = await fetchWithTimeout(url);
           const data = await response.json();
 
