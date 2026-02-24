@@ -503,7 +503,7 @@ Purpose: GitHub Pages testing
 
 
   <script>
-    const APP_VERSION = "v4.10-00-Baseline";
+    const APP_VERSION = "v4.10-01-HOTFIX-RATE-FETCH";
   </script>
 
 
@@ -1057,6 +1057,7 @@ Purpose: GitHub Pages testing
       localStorage.removeItem("kraken_v2_withdrawals");
       localStorage.removeItem("kraken_v2_rates_" + APP_VERSION);
       localStorage.removeItem("kraken_summary_staging_" + APP_VERSION);
+      localStorage.removeItem("kraken_rates_cache"); // v4.10-01: clear the version-agnostic rate cache
 
       // Clear Views
       renderPreview();
@@ -2958,6 +2959,20 @@ Purpose: GitHub Pages testing
       return null;
     }
 
+    // v4.10-01 HOTFIX: fetch wrapper with hard timeout to prevent hung API calls stalling the loop
+    async function fetchWithTimeout(url, options = {}, timeoutMs = 8000) {
+      const controller = new AbortController();
+      const id = setTimeout(() => controller.abort(), timeoutMs);
+      try {
+        const resp = await fetch(url, { ...options, signal: controller.signal });
+        clearTimeout(id);
+        return resp;
+      } catch (e) {
+        clearTimeout(id);
+        throw e;
+      }
+    }
+
     // Get historical exchange rate from Kraken public API
     // Returns { gbpRate, eurRate } for the given asset at the given timestamp
     // Strategy: Fetch USD pair (more history) and convert via GBP/USD rate
@@ -2978,11 +2993,19 @@ Purpose: GitHub Pages testing
       // Use 30 days before to ensure we get historical data
       const thirtyDaysBefore = timestamp - (30 * 24 * 60 * 60);
 
-      // Helper to fetch rate from OHLC
+      // v4.10-01: dates older than 1 year skip Kraken OHLC (it never returns useful data for old dates)
+      const ONE_YEAR_SECS = 365 * 24 * 60 * 60;
+      const isOldDate = (Date.now() / 1000 - timestamp) > ONE_YEAR_SECS;
+      if (isOldDate) {
+        logTrace("Skipping Kraken OHLC for old date (>1yr): going direct to CryptoCompare/Frankfurter");
+      }
+
+      // Helper to fetch rate from OHLC — skipped for old dates
       async function fetchOHLC(pair, since) {
+        if (isOldDate) return null; // v4.10-01: skip proxy call entirely for old dates
         try {
           const url = proxy + "https://api.kraken.com/0/public/OHLC?pair=" + pair + "&interval=1440&since=" + Math.floor(since);
-          const response = await fetch(url);
+          const response = await fetchWithTimeout(url);
           const data = await response.json();
 
           if (data.result && Object.keys(data.result).length > 0) {
@@ -3007,7 +3030,7 @@ Purpose: GitHub Pages testing
             }
           }
         } catch (e) {
-          // Pair might not exist
+          // Pair might not exist or timed out
         }
         return null;
       }
@@ -3053,7 +3076,7 @@ Purpose: GitHub Pages testing
               try {
                 const dateStr = new Date(timestamp * 1000).toISOString().split("T")[0];
                 const forexUrl = `https://api.frankfurter.app/${dateStr}?from=USD&to=GBP`;
-                const resp = await fetch(forexUrl);
+                const resp = await fetchWithTimeout(forexUrl);
                 if (resp.ok) {
                   const data = await resp.json();
                   if (data.rates && data.rates.GBP) {
@@ -3105,7 +3128,7 @@ Purpose: GitHub Pages testing
         try {
           const dateStr = new Date(timestamp * 1000).toISOString().split("T")[0];
           const forexUrl = `https://api.frankfurter.app/${dateStr}?from=USD&to=GBP`;
-          const resp = await fetch(forexUrl);
+          const resp = await fetchWithTimeout(forexUrl);
           if (resp.ok) {
             const data = await resp.json();
             if (data.rates && data.rates.GBP) {
@@ -3127,7 +3150,7 @@ Purpose: GitHub Pages testing
 
           // Get XRP/USD from CryptoCompare (free API, no auth needed)
           const ccUrl = `https://min-api.cryptocompare.com/data/v2/histoday?fsym=XRP&tsym=USD&limit=1&toTs=${timestamp}`;
-          const ccResp = await fetch(ccUrl);
+          const ccResp = await fetchWithTimeout(ccUrl);
           logTrace("CryptoCompare response status: " + ccResp.status);
 
           if (ccResp.ok) {
@@ -3139,7 +3162,7 @@ Purpose: GitHub Pages testing
 
               // Now get USD/GBP from forex API
               const forexUrl = `https://api.frankfurter.app/${dateStr}?from=USD&to=GBP`;
-              const forexResp = await fetch(forexUrl);
+              const forexResp = await fetchWithTimeout(forexUrl);
               if (forexResp.ok) {
                 const forexData = await forexResp.json();
                 if (forexData.rates && forexData.rates.GBP) {
@@ -3377,7 +3400,7 @@ Purpose: GitHub Pages testing
           let eurGbpRate = null;
           try {
             const fxUrl = `https://api.frankfurter.app/${dateStr}?from=EUR&to=GBP`;
-            const fxResp = await fetch(fxUrl);
+            const fxResp = await fetchWithTimeout(fxUrl);
             if (fxResp && fxResp.ok) {
               const fxData = await fxResp.json();
               if (fxData && fxData.rates && typeof fxData.rates.GBP === "number") {
@@ -3399,7 +3422,10 @@ Purpose: GitHub Pages testing
             XRPSource: xrpRates.rateSource || "Kraken day rate"
           };
 
-
+          // v4.10-01 HOTFIX: persist rates to localStorage so reloads don't re-fetch everything
+          try {
+            localStorage.setItem("kraken_rates_cache", JSON.stringify(cacheData.ratesCache));
+          } catch (e) { /* localStorage quota exceeded — non-fatal */ }
 
           logTrace("Rates for " + dateStr + ": USDTGBP=" + usdtRates.gbpRate + ", XRPGBP=" + xrpRates.gbpRate + (eurGbpRate !== null ? ", EURGBP=" + eurGbpRate : ""));
 
@@ -5606,7 +5632,21 @@ Purpose: GitHub Pages testing
       if (savedWithdrawals) cacheData.withdrawals = JSON.parse(savedWithdrawals);
       if (savedAddresses) cacheData.krakenAddresses = JSON.parse(savedAddresses);
       if (savedHistory) cacheData.withdrawalHistory = JSON.parse(savedHistory);
-      if (savedRates) cacheData.ratesCache = JSON.parse(savedRates);
+      // v4.10-01: load version-agnostic rate cache first, then overlay with versioned cache if present
+      // This means rates survive a version bump without needing a full re-fetch
+      const savedRatesVersionless = localStorage.getItem("kraken_rates_cache");
+      if (savedRatesVersionless) {
+        try { cacheData.ratesCache = JSON.parse(savedRatesVersionless); } catch (e) { }
+      }
+      if (savedRates) {
+        try {
+          const versioned = JSON.parse(savedRates);
+          cacheData.ratesCache = Object.assign({}, cacheData.ratesCache, versioned);
+        } catch (e) { }
+      }
+      if (Object.keys(cacheData.ratesCache).length > 0) {
+        logTrace("Rates cache loaded from localStorage: " + Object.keys(cacheData.ratesCache).length + " dates");
+      }
 
       renderPreview();
       updateStatusCounts();
