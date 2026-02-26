@@ -32,6 +32,16 @@ The two documents that matter are produced in this order:
 
 **Future consideration**: If Google Sheets integration is later added as a data source, bank names could potentially be resolved dynamically from there. This is deferred.
 
+### 1a. Statement Summary Disclaimer Comment (Currency-Only Labels)
+When the deposits heading resolves to a currency-only form — i.e. **"Total Deposits (EUR)"** or **"Total Deposits (GBP)"** — it means all fiat deposits for that currency are being summed without distinguishing the originating bank account. In this case a disclaimer note must appear beneath the deposits section in the Statement Summary.
+
+**Design**:
+* Detect when the deposit label is of the form `"Total Deposits (EUR)"` or `"Total Deposits (GBP)"` (i.e. no specific bank has been selected; deposits are grouped by currency only).
+* Immediately below the deposits subtotal row, render a styled footnote, for example:
+  > *Note: Kraken does not record the source bank account for fiat deposits. This must be obtained from the individual Haricom Limited bank account statements (for example, Revolut Business and Santander Business).*
+* The note should be visually distinct (italic, muted colour, smaller font) so it reads as a footnote rather than a data row.
+* The note must **not** appear when a specific bank account label is active (i.e. the Specific option is selected and a label has been entered), because in that case the source is already identified.
+
 ---
 
 ## Priority 2: Ledger Extraction Progress Display
@@ -84,6 +94,13 @@ The two documents that matter are produced in this order:
 
 ---
 
+## Priority 6: Duplicate Google OAuth Client ID Field (Cosmetic)
+**Context**: In the API Configuration panel, the **"Google OAuth Client ID"** label and input field are rendered twice in succession. On inspection of the HTML, both `<div>` blocks are identical — same `id="googleOAuthClientId"`, same placeholder, same attributes. Because `document.getElementById()` always returns the **first** matching element, the second block is completely unreachable by the save/load JavaScript. The value entered in either field is correctly stored and loaded via the first element. This was previously fixed but appears to have been reverted.
+
+**Design**: Remove the **second** duplicate `<div class="col-md-6">` block (the one that appears below the first) so that exactly one `Google OAuth Client ID` label and input field remains. No JavaScript changes are needed.
+
+---
+
 ## Formalized Agent Directives
 These rules apply to all future implementation work and must be re-read before any coding session begins.
 
@@ -109,18 +126,40 @@ The object `fiatInstitutionByCurrency` is only populated when a fiat **withdrawa
 
 ---
 
-### Bug B: "Withdrawal (EUR)" Appearing in the Deposits Section
-**Symptom**: In date ranges containing EUR fiat withdrawals that did not match an address book entry (e.g., Dec 2025–Feb 2026), the Deposits section of the Statement Summary shows `"Withdrawal (EUR)"` as the deposit bank account label rather than a bank name.
+## Phase 2: Staged Fiat Label Refinement
 
-**Root Cause** (`generateStatementSummary`, line ~4429):
-```javascript
-if (!fiatInstitutionByCurrency[asset]) fiatInstitutionByCurrency[asset] = recipient;
-```
-This line is inside the **fiat withdrawal** processing block. When the EUR withdrawal has no address book match, the Kraken API `info` field returns a generic string (e.g., `"Withdrawal (EUR)"`), and this becomes the `recipient`. That generic string is then assigned to `fiatInstitutionByCurrency["EUR"]`, which is subsequently used to label the **deposit** rows — producing the nonsensical `"Withdrawal (EUR)"` deposit label.
+The refinement of fiat labels will be handled in three distinct stages to ensure clarity and avoid regressions.
 
-**Design Flaw**: The deposit label should never be derived from withdrawal recipient data. The two are unrelated; the current design assumed the same institution would always appear on both sides, which is incorrect.
+### Stage 1: Decouple Naming Logic [DONE]
+*   **Goal**: Stop the cross-contamination between withdrawals and deposits. 
+*   **Action**: In `generateStatementSummary`, remove the code that caches the first-seen withdrawal recipient name for use in the deposits section.
+*   **Result**: The Deposits section will no longer be affected by what the system finds in the withdrawals data. This is the prerequisite for fixing Bug C and Bug B.
 
-**Resolution**: Resolved by Priority 1 (Fiat Deposit Label config). The deposit label path must be fully decoupled from `fiatInstitutionByCurrency`. The deposit label should read exclusively from the user-configured `localStorage` setting.
+### Stage 2: Fix Bug C (Withdrawal Labels)
+*   **Goal**: Ensure fiat withdrawals show the correct institution (e.g., `"Revolut Ltd"`) instead of the generic `"Withdrawal (EUR)"` in the **Withdrawals** section.
+*   **Action**: Update the withdrawal name resolution to prioritize the `"key"` (the label assigned in Kraken) from the `WithdrawStatus` API.
+*   **Result**: Withdrawals will correctly display your assigned account labels.
+
+### Stage 3: Fix Bug B + Generic Deposit Labels
+*   **Goal**: Finalize the **Deposits** section with clear, generic labels since source bank data is unavailable.
+*   **Bug B Symptom**: The generic `"Withdrawal (EUR)"` (or any bank name) incorrectly appearing as a deposit label.
+*   **Action**: Fully implement the generic labels (e.g., `"Deposits (GBP)"`, `"Deposits (EUR)"`) for all deposit rows. Provide user configuration if specific labels are desired.
+*   **Result**: A clean, consistent display for deposits that accurately reflects the available data.
+
+---
+
+### Bug C: "Withdrawal (EUR)" Appearing in the Withdrawals Section
+**Symptom**: In the **Withdrawals to Haricom Bank Accounts GBP | EUR** section of the Statement Summary, a row labelled `"Withdrawal (EUR)"` appears as the bank account name, alongside the correct `"Revolut Ltd (GBP)"` row.
+
+**Corrected Assessment**: For fiat withdrawals, Kraken *must* have a destination "wallet address" or bank account link. The generic bank name (e.g., `"Revolut Ltd"`, `"Santander Business"`) is available within the Kraken API (often in the `info` or linked address fields). The symptom occurs when the system fails to correctly map the withdrawal record to its known bank destination, falling back instead to a generic `"Withdrawal (CCY)"` string.
+
+**Root Cause**: The current resolution logic in `generateBankReport` and `generateStatementSummary` sometimes defaults to the raw ledger `info` string when an address book match isn't found, but it fails to recognize that a generic banker name is almost always available in the withdrawal records or can be resolved from the address book if handled simply.
+
+**Resolution**: Simplify and prioritize bank name resolution for fiat withdrawals:
+*   Ensure that for any fiat withdrawal, the generic bank name (e.g., `"Revolut Ltd"`) is extracted from the Kraken API data as the primary label.
+*   Prioritize: `Address Book Label` > `Generic Bank Name (from API)` > `Currency-based Fallback`.
+*   Avoid complex "lookback" or "fallback" logic that produces generic `"Withdrawal"` labels when the bank name is known to Kraken.
+*   This ensures consistency with the Statement and WTD reports, which already successfully use these labels.
 
 ---
 

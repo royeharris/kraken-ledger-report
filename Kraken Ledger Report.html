@@ -503,7 +503,7 @@ Purpose: GitHub Pages testing
 
 
   <script>
-    const APP_VERSION = "v4.10-04-HOTFIX-EURGBP-KRAKEN";
+    const APP_VERSION = "v5.00-01";
   </script>
 
 
@@ -2549,33 +2549,6 @@ Purpose: GitHub Pages testing
     }
 
 
-    // v3.015: Global helper to load credentials (fix for ReferenceError)
-    function loadSavedCredentials() {
-      const savedKey = localStorage.getItem("kraken_api_key");
-      const savedPrivate = localStorage.getItem("kraken_private_key");
-      const savedProxyType = localStorage.getItem("kraken_cors_proxy_type");
-      const savedProxy = localStorage.getItem("kraken_cors_proxy");
-      const savedWithdrawKey = localStorage.getItem("kraken_withdraw_api_key");
-      const savedWithdrawPrivate = localStorage.getItem("kraken_withdraw_private_key");
-      const savedSheetId = localStorage.getItem("kraken_sheet_id");
-
-      if (savedKey) document.getElementById("krakenApiKey").value = savedKey;
-      if (savedPrivate) document.getElementById("krakenPrivateKey").value = savedPrivate;
-      if (savedProxyType) {
-        const sel = document.getElementById("corsProxySelect");
-        if (sel) sel.value = savedProxyType;
-        if (savedProxyType === "custom" && savedProxy) {
-          const inp = document.getElementById("corsProxy");
-          if (inp) { inp.value = savedProxy; inp.style.display = "block"; }
-        }
-      }
-      if (savedWithdrawKey) document.getElementById("withdrawApiKey").value = savedWithdrawKey;
-      if (savedWithdrawPrivate) document.getElementById("withdrawPrivateKey").value = savedWithdrawPrivate;
-      if (savedSheetId) document.getElementById("googleSheetId").value = savedSheetId;
-
-      logTrace("Credentials loaded from storage.");
-      initGoogleFromConfig(true);
-    }
 
     function toggleApiConfig() {
       const btn = document.getElementById("api_btn");
@@ -4492,7 +4465,6 @@ Purpose: GitHub Pages testing
               // FIAT EXPENSE (bank withdrawals)
               // IMPORTANT: Keep GBP and EUR on separate summary rows by suffixing the label with currency.
               // This prevents merged rows when Kraken 'info' uses the same institution string (e.g. 'Revolut Ltd') for both currencies.
-              if (!fiatInstitutionByCurrency[asset]) fiatInstitutionByCurrency[asset] = recipient;
               const fiatKey = `${recipient} (${asset})`;
               if (!fMap[fiatKey]) fMap[fiatKey] = { GBP: 0, EUR: 0, EUR_GBP: 0 };
 
