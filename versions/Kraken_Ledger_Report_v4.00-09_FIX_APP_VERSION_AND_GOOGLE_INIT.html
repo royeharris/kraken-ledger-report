@@ -1,5 +1,5 @@
 <!--
-Version: 4.00-12
+Version: 4.00-09
 Objective: Bank Label Normalisation (GBP/EUR)
 Source: Phase III-1 Bank Withdrawal Label Normalisation
 Constraint: NO REFACTOR
@@ -10,7 +10,6 @@ Purpose: GitHub Pages testing
 <html lang="en">
 
 <head>
-  <link rel="icon" type="image/png" href="favicon.png">
   <meta charset="utf-8" />
   <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport" />
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
@@ -504,7 +503,7 @@ Purpose: GitHub Pages testing
 
 
   <script>
-    const APP_VERSION = "v4.10-09-FIX-BUG-C-FINAL";
+    const APP_VERSION = "v4.00-09";
   </script>
 
 
@@ -603,9 +602,7 @@ Purpose: GitHub Pages testing
         <div style="font-size:0.7rem; font-weight:700; color:var(--primary); margin-bottom:4px;">Query API (for Ledger
           data)</div>
         <label>API Key</label>
-        <input autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off" data-1p-ignore="true"
-          data-lpignore="true" type="text" id="krakenApiKey" placeholder="API Key with Query permissions"
-          style="margin-bottom:4px;">
+        <input autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off" data-1p-ignore="true" data-lpignore="true" type="text" id="krakenApiKey" placeholder="API Key with Query permissions" style="margin-bottom:4px;">
         <label>Private Key</label>
         <input type="password" id="krakenPrivateKey" placeholder="Private Key (Base64)" style="margin-bottom:10px;">
 
@@ -618,42 +615,27 @@ Purpose: GitHub Pages testing
             style="font-size:0.6rem; color:#000; text-decoration:none;">Open Google Sheets ↗</a>
         </div>
         <input type="text" id="googleSheetId" placeholder="e.g. 1Vf0iqthwHv0kFqTRJkYShH..." style="margin-bottom:2px;">
-
-        <div class="col-md-6">
-          <label for="googleSheetsApiKey" class="form-label">Google Sheets API Key</label>
-          <input autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off" data-1p-ignore="true"
-            data-lpignore="true" type="text" class="form-control" id="googleSheetsApiKey"
-            placeholder="AIza... (stored locally)">
-
-          <div class="col-md-6">
-            <label for="googleOAuthClientId" class="form-label">Google OAuth Client ID</label>
-            <input autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off" data-1p-ignore="true"
-              data-lpignore="true" type="text" class="form-control" id="googleOAuthClientId"
-              placeholder="xxxxx-xxxxxxxx.apps.googleusercontent.com (stored locally)">
-          </div>
-
-          <div class="col-md-6">
-            <label for="googleOAuthClientId" class="form-label">Google OAuth Client ID</label>
-            <input autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off" data-1p-ignore="true"
-              data-lpignore="true" type="text" class="form-control" id="googleOAuthClientId"
-              placeholder="xxxxx-xxxxxxxx.apps.googleusercontent.com (stored locally)">
-          </div>
-
-          <div style="font-size:0.6rem; color:#95a5a6; margin-bottom:10px; line-height:1.2;">
-            Found in URL: .../spreadsheets/d/<b>ID_IS_HERE</b>/edit
-          </div>
-
-          <div
-            style="font-size:0.7rem; font-weight:700; color:var(--kraken); margin-bottom:4px; padding-top:8px; border-top:1px solid #ddd;">
-            Withdraw API (for Addresses - requires 2FA)</div>
-          <label>API Key</label>
-          <input autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off" data-1p-ignore="true"
-            data-lpignore="true" type="text" id="withdrawApiKey" placeholder="API Key with Withdraw permissions"
-            style="margin-bottom:4px;">
-
-
-
+        <div style="font-size:0.6rem; color:#95a5a6; margin-bottom:10px; line-height:1.2;">
+          Found in URL: .../spreadsheets/d/<b>ID_IS_HERE</b>/edit
         </div>
+
+        <div
+          style="font-size:0.7rem; font-weight:700; color:var(--kraken); margin-bottom:4px; padding-top:8px; border-top:1px solid #ddd;">
+          Withdraw API (for Addresses - requires 2FA)</div>
+        <label>API Key</label>
+        <input autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off" data-1p-ignore="true" data-lpignore="true" type="text" id="withdrawApiKey" placeholder="API Key with Withdraw permissions"
+          style="margin-bottom:4px;">
+
+            <div class="col-md-6">
+              <label for="googleSheetsApiKey" class="form-label">Google Sheets API Key</label>
+              <input autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off" data-1p-ignore="true" data-lpignore="true" type="text" class="form-control" id="googleSheetsApiKey" placeholder="AIza... (stored locally)">
+
+            <div class="col-md-6">
+              <label for="googleOAuthClientId" class="form-label">Google OAuth Client ID</label>
+              <input autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off" data-1p-ignore="true" data-lpignore="true" type="text" class="form-control" id="googleOAuthClientId" placeholder="xxxxx-xxxxxxxx.apps.googleusercontent.com (stored locally)">
+            </div>
+
+            </div>
 
         <label>Private Key</label>
         <input type="password" id="withdrawPrivateKey" placeholder="Private Key (Base64)" style="margin-bottom:10px;">
@@ -1058,7 +1040,6 @@ Purpose: GitHub Pages testing
       localStorage.removeItem("kraken_v2_withdrawals");
       localStorage.removeItem("kraken_v2_rates_" + APP_VERSION);
       localStorage.removeItem("kraken_summary_staging_" + APP_VERSION);
-      localStorage.removeItem("kraken_rates_cache"); // v4.10-01: clear the version-agnostic rate cache
 
       // Clear Views
       renderPreview();
@@ -1313,22 +1294,17 @@ Purpose: GitHub Pages testing
       const sheetId = document.getElementById("googleSheetId").value;
       const proxy = getSelectedProxy();
       const gasUrl = document.getElementById("gasProxyUrl").value;
-      const googleSheetsApiKey = document.getElementById("googleSheetsApiKey").value;
-      const googleOAuthClientId = document.getElementById("googleOAuthClientId").value;
 
       localStorage.setItem("kraken_api_key", apiKey);
       localStorage.setItem("kraken_private_key", privateKey);
       localStorage.setItem("kraken_withdraw_api_key", withdrawKey);
       localStorage.setItem("kraken_withdraw_private_key", withdrawPrivate);
-      localStorage.setItem("krk_google_sheets_api_key", googleSheetsApiKey || "");
-      localStorage.setItem("krk_google_oauth_client_id", googleOAuthClientId || "");
       if (sheetId && sheetId.trim()) localStorage.setItem("kraken_sheet_id", sheetId.trim());
 
       localStorage.setItem("kraken_cors_proxy", proxy);
       localStorage.setItem("kraken_cors_proxy_type", document.getElementById("corsProxySelect").value);
       localStorage.setItem("kraken_gas_proxy_url", gasUrl ? gasUrl.trim() : "");
 
-      initGoogleFromConfig(false);
       logTrace("API credentials saved (Query + Withdraw).");
       alert("API keys saved.");
     }
@@ -1926,7 +1902,7 @@ Purpose: GitHub Pages testing
     }
 
     // ---------- Google Auth / Sheets ----------
-
+    
     // v4.00-08: Initialise Google clients from saved config (prevents misleading 'not configured' logs at startup)
     function initGoogleFromConfig(silent) {
       try {
@@ -1961,9 +1937,15 @@ Purpose: GitHub Pages testing
       }
     }
 
-    function gapiLoaded() {
+function gapiLoaded() {
       // v4.00-08: keep startup silent; init happens after API Config save/load
       initGoogleFromConfig(true);
+    }
+
+await gapi.client.init({ apiKey: apiKey });
+        await gapi.client.load("sheets", "v4");
+        logTrace("GAPI Ready.");
+      });
     }
 
     function gisLoaded() {
@@ -2231,9 +2213,9 @@ Purpose: GitHub Pages testing
 
             // 1. Calculate Flow Totals (GBP Eq where appropriate for columns)
             // 1. Calculate Flow Totals (GBP Eq where appropriate for columns)
-            // Deposits (Haricom Bank Accounts) - No r.asset, sum fields directly from deposit rows
-            const depGBP = (summaryRecords.deposits || []).reduce((acc, r) => acc + (Number(r.GBP) || 0), 0);
-            const depEUR = (summaryRecords.deposits || []).reduce((acc, r) => acc + (Number(r.EUR_GBP) || 0), 0);
+            // Deposits (Haricom Bank Accounts) - These HAVE r.asset
+            const depGBP = _sumAsset(summaryRecords.deposits, "GBP", "total");
+            const depEUR = _sumAsset(summaryRecords.deposits, "EUR", "gbpEq");
 
             // Withdrawals (Recipients) - USDT/XRP (No r.asset, sum fields directly from crypto rows)
             const sumCryptoField = (arr, field) => {
@@ -2550,6 +2532,33 @@ Purpose: GitHub Pages testing
     }
 
 
+    // v3.015: Global helper to load credentials (fix for ReferenceError)
+    function loadSavedCredentials() {
+      const savedKey = localStorage.getItem("kraken_api_key");
+      const savedPrivate = localStorage.getItem("kraken_private_key");
+      const savedProxyType = localStorage.getItem("kraken_cors_proxy_type");
+      const savedProxy = localStorage.getItem("kraken_cors_proxy");
+      const savedWithdrawKey = localStorage.getItem("kraken_withdraw_api_key");
+      const savedWithdrawPrivate = localStorage.getItem("kraken_withdraw_private_key");
+      const savedSheetId = localStorage.getItem("kraken_sheet_id");
+
+      if (savedKey) document.getElementById("krakenApiKey").value = savedKey;
+      if (savedPrivate) document.getElementById("krakenPrivateKey").value = savedPrivate;
+      if (savedProxyType) {
+        const sel = document.getElementById("corsProxySelect");
+        if (sel) sel.value = savedProxyType;
+        if (savedProxyType === "custom" && savedProxy) {
+          const inp = document.getElementById("corsProxy");
+          if (inp) { inp.value = savedProxy; inp.style.display = "block"; }
+        }
+      }
+      if (savedWithdrawKey) document.getElementById("withdrawApiKey").value = savedWithdrawKey;
+      if (savedWithdrawPrivate) document.getElementById("withdrawPrivateKey").value = savedWithdrawPrivate;
+      if (savedSheetId) document.getElementById("googleSheetId").value = savedSheetId;
+
+      logTrace("Credentials loaded from storage.");
+      initGoogleFromConfig(true);
+    }
 
     function toggleApiConfig() {
       const btn = document.getElementById("api_btn");
@@ -2882,7 +2891,7 @@ Purpose: GitHub Pages testing
       const withdrawCreds = getWithdrawCredentials();
 
       // Try both USDT and XRP (common assets for withdrawals)
-      const assets = ["USDT", "XXRP", "ZUSD", "ZGBP", "ZEUR", "GBP", "EUR"];
+      const assets = ["USDT", "XXRP", "ZUSD", "ZGBP"];
       const allWithdrawals = [];
 
       for (const asset of assets) {
@@ -2910,48 +2919,6 @@ Purpose: GitHub Pages testing
       return allWithdrawals;
     }
 
-
-
-    // v4.00-58 Helper: Dynamically determine Fiat Bank Name from Withdrawal History
-    // Used for labeling fiat deposits which lack 'info' strings from the Kraken API.
-    function getFiatBankNameFromHistory(asset) {
-      if (!cacheData.withdrawalHistory || !cacheData.withdrawalHistory.length) return null;
-      const cleanAsset = (asset || "").toUpperCase().replace(/^Z/, "");
-      if (cleanAsset !== "GBP" && cleanAsset !== "EUR") return null;
-
-      // Find the most recent withdrawal in history matching this fiat currency
-      // v4.10-08: Simply prioritize 'key' (user's label), then 'method', then 'info'
-      const match = cacheData.withdrawalHistory.find(h => {
-        const hAsset = (h.asset || "").toUpperCase().replace(/^Z/, "");
-        return hAsset === cleanAsset && (h.key || h.method || h.info);
-      });
-
-      if (match) {
-        const rawName = match.key || match.method || match.info;
-        if (!rawName) return null;
-
-        // Extract up to 2 words (e.g., "Revolut Ltd")
-        const words = String(rawName).trim().split(/\s+/).filter(Boolean);
-        return (words.length <= 2) ? words.join(" ") : words.slice(0, 2).join(" ");
-      }
-      return null;
-    }
-
-    // v4.10-01 HOTFIX: fetch wrapper with hard timeout to prevent hung API calls stalling the loop
-    // v4.10-02: increased to 20s to accommodate Cloudflare Zero Trust latency on some networks
-    async function fetchWithTimeout(url, options = {}, timeoutMs = 20000) {
-      const controller = new AbortController();
-      const id = setTimeout(() => controller.abort(), timeoutMs);
-      try {
-        const resp = await fetch(url, { ...options, signal: controller.signal });
-        clearTimeout(id);
-        return resp;
-      } catch (e) {
-        clearTimeout(id);
-        throw e;
-      }
-    }
-
     // Get historical exchange rate from Kraken public API
     // Returns { gbpRate, eurRate } for the given asset at the given timestamp
     // Strategy: Fetch USD pair (more history) and convert via GBP/USD rate
@@ -2972,20 +2939,11 @@ Purpose: GitHub Pages testing
       // Use 30 days before to ensure we get historical data
       const thirtyDaysBefore = timestamp - (30 * 24 * 60 * 60);
 
-      // v4.10-01: dates older than 1 year skip Kraken OHLC (it never returns useful data for old dates)
-      const ONE_YEAR_SECS = 365 * 24 * 60 * 60;
-      const isOldDate = (Date.now() / 1000 - timestamp) > ONE_YEAR_SECS;
-      if (isOldDate) {
-        logTrace("Skipping Kraken OHLC for old date (>1yr): going direct to CryptoCompare/Frankfurter");
-      }
-
-      // Helper to fetch rate from OHLC — skipped for old dates
+      // Helper to fetch rate from OHLC
       async function fetchOHLC(pair, since) {
-        if (isOldDate) return null; // v4.10-01: skip proxy call entirely for old dates
         try {
-          // v4.10-03: Kraken OHLC is a PUBLIC endpoint — call directly, no proxy needed
-          const url = "https://api.kraken.com/0/public/OHLC?pair=" + pair + "&interval=1440&since=" + Math.floor(since);
-          const response = await fetchWithTimeout(url);
+          const url = proxy + "https://api.kraken.com/0/public/OHLC?pair=" + pair + "&interval=1440&since=" + Math.floor(since);
+          const response = await fetch(url);
           const data = await response.json();
 
           if (data.result && Object.keys(data.result).length > 0) {
@@ -3010,7 +2968,7 @@ Purpose: GitHub Pages testing
             }
           }
         } catch (e) {
-          // Pair might not exist or timed out
+          // Pair might not exist
         }
         return null;
       }
@@ -3056,7 +3014,7 @@ Purpose: GitHub Pages testing
               try {
                 const dateStr = new Date(timestamp * 1000).toISOString().split("T")[0];
                 const forexUrl = `https://api.frankfurter.app/${dateStr}?from=USD&to=GBP`;
-                const resp = await fetchWithTimeout(forexUrl);
+                const resp = await fetch(forexUrl);
                 if (resp.ok) {
                   const data = await resp.json();
                   if (data.rates && data.rates.GBP) {
@@ -3066,8 +3024,7 @@ Purpose: GitHub Pages testing
                   }
                 }
               } catch (e) {
-                const msg = (e && e.name === 'AbortError') ? 'Timed out (20s)' : (e.message || e);
-                logTrace("Frankfurter USD→GBP fallback failed: " + msg);
+                logTrace("Forex API fallback failed: " + e.message);
               }
             }
 
@@ -3109,7 +3066,7 @@ Purpose: GitHub Pages testing
         try {
           const dateStr = new Date(timestamp * 1000).toISOString().split("T")[0];
           const forexUrl = `https://api.frankfurter.app/${dateStr}?from=USD&to=GBP`;
-          const resp = await fetchWithTimeout(forexUrl);
+          const resp = await fetch(forexUrl);
           if (resp.ok) {
             const data = await resp.json();
             if (data.rates && data.rates.GBP) {
@@ -3119,8 +3076,7 @@ Purpose: GitHub Pages testing
             }
           }
         } catch (e) {
-          const msg = (e && e.name === 'AbortError') ? 'Timed out (20s)' : (e.message || e);
-          logTrace("Frankfurter USDT/GBP fallback failed: " + msg);
+          logTrace("Forex API fallback failed: " + e.message);
         }
       }
 
@@ -3132,7 +3088,7 @@ Purpose: GitHub Pages testing
 
           // Get XRP/USD from CryptoCompare (free API, no auth needed)
           const ccUrl = `https://min-api.cryptocompare.com/data/v2/histoday?fsym=XRP&tsym=USD&limit=1&toTs=${timestamp}`;
-          const ccResp = await fetchWithTimeout(ccUrl);
+          const ccResp = await fetch(ccUrl);
           logTrace("CryptoCompare response status: " + ccResp.status);
 
           if (ccResp.ok) {
@@ -3144,19 +3100,14 @@ Purpose: GitHub Pages testing
 
               // Now get USD/GBP from forex API
               const forexUrl = `https://api.frankfurter.app/${dateStr}?from=USD&to=GBP`;
-              try {
-                const forexResp = await fetchWithTimeout(forexUrl);
-                if (forexResp.ok) {
-                  const forexData = await forexResp.json();
-                  if (forexData.rates && forexData.rates.GBP) {
-                    rates.gbpRate = xrpUsd * forexData.rates.GBP;
-                    rates.rateSource = "CryptoCompare";
-                    logTrace("XRP/GBP via CryptoCompare+Forex: " + rates.gbpRate);
-                  }
+              const forexResp = await fetch(forexUrl);
+              if (forexResp.ok) {
+                const forexData = await forexResp.json();
+                if (forexData.rates && forexData.rates.GBP) {
+                  rates.gbpRate = xrpUsd * forexData.rates.GBP;
+                  rates.rateSource = "CryptoCompare";
+                  logTrace("XRP/GBP via CryptoCompare+Forex: " + rates.gbpRate);
                 }
-              } catch (fe) {
-                const msg = (fe && fe.name === 'AbortError') ? 'Timed out (20s)' : (fe.message || fe);
-                logTrace("Frankfurter USD→GBP (XRP step 2) failed: " + msg);
               }
             } else {
               logTrace("CryptoCompare returned no data for XRP: " + (ccData.Message || "No data"));
@@ -3166,8 +3117,7 @@ Purpose: GitHub Pages testing
             logTrace("CryptoCompare error: " + ccResp.status + " - " + errText.substring(0, 100));
           }
         } catch (e) {
-          const msg = (e && e.name === 'AbortError') ? 'Timed out (20s)' : (e.message || e);
-          logTrace("CryptoCompare XRP/USD fallback failed: " + msg);
+          logTrace("CryptoCompare/Forex API fallback for XRP failed: " + e.message);
         }
       }
 
@@ -3292,8 +3242,17 @@ Purpose: GitHub Pages testing
       // Sort ALL ledger entries by time (ascending) for trade matching
       const sortedLedger = [...cacheData.withdrawals].sort((a, b) => a.time - b.time);
 
-      // v4.00-13 Objective D: Bank label logic moved to getBankLabel() helper
-      // const bankLabelByAsset = {}; REMOVED
+      // v4.00-03 Objective D: bank label lookup by fiat asset (GBP/EUR) from Kraken address book
+      const bankLabelByAsset = {};
+      if (cacheData.krakenAddresses && cacheData.krakenAddresses.length) {
+        for (const a of cacheData.krakenAddresses) {
+          if (!a || !a.asset) continue;
+          if (a.asset !== "GBP" && a.asset !== "EUR") continue;
+          if (bankLabelByAsset[a.asset]) continue;
+          const _lbl = ((a.key || a.info || "").trim());
+          if (_lbl) bankLabelByAsset[a.asset] = _lbl + " (" + a.asset + ")";
+        }
+      }
 
 
       // Helper: Find immediately preceding trade that matches a withdrawal
@@ -3384,49 +3343,19 @@ Purpose: GitHub Pages testing
           const usdtRates = await getKrakenRate("USDT", timestamp);
           const xrpRates = await getKrakenRate("XRP", timestamp);
 
-          // v4.10-04: Get EUR/GBP from Kraken OHLC directly (fast, no Frankfurter needed as primary)
+          // Direct EUR/GBP day-rate for fiat GBP-equivalents (avoids USDT cross-rate ambiguity)
           let eurGbpRate = null;
           try {
-            const eurgbpUrl = "https://api.kraken.com/0/public/OHLC?pair=EURGBP&interval=1440&since=" + Math.floor(timestamp - 86400);
-            const eurgbpResp = await fetchWithTimeout(eurgbpUrl, {}, 8000);
-            if (eurgbpResp && eurgbpResp.ok) {
-              const eurgbpData = await eurgbpResp.json();
-              if (eurgbpData.result && Object.keys(eurgbpData.result).length > 0) {
-                const pairData = Object.values(eurgbpData.result).find(v => Array.isArray(v));
-                if (pairData && pairData.length > 0) {
-                  // Find candle closest to our timestamp
-                  let best = null, bestDiff = Infinity;
-                  for (const candle of pairData) {
-                    const diff = Math.abs(candle[0] - timestamp);
-                    if (diff < bestDiff) { bestDiff = diff; best = candle; }
-                  }
-                  if (best && bestDiff < 7 * 24 * 3600) {
-                    eurGbpRate = parseFloat(best[4]); // close price
-                    logTrace("EUR/GBP via Kraken OHLC: " + eurGbpRate);
-                  }
-                }
+            const fxUrl = `https://api.frankfurter.app/${dateStr}?from=EUR&to=GBP`;
+            const fxResp = await fetch(fxUrl);
+            if (fxResp && fxResp.ok) {
+              const fxData = await fxResp.json();
+              if (fxData && fxData.rates && typeof fxData.rates.GBP === "number") {
+                eurGbpRate = fxData.rates.GBP;
               }
             }
           } catch (e) {
-            // Kraken OHLC failed — try Frankfurter with short timeout as fallback
-          }
-
-          // Frankfurter fallback (short timeout — don't let it block for 20s)
-          if (eurGbpRate === null) {
-            try {
-              const fxUrl = `https://api.frankfurter.app/${dateStr}?from=EUR&to=GBP`;
-              const fxResp = await fetchWithTimeout(fxUrl, {}, 5000);
-              if (fxResp && fxResp.ok) {
-                const fxData = await fxResp.json();
-                if (fxData && fxData.rates && typeof fxData.rates.GBP === "number") {
-                  eurGbpRate = fxData.rates.GBP;
-                  logTrace("EUR/GBP via Frankfurter fallback: " + eurGbpRate);
-                }
-              }
-            } catch (e) {
-              const msg = (e && e.name === 'AbortError') ? 'Timed out (5s)' : (e.message || e);
-              logTrace("EUR/GBP all sources failed: " + msg + " — EUR/GBP conversions will be skipped for " + dateStr);
-            }
+            // Keep eurGbpRate as null; do not block report generation
           }
 
           cacheData.ratesCache[dateStr] = {
@@ -3440,10 +3369,7 @@ Purpose: GitHub Pages testing
             XRPSource: xrpRates.rateSource || "Kraken day rate"
           };
 
-          // v4.10-01 HOTFIX: persist rates to localStorage so reloads don't re-fetch everything
-          try {
-            localStorage.setItem("kraken_rates_cache", JSON.stringify(cacheData.ratesCache));
-          } catch (e) { /* localStorage quota exceeded — non-fatal */ }
+
 
           logTrace("Rates for " + dateStr + ": USDTGBP=" + usdtRates.gbpRate + ", XRPGBP=" + xrpRates.gbpRate + (eurGbpRate !== null ? ", EURGBP=" + eurGbpRate : ""));
 
@@ -3469,8 +3395,7 @@ Purpose: GitHub Pages testing
         const historyMatch = cacheData.withdrawalHistory.find(h => h.refid === w.refid);
 
         // Get address from history
-        // v4.10-06: Prioritize 'key' (user label) for withdrawals to avoid generic strings
-        let walletAddr = historyMatch ? (historyMatch.key || historyMatch.info || historyMatch.address || "") : "";
+        let walletAddr = historyMatch ? (historyMatch.info || historyMatch.address || "") : "";
         let destTag = historyMatch ? (historyMatch.dest || historyMatch.tag || "") : "";
 
         // Find recipient from krakenAddresses
@@ -3478,41 +3403,47 @@ Purpose: GitHub Pages testing
 
         // Helper to normalize string for matching (remove spaces, symbols, lowercase)
         const normalize = (s) => (s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+
         const walletAddrNorm = normalize(walletAddr);
 
-        // v4.00-59 NEW FIAT LABEL RULE: Bypass address book entirely for fiat. 
-        const isFiat = ["GBP", "EUR", "USD", "ZGBP", "ZEUR", "ZUSD"].includes(w.asset);
-
-        if (isFiat) {
-          if (w.type === "deposit") {
-            const dynamicName = getFiatBankNameFromHistory(w.asset);
-            fullRecipient = dynamicName ? dynamicName : (w.info && w.info !== "Deposit" ? w.info : "");
-          } else if (w.type === "withdrawal") {
-            fullRecipient = walletAddr; // e.g. "Revolut Ltd" from historyMatch.info
+        const addrMatch = cacheData.krakenAddresses.find(a => {
+          // Strict match on address field
+          if (a.address === walletAddr) {
+            return (destTag ? (a.tag === destTag) : (!a.tag));
           }
-        } else {
-          // v4.00-56 Legacy Crypto Match Logic
-          const addrMatch = cacheData.krakenAddresses.find(a => {
-            if (a.address === walletAddr) {
-              return (destTag ? (a.tag === destTag) : (!a.tag));
-            }
-            if (walletAddrNorm.length > 5 && (normalize(a.address) === walletAddrNorm || normalize(a.info) === walletAddrNorm)) {
-              return true;
-            }
-            return false;
-          });
+          // v2.48: Fuzzy/Normalized match for Fiat IBANs
+          // Check if normalised address in book matches normalised wallet address
+          // OR if the 'info' field (sometimes matches)
+          if (walletAddrNorm.length > 5 && (normalize(a.address) === walletAddrNorm || normalize(a.info) === walletAddrNorm)) {
+            return true;
+          }
+          return false;
+        });
 
-          if (addrMatch) {
-            fullRecipient = ((addrMatch.key || addrMatch.info || "").trim()) + ((addrMatch.asset === 'GBP' || addrMatch.asset === 'EUR') ? ' (' + addrMatch.asset + ')' : '');
+        if (addrMatch) {
+          // Use the Key Name from address book
+          fullRecipient = ((addrMatch.key || addrMatch.info || "").trim()) + ((addrMatch.asset === 'GBP' || addrMatch.asset === 'EUR') ? ' (' + addrMatch.asset + ')' : '');
+        } else {
+          // Fallback 1: Loose match on address only (for crypto non-tag assets)
+          // Fallback 1: Loose match on address only (for crypto non-tag assets)
+          const looseMatch = cacheData.krakenAddresses.find(a => a.address === walletAddr);
+          if (looseMatch) {
+            // If we found a match by address, use it.
+            // (We relax strict tag matching here because sometimes tags appear in "info" or are optional)
+            fullRecipient = (looseMatch.key || "").trim();
           } else {
-            const looseMatch = cacheData.krakenAddresses.find(a => a.address === walletAddr);
-            if (looseMatch) {
-              fullRecipient = (looseMatch.key || "").trim();
-            } else {
-              if (historyMatch && historyMatch.info) {
-                fullRecipient = historyMatch.info;
-              }
+            // Fallback 2: Use the 'info' field from withdrawal history directly if no book match
+            if (historyMatch && historyMatch.info) {
+              fullRecipient = historyMatch.info;
             }
+          }
+        }
+
+        // v2.48 Fallback 2: If still empty and it's a Fiat withdrawal, use the bank name from history
+        if (!fullRecipient && (w.type === "withdrawal")) {
+          const isFiat = w.asset.includes("GBP") || w.asset.includes("EUR") || w.asset.includes("USD") || w.asset.includes("ZGBP") || w.asset.includes("ZEUR") || w.asset.includes("ZUSD");
+          if (isFiat && walletAddr) {
+            fullRecipient = walletAddr; // e.g. "Revolut Ltd"
           }
         }
 
@@ -3750,9 +3681,6 @@ Purpose: GitHub Pages testing
     const TRACKED_ASSETS = ["GBP", "EUR", "USDT", "XRP"];
 
     async function generateBankReport() {
-      // v4.00-13 Objective D: Bank label logic moved to getBankLabel() helper
-      // const bankLabelByAsset = {}; REMOVED
-
       const btn = document.getElementById("btn_bank_statement");
       const sDateVal = document.getElementById("startDate").value;
       const eDateVal = document.getElementById("endDate").value;
@@ -4044,79 +3972,45 @@ Purpose: GitHub Pages testing
             // Enriched Logic: First 2 words of recipient
             let recipient = null;
 
-
-            // v4.00-59 NEW FIAT LABEL RULE: Strict asset matching to avoid USDT triggering USD.
-            const isFiat = ["GBP", "EUR", "USD", "ZGBP", "ZEUR", "ZUSD"].includes(e.asset);
-
-            if (isFiat && e.type === "deposit") {
-              // Fiat deposits from Kraken lack 'info' strings containing the bank. Use dynamic history scan.
-              const dynamicName = getFiatBankNameFromHistory(e.asset);
-              if (dynamicName) {
-                recipient = dynamicName;
-                detail = dynamicName;
-              }
-            } else if (isFiat && e.type === "withdrawal") {
-              // v4.10-09: Strict fiat withdrawal resolution
-              // 1. Identify specific withdrawal in history
-              const historyMatch = cacheData.withdrawalHistory.find(h => h.refid === e.refid);
-
-              let rawBankName = "";
-              if (historyMatch) {
-                // Prioritize user labels (key) or provider (method) or specific record info
-                rawBankName = historyMatch.key || historyMatch.method || historyMatch.info;
-
-                // If the string is generic API text, check the address book match
-                if (rawBankName && rawBankName.includes("Withdrawal")) {
-                  const addrMatch = cacheData.krakenAddresses.find(a => a.address === historyMatch.address);
-                  if (addrMatch) rawBankName = addrMatch.key;
+            
+              // v4.00-03 Objective D: ensure fiat deposits have bank recipient label for propagation
+              if (w.type === "deposit" && (!recipient || recipient === "Unknown")) {
+                const _fa = (asset || "").replace(/^Z/, "");
+                if ((_fa === "GBP" || _fa === "EUR") && bankLabelByAsset && bankLabelByAsset[_fa]) {
+                  recipient = bankLabelByAsset[_fa];
                 }
               }
-
-              // 2. Fallback to "Other Banks" instead of guessing by currency
-              if (!rawBankName || rawBankName.includes("Withdrawal")) {
-                if (e.info && !e.info.includes("Withdrawal") && e.info !== "Deposit") {
-                  rawBankName = e.info;
-                } else {
-                  rawBankName = "Other Banks";
-                }
-              }
-
-              // Apply name to report
-              const words = String(rawBankName).trim().split(/\s+/).filter(Boolean);
-              detail = (words.length <= 2) ? words.join(" ") : words.slice(0, 2).join(" ");
-              recipient = detail;
-
-            } else {
-              // v4.00-56 Legacy Crypto Match Logic
-
-              // 1. History Lookup
-              const historyMatch = cacheData.withdrawalHistory.find(h => h.refid === e.refid);
-              if (historyMatch) {
-                // v4.10-06: Prioritize key (label)
-                const addr = historyMatch.key || historyMatch.info || historyMatch.address;
-                const addrMatch = cacheData.krakenAddresses.find(a => a.address === addr);
-                if (addrMatch) recipient = addrMatch.key + ((addrMatch.asset === 'GBP' || addrMatch.asset === 'EUR') ? ' (' + addrMatch.asset + ')' : '');
-                else if (addr) recipient = addr;
-              }
-
-              if (recipient) {
-                // Take first 2 words
-                const _m = recipient.match(/\s*\((GBP|EUR)\)\s*$/);
-                const _suf = _m ? " (" + _m[1] + ")" : "";
-                const _base = recipient.replace(/\s*\((GBP|EUR)\)\s*$/, "");
-                const words = _base.split(/\s+/).slice(0, 2).join(" ") + _suf;
-                // Clean common suffixes if needed, or just trust words
-                detail = `${words}`;
-
-                // v3.028: Fix "Withdrawal (EUR)" showing instead of name
-                // Use the detected name as the primary detail
-                row.details = detail;
-
-              } else if (e.info && e.info !== "Withdrawal" && e.info !== "Deposit") {
-                // v3.017: Fallback to ledger info if no address match (e.g. "Revolut Ltd")
-                detail = e.info;
-              }
+// 1. History Lookup
+            const historyMatch = cacheData.withdrawalHistory.find(h => h.refid === e.refid);
+            if (historyMatch) {
+              const addr = historyMatch.info || historyMatch.address;
+              const addrMatch = cacheData.krakenAddresses.find(a => a.address === addr);
+              if (addrMatch) recipient = addrMatch.key + ((addrMatch.asset === 'GBP' || addrMatch.asset === 'EUR') ? ' (' + addrMatch.asset + ')' : '');
+              else if (addr) recipient = addr;
             }
+
+            if (recipient) {
+              // Take first 2 words
+              const _m = recipient.match(/\s*\((GBP|EUR)\)\s*$/);
+              const _suf = _m ? " (" + _m[1] + ")" : "";
+              const _base = recipient.replace(/\s*\((GBP|EUR)\)\s*$/, "");
+              const words = _base.split(/\s+/).slice(0, 2).join(" ") + _suf;
+              // Clean common suffixes if needed, or just trust words
+              detail = `${words}`;
+
+              // v3.028: Fix "Withdrawal (EUR)" showing instead of name
+              // Use the detected name as the primary detail
+              row.details = detail;
+
+            } else if (e.info && e.info !== "Withdrawal" && e.info !== "Deposit") {
+              // v3.017: Fallback to ledger info if no address match (e.g. "Revolut Ltd")
+              detail = e.info;
+            }
+
+            // Fix: Override for Revolut GBP
+            // v3.030: User requested NO hardcoding of bank names.
+            // Keeping dynamic logic only.
+            // if (detail === "Revolut Ltd") { detail = "Revolut Business"; }
 
             // Append Asset (cleaned)
             let cleanAsset = normalizedAsset.replace("ZEUR", "EUR").replace("ZGBP", "GBP").replace("ZUSD", "USD");
@@ -4321,12 +4215,8 @@ Purpose: GitHub Pages testing
       const cryptoTotals = {}; // { recipient: { USDT: 0, XRP: 0, USDT_GBP: 0, XRP_GBP: 0 } }
       const fMap = {};         // { recipient: { GBP: 0, EUR: 0, EUR_GBP: 0 } }
 
-      // Phase III-1: Canonical institution label per fiat currency for consistent Deposits/Withdrawals presentation
-      // Populated from actual fiat withdrawal rows in the selected period (transaction evidence), not by frequency.
-      const fiatInstitutionByCurrency = { GBP: null, EUR: null };
-
       // Global reset
-      depositTotals = { GBP: 0, EUR: 0 };
+      depositTotals = {};
       const depositGbpTotals = { GBP: 0, EUR: 0 };
 
       const feeTotals = { GBP: 0, EUR: 0, USDT: 0, XRP: 0 };
@@ -4364,8 +4254,7 @@ Purpose: GitHub Pages testing
         const rawTime = (item._raw && item._raw.time) ? item._raw.time : null;
 
         // --- 1. RECIPIENT IDENTIFICATION ---
-        // v4.00-03: Prioritize authoritative recipient from Canonical Resolver
-        let recipient = item.recipient || item.details || "Unknown";
+        let recipient = item.details || "Unknown";
 
         // v3.045-19.40: Smart Name Extraction
         // If details is just "Withdrawal" (common for Bank Transfers), try to use the raw address label if available
@@ -4374,16 +4263,21 @@ Purpose: GitHub Pages testing
         // Let's refine the cleanup to ensure "Revolut Ltd" etc comes through.
 
         // Cleanup: remove parenthetical assets e.g. " (USDT)"
-        recipient = recipient.replace(/\(.*\)/, "").trim();
+        recipient = recipient.replace(/\((?!GBP\b|EUR\b)[^)]*\)/, "").trim();
 
         // Cleanup: remove known asset keywords if they appear floating
         recipient = recipient.replace(/\s*(XRP|USDT|TRC20|ERC20|BTC|ETH)\s*/gi, "").trim();
 
         // v3.045-19.40: Enforce "First Two Words" rule for better formatting
         // This fixes "Revolut Business" showing as just "Withdrawal" if the logic previously failed.
-        const words = recipient.split(/\s+/);
+        const _m2 = recipient.match(/\s*\((GBP|EUR)\)\s*$/);
+        const _suf2 = _m2 ? " (" + _m2[1] + ")" : "";
+        const _base2 = recipient.replace(/\s*\((GBP|EUR)\)\s*$/, "");
+        const words = _base2.split(/\s+/);
         if (words.length > 2) {
-          recipient = words.slice(0, 2).join(" ");
+          recipient = words.slice(0, 2).join(" ") + _suf2;
+        } else {
+          recipient = _base2.trim() + _suf2;
         }
 
         // Specific Fix: If it's still just "Withdrawal" and we have a specific known bank pattern, or if it was overridden??
@@ -4401,14 +4295,7 @@ Purpose: GitHub Pages testing
         }
 
         // --- 2. PROCESS AMOUNTS ---
-        for (const [rawAsset, val] of Object.entries(item.amounts)) {
-          // Phase III-1: Normalize Kraken internal asset codes (ZEUR/ZGBP/XXRP)
-          let asset = rawAsset;
-          if (asset === "ZEUR" || asset === "EUR.HOLD") asset = "EUR";
-          else if (asset === "ZGBP" || asset === "GBP.HOLD") asset = "GBP";
-          else if (asset === "XXRP" || asset === "XRP.HOLD") asset = "XRP";
-          else if (asset === "ZUSD" || asset === "USD.HOLD") asset = "USD";
-
+        for (const [asset, val] of Object.entries(item.amounts)) {
           if (!val || val === 0) continue;
 
           // v3.045-18.3: Track Net Trade Flows for Reconciliation
@@ -4444,7 +4331,9 @@ Purpose: GitHub Pages testing
           if (lType === "deposit" && val > 0) {
             // DEPOSIT
             if (asset === "GBP" || asset === "EUR") {
-              depositTotals[asset] += absVal;
+              const _dKey = recipient + ((asset === "GBP" || asset === "EUR") ? " (" + asset + ")" : "");
+              if (!depositTotals[_dKey]) depositTotals[_dKey] = { GBP: 0, EUR: 0, EUR_GBP: 0 };
+              depositTotals[_dKey][asset] += absVal;
 
               // EUR Deposit -> GBP Equivalent
               if (asset === "EUR") {
@@ -4458,6 +4347,7 @@ Purpose: GitHub Pages testing
                   if (r) gbpEq = absVal * r;
                 }
                 if (gbpEq) depositGbpTotals.EUR += gbpEq;
+                if (_dKey && depositTotals[_dKey]) depositTotals[_dKey].EUR_GBP += gbpEq;
               }
             }
 
@@ -4482,13 +4372,11 @@ Purpose: GitHub Pages testing
               if (asset === "XRP") cryptoTotals[recipient].XRP_GBP += gbpEq;
 
             } else if (asset === "GBP" || asset === "EUR") {
-              // FIAT EXPENSE (bank withdrawals)
-              // IMPORTANT: Keep GBP and EUR on separate summary rows by suffixing the label with currency.
-              // This prevents merged rows when Kraken 'info' uses the same institution string (e.g. 'Revolut Ltd') for both currencies.
-              const fiatKey = `${recipient} (${asset})`;
-              if (!fMap[fiatKey]) fMap[fiatKey] = { GBP: 0, EUR: 0, EUR_GBP: 0 };
+              // FIAT EXPENSE
+              const _rKey = recipient + ((asset === "GBP" || asset === "EUR") ? " (" + asset + ")" : "");
+              if (!fMap[_rKey]) fMap[_rKey] = { GBP: 0, EUR: 0, EUR_GBP: 0 };
 
-              fMap[fiatKey][asset] += absVal;
+              fMap[_rKey][asset] += absVal;
 
               if (asset === "EUR") {
                 let gbpEq = 0;
@@ -4498,7 +4386,7 @@ Purpose: GitHub Pages testing
                   const r = getDailyRate("EUR", rawTime);
                   if (r) gbpEq = absVal * r;
                 }
-                if (gbpEq) fMap[fiatKey].EUR_GBP += gbpEq;
+                if (gbpEq) fMap[_rKey].EUR_GBP += gbpEq;
               }
             }
           } else {
@@ -4562,41 +4450,9 @@ Purpose: GitHub Pages testing
       const cryptoRows = Object.keys(cryptoTotals).map(r => ({ recipient: r, ...cryptoTotals[r] })).sort((a, b) => a.recipient.localeCompare(b.recipient));
       const fiatRows = Object.keys(fMap).map(r => ({ recipient: r, ...fMap[r] })).sort((a, b) => a.recipient.localeCompare(b.recipient));
 
-      const depositRows = (() => {
-        // Phase III-1: Deposits summary must align with bank-withdrawal labelling:
-        // - left column is bank account label (institution + currency suffix)
-        // - only include currencies that actually have deposits in the selected period
-        // - never emit zero-value placeholder rows
-        const rows = [];
-
-        const normAsset = (a) => (a || "").replace(/^Z/, "").replace(/^X/, "");
-
-        const firstTwoWords = (s) => {
-          if (!s) return "";
-          const w = String(s).trim().split(/\s+/).filter(Boolean);
-          return (w.length <= 2) ? w.join(" ") : w.slice(0, 2).join(" ");
-        };
-
-        // v4.00-57 FIAT LABEL RULE: We explicitly do NOT fallback to the address book here anymore.
-        // It simply uses the API-derived name passed from the bank report logic.
-        for (const ccy of ["GBP", "EUR"]) {
-          const total = (ccy === "GBP") ? depositTotals.GBP : depositTotals.EUR;
-          if (!total || total <= 0) continue;
-
-          // Prefer institution label dynamically generated by fiat withdrawals in-period
-          // otherwise fallback to "Haricom Bank".
-          const inst = fiatInstitutionByCurrency[ccy] || "Haricom Bank";
-          const label = `${inst} (${ccy})`;
-
-          rows.push({
-            recipient: label,
-            GBP: (ccy === "GBP") ? total : 0,
-            EUR: (ccy === "EUR") ? total : 0,
-            EUR_GBP: (ccy === "EUR") ? (depositGbpTotals.EUR || 0) : 0
-          });
-        }
-        return rows;
-      })();
+      const depositRows = Object.keys(depositTotals)
+        .map(r => ({ recipient: r, ...depositTotals[r] }))
+        .sort((a, b) => a.recipient.localeCompare(b.recipient));
 
       const feeRows = [
         { asset: "GBP", total: feeTotals.GBP, gbpEq: null },
@@ -4890,31 +4746,35 @@ Purpose: GitHub Pages testing
       html += '<div style="background:#27ae60; color:#fff; padding:5px 10px; font-size:0.7rem; font-weight:bold; border-radius:4px 4px 0 0; margin-bottom:0; margin-top:20px;">Deposits from Haricom Bank Accounts  GBP | EUR</div>';
       html += '<table style="width:100%; border-collapse:collapse; margin-bottom:20px; border:1px solid #ddd;">';
       html += '<thead><tr style="background:#f2f2f2;">';
-      html += '<th style="padding:4px; border:1px solid #ddd; text-align:left;">Haricom Bank Account</th>';
-      html += '<th style="padding:4px; border:1px solid #ddd; text-align:right;">GBP</th>';
-      html += '<th style="padding:4px; border:1px solid #ddd; text-align:right;">EUR</th>';
-      html += '<th style="padding:4px; border:1px solid #ddd; text-align:right;">GBP Equivalent</th>';
+      html += '<th style="padding:4px; border:1px solid #ddd; text-align:left;">Currency</th>';
+      html += '<th style="padding:4px; border:1px solid #ddd; text-align:right;">Total Amount</th><th style="padding:4px; border:1px solid #ddd; text-align:right;">GBP Equivalent</th>';
       html += '</tr></thead><tbody>';
+      const _hasDeposits = (summaryRecords.deposits || []).some(r => (Number(r.total) || 0) !== 0);
+      if (!_hasDeposits) {
+        html += '<tr><td colspan="3" style="padding:8px; border:1px solid #ddd; text-align:center; color:#666; font-style:italic;">No deposits found for this period.</td></tr>';
+      }
+      for (const r of (summaryRecords.deposits || [])) {
+        if (!_hasDeposits) break;
+        const asset = r.asset;
+        const total = parseFloat(r.total || 0);
+        const totalShow = total.toFixed(2);
 
-      const depositRecipients = summaryRecords.deposits || [];
-      if (depositRecipients.length === 0) {
-        html += '<tr><td colspan="4" style="padding:8px; border:1px solid #ddd; text-align:center; color:#666; font-style:italic;">No deposits found for this period.</td></tr>';
-      } else {
-        for (const r of depositRecipients) {
-          const gbpShow = (r.GBP && r.GBP > 0) ? r.GBP.toFixed(2) : "-";
-          const eurShow = (r.EUR && r.EUR > 0) ? r.EUR.toFixed(2) : "-";
-          const eqShow = (r.EUR && r.EUR > 0) ? (r.EUR_GBP ? r.EUR_GBP.toFixed(2) : "0.00") : "n/a";
-
-          const gbpStyle = (r.GBP && r.GBP > 0) ? "font-weight:bold; color:#000;" : "";
-          const eqStyle = (r.EUR && r.EUR > 0) ? "font-weight:bold; color:#000;" : "color:#7f8c8d;";
-
-          html += '<tr>';
-          html += `<td style="padding:4px; border:1px solid #ddd; text-align:left;">${escHtml(r.recipient)}</td>`;
-          html += `<td style="padding:4px; border:1px solid #ddd; text-align:right; ${gbpStyle}">${gbpShow}</td>`;
-          html += `<td style="padding:4px; border:1px solid #ddd; text-align:right;">${eurShow}</td>`;
-          html += `<td style="padding:4px; border:1px solid #ddd; text-align:right; ${eqStyle}">${eqShow}</td>`;
-          html += '</tr>';
+        let gbpEqShow = "-";
+        if (asset === "GBP") {
+          gbpEqShow = "n/a";
+        } else if (asset === "EUR") {
+          const eq = (typeof r.gbpEq === "number") ? r.gbpEq : parseFloat(r.gbpEq || 0);
+          gbpEqShow = (eq || total === 0) ? (eq || 0).toFixed(2) : "0.00";
         }
+
+        const totalStyle = (asset === "GBP") ? "font-weight:bold;" : "";
+        const eqStyle = (asset === "EUR") ? "font-weight:bold; color:#000;" : "color:#7f8c8d;";
+
+        html += '<tr>';
+        html += `<td style="padding:4px; border:1px solid #ddd;">${asset}</td>`;
+        html += `<td style="padding:4px; border:1px solid #ddd; text-align:right; ${totalStyle}">${totalShow}</td>`;
+        html += `<td style="padding:4px; border:1px solid #ddd; text-align:right; ${eqStyle}">${gbpEqShow}</td>`;
+        html += '</tr>';
       }
       html += '</tbody></table>';
 
@@ -5113,8 +4973,8 @@ Purpose: GitHub Pages testing
       if (Array.isArray(summaryRecords.deposits)) {
         for (const r of summaryRecords.deposits) {
           if (!r) continue;
-          depGBP += _n2(r.GBP);
-          depEUR += _n2(r.EUR_GBP);
+          if (r.asset === "GBP") depGBP += _n2(r.total);
+          if (r.asset === "EUR") depEUR += _n2(r.gbpEq);
         }
       }
 
@@ -5664,21 +5524,7 @@ Purpose: GitHub Pages testing
       if (savedWithdrawals) cacheData.withdrawals = JSON.parse(savedWithdrawals);
       if (savedAddresses) cacheData.krakenAddresses = JSON.parse(savedAddresses);
       if (savedHistory) cacheData.withdrawalHistory = JSON.parse(savedHistory);
-      // v4.10-01: load version-agnostic rate cache first, then overlay with versioned cache if present
-      // This means rates survive a version bump without needing a full re-fetch
-      const savedRatesVersionless = localStorage.getItem("kraken_rates_cache");
-      if (savedRatesVersionless) {
-        try { cacheData.ratesCache = JSON.parse(savedRatesVersionless); } catch (e) { }
-      }
-      if (savedRates) {
-        try {
-          const versioned = JSON.parse(savedRates);
-          cacheData.ratesCache = Object.assign({}, cacheData.ratesCache, versioned);
-        } catch (e) { }
-      }
-      if (Object.keys(cacheData.ratesCache).length > 0) {
-        logTrace("Rates cache loaded from localStorage: " + Object.keys(cacheData.ratesCache).length + " dates");
-      }
+      if (savedRates) cacheData.ratesCache = JSON.parse(savedRates);
 
       renderPreview();
       updateStatusCounts();

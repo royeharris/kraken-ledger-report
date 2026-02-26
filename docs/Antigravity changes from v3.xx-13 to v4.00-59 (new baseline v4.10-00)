@@ -1,0 +1,37 @@
+# Task List
+
+## Previous Fixes
+- [x] Math logic transplanted (v4.00-53)
+- [x] Blocking `continue` statement cleared (v4.00-54)
+- [x] HTML Table rendering loop replaced (v4.00-55)
+- [x] Reconciliation Aggregation variables replaced (v4.00-56)
+
+## Bank Label Normalization (Version 1)
+- [x] Investigate fiat label generation in `processLedger` (WTD Report)
+- [x] Investigate fiat label generation in `generateBankReport` (Statement Report)
+- [x] Investigate fiat label generation in `generateStatementSummary` (Summary Report)
+- [x] Present implementation plan focusing on simple `e.info (Asset)` logic ignoring Address Book
+- [x] Get user approval
+- [x] Replace complex resolution blocks with the new standard format
+- [x] Update version to `v4.00-57-Labels-Fixed`
+- [x] Commit and push to main for GitHub Pages deployment
+
+## Bank Label Normalization (Version 2)
+- [x] Restore legacy address book matcher blocks verbatim for Crypto individuals that broke in v4.00-57
+- [x] Diagnose fiat generic blank descriptions for Deposits
+- [x] Build `getFiatBankNameFromHistory()` to dynamically scan for the first generic API fiat string
+- [x] Splice `getFiatBankNameFromHistory()` into `generateBankReport` and `processLedger`
+- [x] Update version to `v4.00-58-Labels-Fixed-v2`
+- [x] Commit and push to main for GitHub Pages deployment
+
+## Bugfix (Regex Overreach)
+- [x] Diagnose why crypto names are still failing in v4.00-58
+- [x] Identify `w.asset.includes("USD")` returning TRUE for `USDT`
+- [x] Replace with strict explicit array match logic `["GBP", "EUR", "USD", ...].includes(w.asset)`
+- [x] Commit and push v4.00-59
+
+## Establishing New Baseline
+- [x] Confirm no logic changes requested for fiat deposits
+- [x] Acknowledge user ideas for future UI/UX improvements (progress bar, toggles, headers)
+- [x] Set APP_VERSION strictly to `v4.10-00-Baseline`
+- [x] Commit and push to `main` branch

@@ -1,22 +1,13 @@
-<!--
-Version: 4.00-12
-Objective: Bank Label Normalisation (GBP/EUR)
-Source: Phase III-1 Bank Withdrawal Label Normalisation
-Constraint: NO REFACTOR
-Purpose: GitHub Pages testing
--->
-
 <!DOCTYPE html>
 <html lang="en">
 
 <head>
-  <link rel="icon" type="image/png" href="favicon.png">
   <meta charset="utf-8" />
   <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" name="viewport" />
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-  <title>Kraken Ledger Report v4.00</title>
+  <title>Kraken Ledger Report v4.00-49</title>
   <script async defer src="https://accounts.google.com/gsi/client"></script>
   <script async defer src="https://apis.google.com/js/api.js"></script>
   <style>
@@ -504,7 +495,7 @@ Purpose: GitHub Pages testing
 
 
   <script>
-    const APP_VERSION = "v4.10-09-FIX-BUG-C-FINAL";
+    const APP_VERSION = "v4.00-49";
   </script>
 
 
@@ -518,7 +509,44 @@ Purpose: GitHub Pages testing
       if (traceEl && v) traceEl.textContent = `Trace: ${v} Kraken Withdrawals Report initialized.`;
 
       if (v) document.title = `Kraken Reports ${v}`;
+
+      // v4.00-22: Auto-load persistent data (Addresses/History) on startup
+      loadPersistentDataSilent();
     });
+
+    function loadPersistentDataSilent() {
+      try {
+        const addr = localStorage.getItem("kraken_v2_addresses");
+        const hist = localStorage.getItem("kraken_v2_history");
+
+        if (addr) {
+          cacheData.krakenAddresses = JSON.parse(addr);
+        }
+        if (hist) {
+          cacheData.withdrawalHistory = JSON.parse(hist);
+          // Rebuild Index
+          cacheData.withdrawalHistoryByRefid = {};
+          for (const w of cacheData.withdrawalHistory) {
+            if (w && w.refid) cacheData.withdrawalHistoryByRefid[w.refid] = w;
+          }
+        }
+
+        if (addr || hist) {
+          // We need to delay logging slightly or just log immediately if element exists
+          const log = document.getElementById("trace_log");
+          if (log) {
+            const now = new Date().toLocaleTimeString();
+            const msg = `[Auto-Load] Restored ${cacheData.krakenAddresses.length} addresses and ${cacheData.withdrawalHistory.length} history items.`;
+            log.textContent += "\n[" + now + "] " + msg;
+
+            // Update status counts silently
+            setTimeout(updateStatusCounts, 500);
+          }
+        }
+      } catch (e) {
+        console.error("Silent load failed", e);
+      }
+    }
   </script>
 
 </head>
@@ -603,9 +631,7 @@ Purpose: GitHub Pages testing
         <div style="font-size:0.7rem; font-weight:700; color:var(--primary); margin-bottom:4px;">Query API (for Ledger
           data)</div>
         <label>API Key</label>
-        <input autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off" data-1p-ignore="true"
-          data-lpignore="true" type="text" id="krakenApiKey" placeholder="API Key with Query permissions"
-          style="margin-bottom:4px;">
+        <input type="text" id="krakenApiKey" placeholder="API Key with Query permissions" style="margin-bottom:4px;">
         <label>Private Key</label>
         <input type="password" id="krakenPrivateKey" placeholder="Private Key (Base64)" style="margin-bottom:10px;">
 
@@ -618,43 +644,16 @@ Purpose: GitHub Pages testing
             style="font-size:0.6rem; color:#000; text-decoration:none;">Open Google Sheets ↗</a>
         </div>
         <input type="text" id="googleSheetId" placeholder="e.g. 1Vf0iqthwHv0kFqTRJkYShH..." style="margin-bottom:2px;">
-
-        <div class="col-md-6">
-          <label for="googleSheetsApiKey" class="form-label">Google Sheets API Key</label>
-          <input autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off" data-1p-ignore="true"
-            data-lpignore="true" type="text" class="form-control" id="googleSheetsApiKey"
-            placeholder="AIza... (stored locally)">
-
-          <div class="col-md-6">
-            <label for="googleOAuthClientId" class="form-label">Google OAuth Client ID</label>
-            <input autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off" data-1p-ignore="true"
-              data-lpignore="true" type="text" class="form-control" id="googleOAuthClientId"
-              placeholder="xxxxx-xxxxxxxx.apps.googleusercontent.com (stored locally)">
-          </div>
-
-          <div class="col-md-6">
-            <label for="googleOAuthClientId" class="form-label">Google OAuth Client ID</label>
-            <input autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off" data-1p-ignore="true"
-              data-lpignore="true" type="text" class="form-control" id="googleOAuthClientId"
-              placeholder="xxxxx-xxxxxxxx.apps.googleusercontent.com (stored locally)">
-          </div>
-
-          <div style="font-size:0.6rem; color:#95a5a6; margin-bottom:10px; line-height:1.2;">
-            Found in URL: .../spreadsheets/d/<b>ID_IS_HERE</b>/edit
-          </div>
-
-          <div
-            style="font-size:0.7rem; font-weight:700; color:var(--kraken); margin-bottom:4px; padding-top:8px; border-top:1px solid #ddd;">
-            Withdraw API (for Addresses - requires 2FA)</div>
-          <label>API Key</label>
-          <input autocapitalize="off" autocorrect="off" spellcheck="false" autocomplete="off" data-1p-ignore="true"
-            data-lpignore="true" type="text" id="withdrawApiKey" placeholder="API Key with Withdraw permissions"
-            style="margin-bottom:4px;">
-
-
-
+        <div style="font-size:0.6rem; color:#95a5a6; margin-bottom:10px; line-height:1.2;">
+          Found in URL: .../spreadsheets/d/<b>ID_IS_HERE</b>/edit
         </div>
 
+        <div
+          style="font-size:0.7rem; font-weight:700; color:var(--kraken); margin-bottom:4px; padding-top:8px; border-top:1px solid #ddd;">
+          Withdraw API (for Addresses - requires 2FA)</div>
+        <label>API Key</label>
+        <input type="text" id="withdrawApiKey" placeholder="API Key with Withdraw permissions"
+          style="margin-bottom:4px;">
         <label>Private Key</label>
         <input type="password" id="withdrawPrivateKey" placeholder="Private Key (Base64)" style="margin-bottom:10px;">
 
@@ -749,6 +748,7 @@ Purpose: GitHub Pages testing
             <th style="padding:4px; border:1px solid #90caf9; width:80px;">Balance</th>
             <th style="padding:4px; border:1px solid #90caf9; width:140px;">Ledger ID</th>
             <th style="padding:4px; border:1px solid #90caf9;">Ref ID</th>
+            <th style="padding:4px; border:1px solid #90caf9;">Info</th>
           </tr>
         </thead>
         <tbody id="ledgerTableBody">
@@ -811,7 +811,7 @@ Purpose: GitHub Pages testing
     <button id="log_btn" onclick="toggleLog()"
       style="width:100%; padding:8px; margin-top:10px; background:#8e44ad; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Display
       Progress Log</button>
-    <div id="trace_log" onclick="toggleLog()">Trace: v4.000 Kraken Ledger Report initialized.</div>
+    <div id="trace_log" onclick="toggleLog()">Trace: v4.00-20 Kraken Ledger Report initialized.</div>
   </div>
 
   <script>
@@ -1055,10 +1055,14 @@ Purpose: GitHub Pages testing
 
       // Clear LocalStorage
       localStorage.removeItem("kraken_staging");
+      localStorage.removeItem("kraken_v3_withdrawals");
+      // localStorage.removeItem("kraken_v3_history"); // Keep History
+      // localStorage.removeItem("kraken_v3_addresses"); // Keep Addresses
+      localStorage.removeItem("kraken_v3_rates_" + APP_VERSION);
+      // Legacy cleanup
       localStorage.removeItem("kraken_v2_withdrawals");
-      localStorage.removeItem("kraken_v2_rates_" + APP_VERSION);
-      localStorage.removeItem("kraken_summary_staging_" + APP_VERSION);
-      localStorage.removeItem("kraken_rates_cache"); // v4.10-01: clear the version-agnostic rate cache
+      // localStorage.removeItem("kraken_v2_history"); // Keep History
+      // localStorage.removeItem("kraken_v2_addresses"); // Keep Addresses
 
       // Clear Views
       renderPreview();
@@ -1257,15 +1261,17 @@ Purpose: GitHub Pages testing
     // ---------- Local Save/Load (v2.0) ----------
 
     // v3.043-2: Internal cache saver used by Summary/Closing Balances (silent, no alerts)
-    function saveCacheToLocalStorage() {
+    function saveCacheToLocalStorage(skipRates = false) {
+      if (typeof Storage === "undefined") return false;
       try {
         localStorage.setItem("kraken_v2_withdrawals", JSON.stringify(cacheData.withdrawals || []));
         localStorage.setItem("kraken_v2_history", JSON.stringify(cacheData.withdrawalHistory || []));
+        // v4.00-20: Reverted to v2 to match Boot logic (Fixes Persistence Bug)
         localStorage.setItem("kraken_v2_addresses", JSON.stringify(cacheData.krakenAddresses || []));
         localStorage.setItem("kraken_v2_rates_" + APP_VERSION, JSON.stringify(cacheData.ratesCache || {}));
         // Optional: store computed withdrawalCache (used for GBP fallbacks)
         if (cacheData && Array.isArray(cacheData.withdrawalCache)) {
-          localStorage.setItem("kraken_v3_withdrawal_cache", JSON.stringify(cacheData.withdrawalCache));
+          localStorage.setItem("kraken_v2_withdrawal_cache", JSON.stringify(cacheData.withdrawalCache));
         }
         return true;
       } catch (e) {
@@ -1289,17 +1295,29 @@ Purpose: GitHub Pages testing
     }
 
     function loadLocalData() {
+      // v4.00-20: Reverted to v2 keys
       const cached = localStorage.getItem("kraken_v2_withdrawals");
       if (!cached) {
-        alert("No saved data found. Use 'Fetch & Generate Report' first.");
+        // Try v2 fallback? No, let's force a clean slate for safety.
+        alert("No saved data found (Cache Version v3). Please 'Fetch & Generate Report' again.");
         return;
       }
       cacheData.withdrawals = JSON.parse(cached || "[]");
       cacheData.withdrawalHistory = JSON.parse(localStorage.getItem("kraken_v2_history") || "[]");
       cacheData.krakenAddresses = JSON.parse(localStorage.getItem("kraken_v2_addresses") || "[]");
       cacheData.ratesCache = JSON.parse(localStorage.getItem("kraken_v2_rates_" + APP_VERSION) || "{}");
+
+      // CRITICAL FIX: Rebuild RefID Index after loading from Cache
+      cacheData.withdrawalHistoryByRefid = {};
+      if (cacheData.withdrawalHistory && cacheData.withdrawalHistory.length > 0) {
+        for (const w of cacheData.withdrawalHistory) {
+          if (w && w.refid) cacheData.withdrawalHistoryByRefid[w.refid] = w;
+        }
+        logTrace(`[Cache Load] Rebuilt RefID Index for ${Object.keys(cacheData.withdrawalHistoryByRefid).length} entries.`);
+      }
+
       updateStatusCounts();
-      logTrace("Loaded from localStorage. Withdrawals=" + cacheData.withdrawals.length);
+      logTrace("Loaded from localStorage (v3). Withdrawals=" + cacheData.withdrawals.length);
 
       // Regenerate report from cached data
       generateReportFromCache();
@@ -1313,28 +1331,28 @@ Purpose: GitHub Pages testing
       const sheetId = document.getElementById("googleSheetId").value;
       const proxy = getSelectedProxy();
       const gasUrl = document.getElementById("gasProxyUrl").value;
-      const googleSheetsApiKey = document.getElementById("googleSheetsApiKey").value;
-      const googleOAuthClientId = document.getElementById("googleOAuthClientId").value;
 
       localStorage.setItem("kraken_api_key", apiKey);
       localStorage.setItem("kraken_private_key", privateKey);
       localStorage.setItem("kraken_withdraw_api_key", withdrawKey);
       localStorage.setItem("kraken_withdraw_private_key", withdrawPrivate);
-      localStorage.setItem("krk_google_sheets_api_key", googleSheetsApiKey || "");
-      localStorage.setItem("krk_google_oauth_client_id", googleOAuthClientId || "");
       if (sheetId && sheetId.trim()) localStorage.setItem("kraken_sheet_id", sheetId.trim());
 
       localStorage.setItem("kraken_cors_proxy", proxy);
       localStorage.setItem("kraken_cors_proxy_type", document.getElementById("corsProxySelect").value);
       localStorage.setItem("kraken_gas_proxy_url", gasUrl ? gasUrl.trim() : "");
 
-      initGoogleFromConfig(false);
       logTrace("API credentials saved (Query + Withdraw).");
       alert("API keys saved.");
     }
 
     // ========== STEP 1: Read Ledger (Query API - no 2FA needed) ==========
     async function readLedger() {
+      // v4.00-38 Fix: Define buttons in outer scope for 'finally' block access
+      const btnRead = document.getElementById("read_ledger_btn");
+      const btnPull = document.getElementById("pull_btn");
+      const btnGen = document.getElementById("generate_btn");
+
       // Validate date range
       const startDate = document.getElementById("startDate").value;
       const endDate = document.getElementById("endDate").value;
@@ -1354,15 +1372,16 @@ Purpose: GitHub Pages testing
       logTrace("Date range: " + startDate + " to " + endDate);
       logTrace("Unix range: " + startTime + " to " + endTime);
 
-      // v3.045-19.47c: Fixed Scope - genBtn defined before try block
-      const genBtn = document.getElementById("generate_btn");
-
       try {
         const creds = getApiCredentials();
         logTrace("Using Query API Key: " + creds.apiKey.substring(0, 8) + "...");
         logTrace("Proxy: " + (creds.proxy || "(none)"));
 
-        if (genBtn) genBtn.disabled = true;
+        // v4.00-37: Mutual Exclusion - Disable ALL buttons
+        if (btnRead) btnRead.disabled = true;
+        if (btnPull) btnPull.disabled = true;
+        if (btnGen) btnGen.disabled = true;
+
         cacheData.withdrawals = []; // Clear stale data
 
         updateStatus("Reading Ledger...", "sync");
@@ -1414,7 +1433,20 @@ Purpose: GitHub Pages testing
                 asset: asset,
                 amount: parseFloat(entry.amount || 0),
                 fee: parseFloat(entry.fee || 0),
-                balance: parseFloat(entry.balance || 0)
+                balance: parseFloat(entry.balance || 0),
+                info: entry.info || "",  // v4.00-08: Capture info
+                // v4.00-08: Resolve Label immediately for Main Report consistency
+                recipient: (entry.type === 'withdrawal') ? finalizeWithdrawalRecipientLabel({
+                  label: resolveRecipientLabel({
+                  asset: asset,
+                  refid: entry.refid,
+                  historyMatch: cacheData.withdrawalHistoryByRefid ? cacheData.withdrawalHistoryByRefid[entry.refid] : null,
+                  krakenAddresses: cacheData.krakenAddresses,
+                  withdrawalHistoryByRefid: cacheData.withdrawalHistoryByRefid
+                }),
+                  asset: asset,
+                  info: entry.info || ""
+                }) : ""
               });
             }
           }
@@ -1481,24 +1513,65 @@ Purpose: GitHub Pages testing
         cacheData.withdrawals = allLedgerEntries;  // Still use withdrawals key for compatibility
 
         // Re-enable Generate Button
-        if (genBtn) {
-          genBtn.disabled = false;
-          genBtn.innerText = "Generate Report"; // Reset text if needed
-          genBtn.style.opacity = "1.0";
+        if (btnGen) {
+          btnGen.disabled = false;
+          btnGen.innerText = "Generate Report"; // Reset text if needed
+          btnGen.style.opacity = "1.0";
         }
 
         updateStatusCounts();
         renderLedgerTable();
+
+        updateStatus("Ledger Read Complete", "success");
+
+        // v4.00-07: Stale Cache Detection -> v4.00-10: Smart Resolution Check
+        const withdrawals = allLedgerEntries.filter(e => e.type === 'withdrawal');
+        const countW = withdrawals.length;
+
+        if (countW > 0) {
+          // Check Resolution Success Rate
+          // We now have 'recipient' pre-calculated in the step above.
+          // A resolved recipient is one that is NOT the default "Withdrawal" or just the info string, 
+          // but something meaningful from the address book is hard to strictly detect without a flag, 
+          // but we can check if it differs from the raw info? 
+          // Actually, simplest check: Do we have an Address Book?
+
+          const hasAddresses = cacheData.krakenAddresses && cacheData.krakenAddresses.length > 0;
+
+          if (!hasAddresses) {
+            // Case 1: No Address Book at all. We definitely can't resolve names.
+            alert("⚠️ Address Book Missing\n\nBank Names will be missing because you have not synced your Address Book.\n\nPlease click 'Pull Addresses' (requires 2FA) once to fix this.");
+            logTrace("WARNING: No Address Book found.");
+          } else {
+            // Case 2: We have addresses. 
+            // With v4.00-09's Smart Resolution, this should be enough!
+            // We ONLY alert if we seemingly failed to match anything meaningful (heuristic).
+            // For now, let's assume if we have addresses, we are good. 
+            // verification: count how many withdrawals have a "recipient" that is NOT empty.
+            const resolvedCount = withdrawals.filter(w => w.recipient && w.recipient.length > 0).length;
+
+            if (resolvedCount === 0) {
+              logTrace("Validation: Warning - 0/" + countW + " withdrawals resolved. Check Address Book matches.");
+              // Optional: Gentle nudge if it really looks broken? 
+              // For now, respect user: silence is golden. 
+            } else {
+              logTrace("Validation: SUCCESS. " + resolvedCount + "/" + countW + " withdrawals resolved via Smart Logic.");
+            }
+          }
+        }
 
         logTrace("SUCCESS: Fetched " + allLedgerEntries.length + " USDT/XRP entries (from " + offset + " total entries)");
         updateStatus("Ledger: " + allLedgerEntries.length, "active");
 
 
       } catch (e) {
-        if (genBtn) genBtn.disabled = false; // Re-enable on error
         updateStatus("Ledger Error", "error");
         logTrace("ERROR in readLedger: " + (e.message || e));
-        // alert("Error reading ledger: " + (e.message || e));
+      } finally {
+        // Re-enable buttons
+        if (btnRead) btnRead.disabled = false;
+        if (btnPull) btnPull.disabled = false;
+        if (btnGen) btnGen.disabled = false;
       }
     }
 
@@ -1518,6 +1591,15 @@ Purpose: GitHub Pages testing
         logTrace("Using Withdraw API Key: " + creds.apiKey.substring(0, 8) + "...");
 
         updateStatus("Pulling Addresses...", "sync");
+
+        // v4.00-31: Disable other buttons
+        const btnRead = document.getElementById("read_ledger_btn");
+        const btnPull = document.getElementById("pull_btn");
+        const btnGen = document.getElementById("generate_btn");
+        if (btnRead) btnRead.disabled = true;
+        if (btnPull) btnPull.disabled = true;
+        if (btnGen) btnGen.disabled = true;
+
 
         // Call WithdrawAddresses API
         logTrace("Calling Kraken WithdrawAddresses API...");
@@ -1545,7 +1627,14 @@ Purpose: GitHub Pages testing
       } catch (e) {
         updateStatus("Address Error", "error");
         logTrace("ERROR in pullAddresses: " + (e.message || e));
-        // alert("Error pulling addresses: " + (e.message || e));
+      } finally {
+        // Re-enable buttons
+        const btnRead = document.getElementById("read_ledger_btn");
+        const btnPull = document.getElementById("pull_btn");
+        const btnGen = document.getElementById("generate_btn");
+        if (btnRead) btnRead.disabled = false;
+        if (btnPull) btnPull.disabled = false;
+        if (btnGen) btnGen.disabled = false;
       }
     }
 
@@ -1556,6 +1645,11 @@ Purpose: GitHub Pages testing
         logTrace("Report generation already in progress - ignoring click");
         return;
       }
+      // Bank-label diagnostics: reset per run and output to Trace log
+      if (ENABLE_BANK_LABEL_DIAGNOSTICS) {
+        window.bankLabelDiagnostics = [];
+      }
+
 
       const btn = document.getElementById("generate_btn");
       isGenerating = true;
@@ -1585,6 +1679,50 @@ Purpose: GitHub Pages testing
 
         // Force update of label and Summary button visibility based on dates
         updateBankButtonLabel();
+      }
+
+      // v4.00-11: Force Re-Resolution of Recipients to ensure freshness
+      // This ensures that if the Address Book was loaded AFTER readLedger (or from cache), 
+      // we apply it now so the report is correct without requiring a re-read.
+      if (cacheData.withdrawals) {
+        cacheData.withdrawals.forEach(w => {
+          if (w.type === 'withdrawal') {
+            // Re-run resolution with arguably better data availability
+            w.recipient = finalizeWithdrawalRecipientLabel({
+              label: resolveRecipientLabel({
+              asset: w.asset,
+              refid: w.refid,
+              historyMatch: cacheData.withdrawalHistoryByRefid ? cacheData.withdrawalHistoryByRefid[w.refid] : null,
+              krakenAddresses: cacheData.krakenAddresses,
+              withdrawalHistoryByRefid: cacheData.withdrawalHistoryByRefid,
+              currentInfo: w.info
+            }),
+              asset: w.asset,
+              info: w.info
+            });
+          }
+        });
+      }
+
+      // v4.00-12: ALSO Update stagingRecords (Main Report Data)
+      // This ensures the "Main Report" (Top Table) reflects the same resolved names as the Statement
+      if (stagingRecords) {
+        stagingRecords.forEach(r => {
+          if (r.type === 'withdrawal') {
+            r.recipient = finalizeWithdrawalRecipientLabel({
+              label: resolveRecipientLabel({
+              asset: r.asset,
+              refid: r.refid, // stagingRecords has refid
+              historyMatch: cacheData.withdrawalHistoryByRefid ? cacheData.withdrawalHistoryByRefid[r.refid] : null,
+              krakenAddresses: cacheData.krakenAddresses,
+              withdrawalHistoryByRefid: cacheData.withdrawalHistoryByRefid,
+              currentInfo: r.info // stagingRecords needs to have captured info! (v4.00-08 did this)
+            }),
+              asset: r.asset,
+              info: r.info
+            });
+          }
+        });
       }
 
       // Check prerequisites
@@ -1651,12 +1789,14 @@ Purpose: GitHub Pages testing
         html += '<td style="padding:4px; border:1px solid #90caf9;">' + escHtml(dateStr) + "</td>";
         html += '<td style="padding:4px 4px 4px 1px; border:1px solid #90caf9;">' + escHtml(w.type || "") + "</td>";
         html += '<td style="padding:4px; border:1px solid #90caf9;">' + escHtml(timeStr) + "</td>";
-        html += '<td style="padding:4px; border:1px solid #90caf9;">' + w.amount.toFixed(6) + "</td>";
-        html += '<td style="padding:4px; border:1px solid #90caf9;">' + Math.abs(w.fee).toFixed(6) + "</td>";
+        html += '<td style="padding:4px; border:1px solid #90caf9;">' + parseFloat(w.rawAmount ?? w.amount ?? 0).toFixed(6) + "</td>";
+        html += '<td style="padding:4px; border:1px solid #90caf9;">' + Math.abs(parseFloat(w.rawFee ?? w.fee ?? 0)).toFixed(6) + "</td>";
         html += '<td style="padding:4px; border:1px solid #90caf9;">' + escHtml(w.asset) + "</td>";
-        html += '<td style="padding:4px; border:1px solid #90caf9;">' + w.balance.toFixed(6) + "</td>";
+        html += '<td style="padding:4px; border:1px solid #90caf9;">' + parseFloat(w.rawBalance ?? w.balance ?? 0).toFixed(6) + "</td>";
         html += '<td style="padding:4px; border:1px solid #90caf9; word-break:break-all;">' + escHtml(w.ledgerId || "") + "</td>";
         html += '<td style="padding:4px; border:1px solid #90caf9; word-break:break-all;">' + escHtml(w.refid || "") + "</td>";
+        // v4.00-28: Show Info column to reveal source of "Revolut Ltd"
+        html += '<td style="padding:4px; border:1px solid #90caf9; font-size:0.85em;">' + escHtml(w.info || "") + "</td>";
         html += "</tr>";
       }
       tbody.innerHTML = html;
@@ -1926,51 +2066,23 @@ Purpose: GitHub Pages testing
     }
 
     // ---------- Google Auth / Sheets ----------
-
-    // v4.00-08: Initialise Google clients from saved config (prevents misleading 'not configured' logs at startup)
-    function initGoogleFromConfig(silent) {
-      try {
-        const apiKey = localStorage.getItem("krk_google_sheets_api_key") || "";
-        if (window.gapi && apiKey) {
-          gapi.load("client", async () => {
-            try {
-              await gapi.client.init({ apiKey: apiKey });
-              await gapi.client.load("sheets", "v4");
-              if (!silent) logTrace("GAPI Ready.");
-            } catch (e) {
-              if (!silent) logTrace("GAPI init error: " + (e && e.message ? e.message : e));
-            }
-          });
-        } else {
-          if (!silent) logTrace("Google Sheets API key not configured. Use API Config.");
-        }
-
-        const cid = localStorage.getItem("krk_google_oauth_client_id") || "";
-        if (window.google && google.accounts && google.accounts.oauth2 && cid) {
-          tokenClient = google.accounts.oauth2.initTokenClient({
-            client_id: cid,
-            scope: SCOPES,
-            callback: ""
-          });
-          if (!silent) logTrace("GIS Ready.");
-        } else {
-          if (!silent) logTrace("Google OAuth Client ID not configured. Use API Config.");
-        }
-      } catch (e) {
-        if (!silent) logTrace("Google init error: " + (e && e.message ? e.message : e));
-      }
-    }
-
     function gapiLoaded() {
-      // v4.00-08: keep startup silent; init happens after API Config save/load
-      initGoogleFromConfig(true);
+      gapi.load("client", async () => {
+        await gapi.client.init({ apiKey: "AIzaSyDvZ1XZw5bZgWSB9zaU7h9Vtn7MhDGFMSM" });
+        await gapi.client.load("sheets", "v4");
+        logTrace("GAPI Ready.");
+      });
     }
 
     function gisLoaded() {
-      // v4.00-08: keep startup silent; init happens after API Config save/load
-      initGoogleFromConfig(true);
+      tokenClient = google.accounts.oauth2.initTokenClient({
+        client_id: "23231735212-jtgur3sn2ndh798ke00pm2a1d5rkd4eu.apps.googleusercontent.com",
+        scope: "https://www.googleapis.com/auth/spreadsheets",
+        prompt: "consent", // Force re-consent to clear stale tokens
+        callback: () => { }
+      });
+      logTrace("GIS Ready.");
     }
-
 
     function initRefresh() {
       requestToken(true, () => fetchAllSheets());
@@ -2161,7 +2273,15 @@ Purpose: GitHub Pages testing
             let s1ColHeaders = ["Recipient", "USDT", "Avg Rate", "GBP Equivalent", "XRP Amount", "Avg Rate", "GBP Equivalent"];
 
             let s1Rows = [];
-            const fmt = (v, d) => (v && parseFloat(v) !== 0) ? parseFloat(v).toFixed(d) : "-";
+            const fmt = (v, d) => {
+              if (v === undefined || v === null || v === "") return "-";
+              const n0 = parseFloat(v);
+              if (!isFinite(n0)) return "-";
+              const n = (Math.abs(n0) < 1e-9) ? 0 : n0; // prevent "-0.00"
+              if (n === 0) return "-";
+              const s = n.toFixed(d);
+              return (s === "-0.00" || s === "-0.0000") ? s.replace("-", "") : s;
+            };
 
             if (summaryRecords.crypto && summaryRecords.crypto.length > 0) {
               s1Rows = summaryRecords.crypto.map(r => {
@@ -2196,15 +2316,20 @@ Purpose: GitHub Pages testing
               s2Rows = [["", "-", "-", "-"]];
             }
 
-            // S3: Deposits
+            // S3: Deposits (Phase III-1 aligned with bank-withdrawal labelling + currency split)
             let s3Headers = ["Deposits from Haricom Bank Accounts  GBP | EUR", "", "", ""];
             let s3ColHeaders = ["Haricom Bank Account", "GBP Amount", "EUR Amount", "EUR (GBP Eq)"];
-            const s3Rows = (summaryRecords.deposits || []).map(r => [
-              r.recipient,
-              fmt(r.GBP, 2),
-              fmt(r.EUR, 2),
-              (r.EUR > 0 && r.EUR_GBP > 0) ? fmt(r.EUR_GBP, 2) : "-"
-            ]);
+            let s3Rows = [];
+            if (summaryRecords.deposits && summaryRecords.deposits.length > 0) {
+              s3Rows = summaryRecords.deposits.map(r => [
+                r.recipient,
+                fmt(r.GBP, 2),
+                fmt(r.EUR, 2),
+                (r.EUR > 0 && r.EUR_GBP > 0) ? fmt(r.EUR_GBP, 2) : "-"
+              ]);
+            } else {
+              s3Rows = [["No deposits for this period.", "-", "-", "-"]];
+            }
 
             // S4: Fees
             let s4Headers = ["Fees  GBP | EUR | USDT | XRP", "", ""];
@@ -2231,9 +2356,9 @@ Purpose: GitHub Pages testing
 
             // 1. Calculate Flow Totals (GBP Eq where appropriate for columns)
             // 1. Calculate Flow Totals (GBP Eq where appropriate for columns)
-            // Deposits (Haricom Bank Accounts) - No r.asset, sum fields directly from deposit rows
-            const depGBP = (summaryRecords.deposits || []).reduce((acc, r) => acc + (Number(r.GBP) || 0), 0);
-            const depEUR = (summaryRecords.deposits || []).reduce((acc, r) => acc + (Number(r.EUR_GBP) || 0), 0);
+            // Deposits (Haricom Bank Accounts) - These HAVE r.asset
+            const depGBP = _sumAsset(summaryRecords.deposits, "GBP", "total");
+            const depEUR = _sumAsset(summaryRecords.deposits, "EUR", "gbpEq");
 
             // Withdrawals (Recipients) - USDT/XRP (No r.asset, sum fields directly from crypto rows)
             const sumCryptoField = (arr, field) => {
@@ -2540,16 +2665,39 @@ Purpose: GitHub Pages testing
         }
       }
       if (savedWithdrawKey) document.getElementById("withdrawApiKey").value = savedWithdrawKey;
-      document.getElementById("googleSheetsApiKey").value = (localStorage.getItem("krk_google_sheets_api_key") || "");
-      document.getElementById("googleOAuthClientId").value = (localStorage.getItem("krk_google_oauth_client_id") || "");
       if (savedWithdrawPrivate) document.getElementById("withdrawPrivateKey").value = savedWithdrawPrivate;
       if (savedSheetId) document.getElementById("googleSheetId").value = savedSheetId;
 
       logTrace("Credentials loaded from storage.");
-      initGoogleFromConfig(true);
     }
 
 
+    // v3.015: Global helper to load credentials (fix for ReferenceError)
+    function loadSavedCredentials() {
+      const savedKey = localStorage.getItem("kraken_api_key");
+      const savedPrivate = localStorage.getItem("kraken_private_key");
+      const savedProxyType = localStorage.getItem("kraken_cors_proxy_type");
+      const savedProxy = localStorage.getItem("kraken_cors_proxy");
+      const savedWithdrawKey = localStorage.getItem("kraken_withdraw_api_key");
+      const savedWithdrawPrivate = localStorage.getItem("kraken_withdraw_private_key");
+      const savedSheetId = localStorage.getItem("kraken_sheet_id");
+
+      if (savedKey) document.getElementById("krakenApiKey").value = savedKey;
+      if (savedPrivate) document.getElementById("krakenPrivateKey").value = savedPrivate;
+      if (savedProxyType) {
+        const sel = document.getElementById("corsProxySelect");
+        if (sel) sel.value = savedProxyType;
+        if (savedProxyType === "custom" && savedProxy) {
+          const inp = document.getElementById("corsProxy");
+          if (inp) { inp.value = savedProxy; inp.style.display = "block"; }
+        }
+      }
+      if (savedWithdrawKey) document.getElementById("withdrawApiKey").value = savedWithdrawKey;
+      if (savedWithdrawPrivate) document.getElementById("withdrawPrivateKey").value = savedWithdrawPrivate;
+      if (savedSheetId) document.getElementById("googleSheetId").value = savedSheetId;
+
+      logTrace("Credentials loaded from storage.");
+    }
 
     function toggleApiConfig() {
       const btn = document.getElementById("api_btn");
@@ -2594,7 +2742,9 @@ Purpose: GitHub Pages testing
         throw new Error("Please enter Withdraw API credentials in API Config (requires 2FA permission)");
       }
       const proxy = getSelectedProxy();
-      return { apiKey, privateKey, proxy };
+      const proxyType = document.getElementById("corsProxySelect").value;
+      const gasUrl = document.getElementById("gasProxyUrl").value.trim();
+      return { apiKey, privateKey, proxy, proxyType, gasUrl };
     }
 
     // Base64 helpers
@@ -2881,8 +3031,8 @@ Purpose: GitHub Pages testing
     async function fetchWithdrawalHistory(otp) {
       const withdrawCreds = getWithdrawCredentials();
 
-      // Try both USDT and XRP (common assets for withdrawals)
-      const assets = ["USDT", "XXRP", "ZUSD", "ZGBP", "ZEUR", "GBP", "EUR"];
+      // Patch 1: Full Asset Coverage - Try both USDT, XRP, ZGBP, ZEUR, AND ISO codes (GBP, EUR)
+      const assets = ["USDT", "XXRP", "ZGBP", "ZEUR", "GBP", "EUR"];
       const allWithdrawals = [];
 
       for (const asset of assets) {
@@ -2906,51 +3056,144 @@ Purpose: GitHub Pages testing
       }
 
       cacheData.withdrawalHistory = allWithdrawals;
+
+      // Patch 1 Part 2: Build RefID Index for fast lookup (Critical for Multi-Bank)
+      cacheData.withdrawalHistoryByRefid = {};
+      for (const w of allWithdrawals) {
+        if (w && w.refid) cacheData.withdrawalHistoryByRefid[w.refid] = w;
+      }
+
       logTrace("Total withdrawal history entries: " + allWithdrawals.length);
       return allWithdrawals;
     }
 
+    // -----------------------------------------------------
+    // RECIPIENT RESOLUTION HELPERS (Phase III-1 Canonical)
+    // -----------------------------------------------------
+
+    function normalizeAsset(asset) {
+      const a = String(asset || "").trim();
+      if (a === "ZGBP") return "GBP";
+      if (a === "ZEUR") return "EUR";
+      if (a === "ZUSD") return "USD";
+      if (a === "XXRP") return "XRP";
+      return a;
+    }
+
+    function isVerifiedAddress(a) {
+      // Kraken may omit `verified` or provide it as string/number depending on proxy/cache.
+      // Missing => treat as verified to avoid suppressing legitimate bank addresses.
+      if (!a || a.verified === undefined || a.verified === null) return true;
+      return a.verified === true || a.verified === "true" || a.verified === 1 || a.verified === "1";
+    }
 
 
-    // v4.00-58 Helper: Dynamically determine Fiat Bank Name from Withdrawal History
-    // Used for labeling fiat deposits which lack 'info' strings from the Kraken API.
-    function getFiatBankNameFromHistory(asset) {
-      if (!cacheData.withdrawalHistory || !cacheData.withdrawalHistory.length) return null;
-      const cleanAsset = (asset || "").toUpperCase().replace(/^Z/, "");
-      if (cleanAsset !== "GBP" && cleanAsset !== "EUR") return null;
+    // Set true temporarily when debugging bank label joins (no UI changes; results go to window.bankLabelDiagnostics)
+    const ENABLE_BANK_LABEL_DIAGNOSTICS = true;
 
-      // Find the most recent withdrawal in history matching this fiat currency
-      // v4.10-08: Simply prioritize 'key' (user's label), then 'method', then 'info'
-      const match = cacheData.withdrawalHistory.find(h => {
-        const hAsset = (h.asset || "").toUpperCase().replace(/^Z/, "");
-        return hAsset === cleanAsset && (h.key || h.method || h.info);
-      });
+    function resolveRecipientLabel({ asset, refid, historyMatch, krakenAddresses, withdrawalHistoryByRefid, currentInfo }) {
+      // --- 1) Fiat bank withdrawals (ZGBP/ZEUR): prefer refid -> key ---
+      const normAsset = normalizeAsset(asset);
+      if (normAsset === "GBP" || normAsset === "EUR") {
+        const w = (refid && withdrawalHistoryByRefid) ? withdrawalHistoryByRefid[refid] : historyMatch;
 
-      if (match) {
-        const rawName = match.key || match.method || match.info;
-        if (!rawName) return null;
+        if (ENABLE_BANK_LABEL_DIAGNOSTICS) {
+          try {
+            const candCount = krakenAddresses.filter(a => normalizeAsset(a.asset) === normAsset && isVerifiedAddress(a)).length;
+            const hasKey = Boolean(w && w.key);
+            window.bankLabelDiagnostics = window.bankLabelDiagnostics || [];
+            window.bankLabelDiagnostics.push({ refid: refid || null, asset: asset || null, normAsset, candidateCount: candCount, hasKey, info: (w && w.info) ? w.info : null });
+          } catch (e) {}
+        }
 
-        // Extract up to 2 words (e.g., "Revolut Ltd")
-        const words = String(rawName).trim().split(/\s+/).filter(Boolean);
-        return (words.length <= 2) ? words.join(" ") : words.slice(0, 2).join(" ");
+        // If WithdrawStatus provides a withdrawal key (common for fiat), use it
+        if (w && w.key) return trimLabel(w.key);
+
+        // If key is not present, try to resolve by matching info/address fields to address book key
+        // Priority 1: History Info (if cached)
+        if (w && w.info) {
+          const k = tryMatchKeyFromInfo(w.info, krakenAddresses, normAsset);
+          if (k) return trimLabel(k);
+        }
+
+        // Priority 2: Current Ledger Info (Live Data)
+        if (currentInfo) {
+          const k2 = tryMatchKeyFromInfo(currentInfo, krakenAddresses, normAsset);
+          if (k2) return trimLabel(k2);
+        }
+
+        // Last-resort fallback: ONLY if there is exactly one verified address for this asset
+        const candidates = krakenAddresses.filter(a => normalizeAsset(a.asset) === normAsset && isVerifiedAddress(a));
+        if (candidates.length === 1) return trimLabel(candidates[0].key);
+
+        // Ambiguous: multiple candidates and no key => do not guess
+        return null;
+      }
+
+      // --- 2) Crypto withdrawals (USDT/XRP): address+tag join ---
+      if (asset === "USDT" || asset === "XRP" || asset === "XXRP") {
+        if (historyMatch?.address) {
+          const addr = krakenAddresses.find(a =>
+            a.address === historyMatch.address &&
+            (a.tag || "") === (historyMatch.tag || "")
+          );
+          if (addr?.key) return trimLabel(addr.key);
+        }
+      }
+
+      // --- 3) Generic fallback ---
+      if (historyMatch?.info) return trimLabel(historyMatch.info);
+
+      return null;
+    }
+
+
+    function applyFiatSuffix(label, asset) {
+      const a = normalizeAsset(asset);
+      if (a === "GBP" || a === "EUR") {
+        // Ensure currency-disambiguated labels so GBP/EUR never merge into one row.
+        return `${label} (${a})`;
+      }
+      return label;
+    }
+
+    function finalizeWithdrawalRecipientLabel({ label, asset, info }) {
+      const a = normalizeAsset(asset);
+      // For fiat withdrawals, always produce a currency-disambiguated label.
+      if (a === "GBP" || a === "EUR") {
+        const base = (label && String(label).trim()) ? String(label).trim() :
+                     (info && String(info).trim()) ? trimLabel(String(info).trim()) :
+                     "Withdrawal";
+        return applyFiatSuffix(trimLabel(base), a);
+      }
+      // For crypto withdrawals, keep label as-is (no asset suffix).
+      return (label && String(label).trim()) ? String(label).trim() : null;
+    }
+
+    function tryMatchKeyFromInfo(infoStr, krakenAddresses, asset) {
+      if (!infoStr) return null;
+      const n = norm(infoStr);
+      for (const a of krakenAddresses) {
+        if (normalizeAsset(a.asset) !== asset) continue;
+        if (a.key && norm(a.key) === n) return a.key;
       }
       return null;
     }
 
-    // v4.10-01 HOTFIX: fetch wrapper with hard timeout to prevent hung API calls stalling the loop
-    // v4.10-02: increased to 20s to accommodate Cloudflare Zero Trust latency on some networks
-    async function fetchWithTimeout(url, options = {}, timeoutMs = 20000) {
-      const controller = new AbortController();
-      const id = setTimeout(() => controller.abort(), timeoutMs);
-      try {
-        const resp = await fetch(url, { ...options, signal: controller.signal });
-        clearTimeout(id);
-        return resp;
-      } catch (e) {
-        clearTimeout(id);
-        throw e;
-      }
+    function norm(s) {
+      return String(s).toUpperCase().replace(/\s+/g, " ").trim();
     }
+
+    function trimLabel(str) {
+      return String(str)
+        .replace(/\(.*?\)/g, "")
+        .trim()
+        .split(/\s+/)
+        .slice(0, 2)
+        .join(" ");
+    }
+
+    // -----------------------------------------------------
 
     // Get historical exchange rate from Kraken public API
     // Returns { gbpRate, eurRate } for the given asset at the given timestamp
@@ -2972,20 +3215,11 @@ Purpose: GitHub Pages testing
       // Use 30 days before to ensure we get historical data
       const thirtyDaysBefore = timestamp - (30 * 24 * 60 * 60);
 
-      // v4.10-01: dates older than 1 year skip Kraken OHLC (it never returns useful data for old dates)
-      const ONE_YEAR_SECS = 365 * 24 * 60 * 60;
-      const isOldDate = (Date.now() / 1000 - timestamp) > ONE_YEAR_SECS;
-      if (isOldDate) {
-        logTrace("Skipping Kraken OHLC for old date (>1yr): going direct to CryptoCompare/Frankfurter");
-      }
-
-      // Helper to fetch rate from OHLC — skipped for old dates
+      // Helper to fetch rate from OHLC
       async function fetchOHLC(pair, since) {
-        if (isOldDate) return null; // v4.10-01: skip proxy call entirely for old dates
         try {
-          // v4.10-03: Kraken OHLC is a PUBLIC endpoint — call directly, no proxy needed
-          const url = "https://api.kraken.com/0/public/OHLC?pair=" + pair + "&interval=1440&since=" + Math.floor(since);
-          const response = await fetchWithTimeout(url);
+          const url = proxy + "https://api.kraken.com/0/public/OHLC?pair=" + pair + "&interval=1440&since=" + Math.floor(since);
+          const response = await fetch(url);
           const data = await response.json();
 
           if (data.result && Object.keys(data.result).length > 0) {
@@ -3010,7 +3244,7 @@ Purpose: GitHub Pages testing
             }
           }
         } catch (e) {
-          // Pair might not exist or timed out
+          // Pair might not exist
         }
         return null;
       }
@@ -3056,7 +3290,7 @@ Purpose: GitHub Pages testing
               try {
                 const dateStr = new Date(timestamp * 1000).toISOString().split("T")[0];
                 const forexUrl = `https://api.frankfurter.app/${dateStr}?from=USD&to=GBP`;
-                const resp = await fetchWithTimeout(forexUrl);
+                const resp = await fetch(forexUrl);
                 if (resp.ok) {
                   const data = await resp.json();
                   if (data.rates && data.rates.GBP) {
@@ -3066,8 +3300,7 @@ Purpose: GitHub Pages testing
                   }
                 }
               } catch (e) {
-                const msg = (e && e.name === 'AbortError') ? 'Timed out (20s)' : (e.message || e);
-                logTrace("Frankfurter USD→GBP fallback failed: " + msg);
+                logTrace("Forex API fallback failed: " + e.message);
               }
             }
 
@@ -3109,7 +3342,7 @@ Purpose: GitHub Pages testing
         try {
           const dateStr = new Date(timestamp * 1000).toISOString().split("T")[0];
           const forexUrl = `https://api.frankfurter.app/${dateStr}?from=USD&to=GBP`;
-          const resp = await fetchWithTimeout(forexUrl);
+          const resp = await fetch(forexUrl);
           if (resp.ok) {
             const data = await resp.json();
             if (data.rates && data.rates.GBP) {
@@ -3119,8 +3352,7 @@ Purpose: GitHub Pages testing
             }
           }
         } catch (e) {
-          const msg = (e && e.name === 'AbortError') ? 'Timed out (20s)' : (e.message || e);
-          logTrace("Frankfurter USDT/GBP fallback failed: " + msg);
+          logTrace("Forex API fallback failed: " + e.message);
         }
       }
 
@@ -3132,7 +3364,7 @@ Purpose: GitHub Pages testing
 
           // Get XRP/USD from CryptoCompare (free API, no auth needed)
           const ccUrl = `https://min-api.cryptocompare.com/data/v2/histoday?fsym=XRP&tsym=USD&limit=1&toTs=${timestamp}`;
-          const ccResp = await fetchWithTimeout(ccUrl);
+          const ccResp = await fetch(ccUrl);
           logTrace("CryptoCompare response status: " + ccResp.status);
 
           if (ccResp.ok) {
@@ -3144,19 +3376,14 @@ Purpose: GitHub Pages testing
 
               // Now get USD/GBP from forex API
               const forexUrl = `https://api.frankfurter.app/${dateStr}?from=USD&to=GBP`;
-              try {
-                const forexResp = await fetchWithTimeout(forexUrl);
-                if (forexResp.ok) {
-                  const forexData = await forexResp.json();
-                  if (forexData.rates && forexData.rates.GBP) {
-                    rates.gbpRate = xrpUsd * forexData.rates.GBP;
-                    rates.rateSource = "CryptoCompare";
-                    logTrace("XRP/GBP via CryptoCompare+Forex: " + rates.gbpRate);
-                  }
+              const forexResp = await fetch(forexUrl);
+              if (forexResp.ok) {
+                const forexData = await forexResp.json();
+                if (forexData.rates && forexData.rates.GBP) {
+                  rates.gbpRate = xrpUsd * forexData.rates.GBP;
+                  rates.rateSource = "CryptoCompare";
+                  logTrace("XRP/GBP via CryptoCompare+Forex: " + rates.gbpRate);
                 }
-              } catch (fe) {
-                const msg = (fe && fe.name === 'AbortError') ? 'Timed out (20s)' : (fe.message || fe);
-                logTrace("Frankfurter USD→GBP (XRP step 2) failed: " + msg);
               }
             } else {
               logTrace("CryptoCompare returned no data for XRP: " + (ccData.Message || "No data"));
@@ -3166,8 +3393,7 @@ Purpose: GitHub Pages testing
             logTrace("CryptoCompare error: " + ccResp.status + " - " + errText.substring(0, 100));
           }
         } catch (e) {
-          const msg = (e && e.name === 'AbortError') ? 'Timed out (20s)' : (e.message || e);
-          logTrace("CryptoCompare XRP/USD fallback failed: " + msg);
+          logTrace("CryptoCompare/Forex API fallback for XRP failed: " + e.message);
         }
       }
 
@@ -3292,10 +3518,6 @@ Purpose: GitHub Pages testing
       // Sort ALL ledger entries by time (ascending) for trade matching
       const sortedLedger = [...cacheData.withdrawals].sort((a, b) => a.time - b.time);
 
-      // v4.00-13 Objective D: Bank label logic moved to getBankLabel() helper
-      // const bankLabelByAsset = {}; REMOVED
-
-
       // Helper: Find immediately preceding trade that matches a withdrawal
       function findMatchingTrade(withdrawalIndex, withdrawal) {
         // Look for a trade immediately before this withdrawal (same asset, amount matches withdrawal + fee)
@@ -3384,49 +3606,19 @@ Purpose: GitHub Pages testing
           const usdtRates = await getKrakenRate("USDT", timestamp);
           const xrpRates = await getKrakenRate("XRP", timestamp);
 
-          // v4.10-04: Get EUR/GBP from Kraken OHLC directly (fast, no Frankfurter needed as primary)
+          // Direct EUR/GBP day-rate for fiat GBP-equivalents (avoids USDT cross-rate ambiguity)
           let eurGbpRate = null;
           try {
-            const eurgbpUrl = "https://api.kraken.com/0/public/OHLC?pair=EURGBP&interval=1440&since=" + Math.floor(timestamp - 86400);
-            const eurgbpResp = await fetchWithTimeout(eurgbpUrl, {}, 8000);
-            if (eurgbpResp && eurgbpResp.ok) {
-              const eurgbpData = await eurgbpResp.json();
-              if (eurgbpData.result && Object.keys(eurgbpData.result).length > 0) {
-                const pairData = Object.values(eurgbpData.result).find(v => Array.isArray(v));
-                if (pairData && pairData.length > 0) {
-                  // Find candle closest to our timestamp
-                  let best = null, bestDiff = Infinity;
-                  for (const candle of pairData) {
-                    const diff = Math.abs(candle[0] - timestamp);
-                    if (diff < bestDiff) { bestDiff = diff; best = candle; }
-                  }
-                  if (best && bestDiff < 7 * 24 * 3600) {
-                    eurGbpRate = parseFloat(best[4]); // close price
-                    logTrace("EUR/GBP via Kraken OHLC: " + eurGbpRate);
-                  }
-                }
+            const fxUrl = `https://api.frankfurter.app/${dateStr}?from=EUR&to=GBP`;
+            const fxResp = await fetch(fxUrl);
+            if (fxResp && fxResp.ok) {
+              const fxData = await fxResp.json();
+              if (fxData && fxData.rates && typeof fxData.rates.GBP === "number") {
+                eurGbpRate = fxData.rates.GBP;
               }
             }
           } catch (e) {
-            // Kraken OHLC failed — try Frankfurter with short timeout as fallback
-          }
-
-          // Frankfurter fallback (short timeout — don't let it block for 20s)
-          if (eurGbpRate === null) {
-            try {
-              const fxUrl = `https://api.frankfurter.app/${dateStr}?from=EUR&to=GBP`;
-              const fxResp = await fetchWithTimeout(fxUrl, {}, 5000);
-              if (fxResp && fxResp.ok) {
-                const fxData = await fxResp.json();
-                if (fxData && fxData.rates && typeof fxData.rates.GBP === "number") {
-                  eurGbpRate = fxData.rates.GBP;
-                  logTrace("EUR/GBP via Frankfurter fallback: " + eurGbpRate);
-                }
-              }
-            } catch (e) {
-              const msg = (e && e.name === 'AbortError') ? 'Timed out (5s)' : (e.message || e);
-              logTrace("EUR/GBP all sources failed: " + msg + " — EUR/GBP conversions will be skipped for " + dateStr);
-            }
+            // Keep eurGbpRate as null; do not block report generation
           }
 
           cacheData.ratesCache[dateStr] = {
@@ -3440,10 +3632,7 @@ Purpose: GitHub Pages testing
             XRPSource: xrpRates.rateSource || "Kraken day rate"
           };
 
-          // v4.10-01 HOTFIX: persist rates to localStorage so reloads don't re-fetch everything
-          try {
-            localStorage.setItem("kraken_rates_cache", JSON.stringify(cacheData.ratesCache));
-          } catch (e) { /* localStorage quota exceeded — non-fatal */ }
+
 
           logTrace("Rates for " + dateStr + ": USDTGBP=" + usdtRates.gbpRate + ", XRPGBP=" + xrpRates.gbpRate + (eurGbpRate !== null ? ", EURGBP=" + eurGbpRate : ""));
 
@@ -3469,8 +3658,7 @@ Purpose: GitHub Pages testing
         const historyMatch = cacheData.withdrawalHistory.find(h => h.refid === w.refid);
 
         // Get address from history
-        // v4.10-06: Prioritize 'key' (user label) for withdrawals to avoid generic strings
-        let walletAddr = historyMatch ? (historyMatch.key || historyMatch.info || historyMatch.address || "") : "";
+        let walletAddr = historyMatch ? (historyMatch.info || historyMatch.address || "") : "";
         let destTag = historyMatch ? (historyMatch.dest || historyMatch.tag || "") : "";
 
         // Find recipient from krakenAddresses
@@ -3478,41 +3666,47 @@ Purpose: GitHub Pages testing
 
         // Helper to normalize string for matching (remove spaces, symbols, lowercase)
         const normalize = (s) => (s || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+
         const walletAddrNorm = normalize(walletAddr);
 
-        // v4.00-59 NEW FIAT LABEL RULE: Bypass address book entirely for fiat. 
-        const isFiat = ["GBP", "EUR", "USD", "ZGBP", "ZEUR", "ZUSD"].includes(w.asset);
-
-        if (isFiat) {
-          if (w.type === "deposit") {
-            const dynamicName = getFiatBankNameFromHistory(w.asset);
-            fullRecipient = dynamicName ? dynamicName : (w.info && w.info !== "Deposit" ? w.info : "");
-          } else if (w.type === "withdrawal") {
-            fullRecipient = walletAddr; // e.g. "Revolut Ltd" from historyMatch.info
+        const addrMatch = cacheData.krakenAddresses.find(a => {
+          // Strict match on address field
+          if (a.address === walletAddr) {
+            return (destTag ? (a.tag === destTag) : (!a.tag));
           }
-        } else {
-          // v4.00-56 Legacy Crypto Match Logic
-          const addrMatch = cacheData.krakenAddresses.find(a => {
-            if (a.address === walletAddr) {
-              return (destTag ? (a.tag === destTag) : (!a.tag));
-            }
-            if (walletAddrNorm.length > 5 && (normalize(a.address) === walletAddrNorm || normalize(a.info) === walletAddrNorm)) {
-              return true;
-            }
-            return false;
-          });
+          // v2.48: Fuzzy/Normalized match for Fiat IBANs
+          // Check if normalised address in book matches normalised wallet address
+          // OR if the 'info' field (sometimes matches)
+          if (walletAddrNorm.length > 5 && (normalize(a.address) === walletAddrNorm || normalize(a.info) === walletAddrNorm)) {
+            return true;
+          }
+          return false;
+        });
 
-          if (addrMatch) {
-            fullRecipient = ((addrMatch.key || addrMatch.info || "").trim()) + ((addrMatch.asset === 'GBP' || addrMatch.asset === 'EUR') ? ' (' + addrMatch.asset + ')' : '');
+        if (addrMatch) {
+          // Use the Key Name from address book
+          fullRecipient = (addrMatch.key || "").trim();
+        } else {
+          // Fallback 1: Loose match on address only (for crypto non-tag assets)
+          // Fallback 1: Loose match on address only (for crypto non-tag assets)
+          const looseMatch = cacheData.krakenAddresses.find(a => a.address === walletAddr);
+          if (looseMatch) {
+            // If we found a match by address, use it.
+            // (We relax strict tag matching here because sometimes tags appear in "info" or are optional)
+            fullRecipient = (looseMatch.key || "").trim();
           } else {
-            const looseMatch = cacheData.krakenAddresses.find(a => a.address === walletAddr);
-            if (looseMatch) {
-              fullRecipient = (looseMatch.key || "").trim();
-            } else {
-              if (historyMatch && historyMatch.info) {
-                fullRecipient = historyMatch.info;
-              }
+            // Fallback 2: Use the 'info' field from withdrawal history directly if no book match
+            if (historyMatch && historyMatch.info) {
+              fullRecipient = historyMatch.info;
             }
+          }
+        }
+
+        // v2.48 Fallback 2: If still empty and it's a Fiat withdrawal, use the bank name from history
+        if (!fullRecipient && (w.type === "withdrawal")) {
+          const isFiat = w.asset.includes("GBP") || w.asset.includes("EUR") || w.asset.includes("USD") || w.asset.includes("ZGBP") || w.asset.includes("ZEUR") || w.asset.includes("ZUSD");
+          if (isFiat && walletAddr) {
+            fullRecipient = walletAddr; // e.g. "Revolut Ltd"
           }
         }
 
@@ -3680,6 +3874,12 @@ Purpose: GitHub Pages testing
 
 
         const record = {
+          time: w.time,
+          // v4.00-25: Store RAW signed numbers for Statement Logic (Math & Sorting)
+          rawAmount: w.amount,
+          rawFee: w.fee,
+          rawBalance: w.balance,
+
           dateSent: formatTimestamp(w.time),
           timeSent: formatTime(w.time),
           refid: w.refid, // v2.90: needed for linking
@@ -3690,7 +3890,8 @@ Purpose: GitHub Pages testing
           asset: normalizedAsset,
           amount: Math.abs(w.amount).toFixed(6),
           fee: Math.abs(w.fee).toFixed(6),
-          balance: w.balance.toFixed(6),
+          // v4.00-36 Fix: Ensure balance is a number before calling toFixed
+          balance: parseFloat(w.balance || 0).toFixed(6),
           conversionCurrency: conversionCurrency,
           conversionRate: conversionRate,
           gbpSent: gbpSent,
@@ -3714,11 +3915,35 @@ Purpose: GitHub Pages testing
       }
       // Populate global cache for Summary reuse
       cacheData.withdrawalCache = [...stagingRecords];
+      // FIX: Also update the main cache variable used by Generate Bank Report
+      cacheData.withdrawals = [...stagingRecords];
 
       localStorage.setItem("kraken_staging", JSON.stringify(stagingRecords));
       renderPreview();
       updateStatus("Ready", "active");
       logTrace("Report generated: " + stagingRecords.length + " records");
+      // Bank-label diagnostics: summarize in Trace log (no need to open browser console)
+      if (ENABLE_BANK_LABEL_DIAGNOSTICS && window.bankLabelDiagnostics && window.bankLabelDiagnostics.length) {
+        try {
+          const total = window.bankLabelDiagnostics.length;
+          const withKey = window.bankLabelDiagnostics.filter(d => d.hasKey).length;
+          const byAsset = {};
+          for (const d of window.bankLabelDiagnostics) {
+            const k = d.normAsset || d.asset || "UNKNOWN";
+            byAsset[k] = byAsset[k] || { total: 0, withKey: 0, noKey: 0 };
+            byAsset[k].total += 1;
+            if (d.hasKey) byAsset[k].withKey += 1; else byAsset[k].noKey += 1;
+          }
+          logTrace("BANK_LABEL_DIAG: entries=" + total + ", withKey=" + withKey + ", noKey=" + (total - withKey) + ", byAsset=" + JSON.stringify(byAsset));
+          const samples = window.bankLabelDiagnostics.slice(0, Math.min(10, total));
+          for (let i = 0; i < samples.length; i++) {
+            logTrace("BANK_LABEL_DIAG_SAMPLE[" + (i + 1) + "]: " + JSON.stringify(samples[i]));
+          }
+        } catch (e) {
+          logTrace("BANK_LABEL_DIAG: failed to summarize diagnostics: " + (e && e.message ? e.message : String(e)));
+        }
+      }
+
     }
 
     // Format unix timestamp to DD Mon YYYY
@@ -3750,9 +3975,6 @@ Purpose: GitHub Pages testing
     const TRACKED_ASSETS = ["GBP", "EUR", "USDT", "XRP"];
 
     async function generateBankReport() {
-      // v4.00-13 Objective D: Bank label logic moved to getBankLabel() helper
-      // const bankLabelByAsset = {}; REMOVED
-
       const btn = document.getElementById("btn_bank_statement");
       const sDateVal = document.getElementById("startDate").value;
       const eDateVal = document.getElementById("endDate").value;
@@ -3773,11 +3995,41 @@ Purpose: GitHub Pages testing
       // 1. Filter and Sort Data
       // Use allLedgerEntries (cached in withdrawals)
       const entries = cacheData.withdrawals
-        .filter(e => e.time >= startTs && e.time <= endTs)
+        .filter(e => {
+          // v4.00-23 Fix: Ensure time is comparable (Unix Timestamp)
+          // If 'readLedger' populated stagingRecords with formatted strings, we might have lost the raw time.
+          // However, our stagingRecords push (line 3770) uses 'timeSent' which is formatted? 
+          // WAIT! In readLedger, we push 'timeSent: formatTimestamp(w.time)'.
+          // BUT we should have preserved the raw unix time in the record as 'time'.
+          // Let's check line 3770 area.
+          // Looking at readLedger: 
+          // record = { dateSent: ..., timeSent: ..., ... }
+          // It does NOT seem to strictly preserve 'time' property in the root of the object if we aren't careful.
+          // Let's ensure we use a normalized time check.
+          let t = e.time;
+          if (!t || isNaN(t)) {
+            // Try to parse 'dateSent' or 'timeSent' if original 'time' is missing
+            // Note: 'dateSent' is "DD Mon YYYY", 'timeSent' is "HH:MM:SS"
+            // Only reliable way is if we KEPT '_raw' or 'time' in the staging object.
+            // In readLedger logic, we constructed 'record'. Did we add 'time'?
+            // If not, we found the bug.
+            // As a workaround, let's try to parse dateSent if possible, but it lacks precision.
+            // BETTER FIX: We will ensure readLedger adds 'time' to the staging record.
+            // For now, let's log if t is missing.
+            console.warn("Missing raw time for entry:", e);
+            return false;
+          }
+          return t >= startTs && t <= endTs;
+        })
         .sort((a, b) => a.time - b.time); // Oldest first
 
       if (entries.length === 0) {
-        alert("No transactions found in this date range.");
+        // Debugging Aid
+        console.log("Filter Range:", startTs, endTs);
+        if (cacheData.withdrawals.length > 0) {
+          console.log("First Entry Time:", cacheData.withdrawals[0].time);
+        }
+        alert("No transactions found in this date range.\nCheck console for debug info.");
         btn.innerText = `Kraken Statement ${formatTimestamp(startTs)} to ${formatTimestamp(endTs)}`;
         return;
       }
@@ -3803,7 +4055,8 @@ Purpose: GitHub Pages testing
           // Found a transaction. Opening balance is Balance BEFORE this transaction.
           // Note: amount is positive for deposits, negative for withdrawals/trades-out.
           // Balance = Prev + Amount  =>  Prev = Balance - Amount
-          runningBal[asset] = first.balance - first.amount;
+          // v4.00-25: Use raw signed numbers
+          runningBal[asset] = first.rawBalance - first.rawAmount;
         } else {
           runningBal[asset] = 0; // Asset not seen in period, assume 0
         }
@@ -3860,12 +4113,14 @@ Purpose: GitHub Pages testing
           else return; // Ignore non-tracked assets if any
 
           // Update Running Balance from Authoritative Ledger Data
-          runningBal[asset] = entry.balance;
+          // v4.00-25: Use rawBalance (number)
+          runningBal[asset] = entry.rawBalance;
 
           // Fill Row Data
-          row.amounts[asset] = entry.amount;
+          // v4.00-25: Use rawAmount/rawFee (numbers) for accumulation
+          row.amounts[asset] = entry.rawAmount;
           // Fix: Accumulate fees, don't overwrite (in case both legs pay in same asset)
-          row.fees[asset] = (row.fees[asset] || 0) + Math.abs(entry.fee);
+          row.fees[asset] = (row.fees[asset] || 0) + Math.abs(entry.rawFee);
         };
 
         if (isTradeMerge) {
@@ -3874,8 +4129,9 @@ Purpose: GitHub Pages testing
           processEntry(next);
 
           // Determine Description e.g. "Buy USDT / Sell GBP"
-          const bought = (e.amount > 0 ? e : next);
-          const sold = (e.amount < 0 ? e : next);
+          // v4.00-25: Use rawAmount to check sign (positive = buy, negative = sell)
+          const bought = (e.rawAmount > 0 ? e : next);
+          const sold = (e.rawAmount < 0 ? e : next);
 
           // Fix v2.77: Safer asset normalization (don't blindly strip X)
           const norm = (a) => {
@@ -4038,82 +4294,37 @@ Purpose: GitHub Pages testing
             if (!row.gbpValues) row.gbpValues = {};
             if (foundGbp) row.gbpValues[normalizedAsset] = parseFloat(foundGbp);
 
+            // v4.00-09: Use Pre-calculated recipient from readLedger if available (Ensures consistency)
+            let label = e.recipient;
+
+            // Patch 4: Apply resolver in Statement row construction
+            if (!label) {
+              label = resolveRecipientLabel({
+                asset: normalizedAsset,
+                refid: e.refid,
+                historyMatch: cacheData.withdrawalHistory.find(h => h.refid === e.refid),
+                krakenAddresses: cacheData.krakenAddresses,
+                withdrawalHistoryByRefid: cacheData.withdrawalHistoryByRefid,
+                currentInfo: e.info
+              });
+            }
+
+            if (e.type === 'withdrawal') {
+              const fin = finalizeWithdrawalRecipientLabel({ label, asset: normalizedAsset, info: e.info });
+              if (fin) label = fin;
+            }
+
             // Default Detail
             detail = (e.type === 'withdrawal') ? `Withdrawal` : `Deposit`;
 
-            // Enriched Logic: First 2 words of recipient
-            let recipient = null;
-
-
-            // v4.00-59 NEW FIAT LABEL RULE: Strict asset matching to avoid USDT triggering USD.
-            const isFiat = ["GBP", "EUR", "USD", "ZGBP", "ZEUR", "ZUSD"].includes(e.asset);
-
-            if (isFiat && e.type === "deposit") {
-              // Fiat deposits from Kraken lack 'info' strings containing the bank. Use dynamic history scan.
-              const dynamicName = getFiatBankNameFromHistory(e.asset);
-              if (dynamicName) {
-                recipient = dynamicName;
-                detail = dynamicName;
-              }
-            } else if (isFiat && e.type === "withdrawal") {
-              // v4.10-09: Strict fiat withdrawal resolution
-              // 1. Identify specific withdrawal in history
-              const historyMatch = cacheData.withdrawalHistory.find(h => h.refid === e.refid);
-
-              let rawBankName = "";
-              if (historyMatch) {
-                // Prioritize user labels (key) or provider (method) or specific record info
-                rawBankName = historyMatch.key || historyMatch.method || historyMatch.info;
-
-                // If the string is generic API text, check the address book match
-                if (rawBankName && rawBankName.includes("Withdrawal")) {
-                  const addrMatch = cacheData.krakenAddresses.find(a => a.address === historyMatch.address);
-                  if (addrMatch) rawBankName = addrMatch.key;
-                }
-              }
-
-              // 2. Fallback to "Other Banks" instead of guessing by currency
-              if (!rawBankName || rawBankName.includes("Withdrawal")) {
-                if (e.info && !e.info.includes("Withdrawal") && e.info !== "Deposit") {
-                  rawBankName = e.info;
-                } else {
-                  rawBankName = "Other Banks";
-                }
-              }
-
-              // Apply name to report
-              const words = String(rawBankName).trim().split(/\s+/).filter(Boolean);
-              detail = (words.length <= 2) ? words.join(" ") : words.slice(0, 2).join(" ");
-              recipient = detail;
-
+            // If we resolved a canonical label, Use it.
+            if (label) {
+              detail = label;
+              // Persist for Summary Report
+              row.recipient = label;
             } else {
-              // v4.00-56 Legacy Crypto Match Logic
-
-              // 1. History Lookup
-              const historyMatch = cacheData.withdrawalHistory.find(h => h.refid === e.refid);
-              if (historyMatch) {
-                // v4.10-06: Prioritize key (label)
-                const addr = historyMatch.key || historyMatch.info || historyMatch.address;
-                const addrMatch = cacheData.krakenAddresses.find(a => a.address === addr);
-                if (addrMatch) recipient = addrMatch.key + ((addrMatch.asset === 'GBP' || addrMatch.asset === 'EUR') ? ' (' + addrMatch.asset + ')' : '');
-                else if (addr) recipient = addr;
-              }
-
-              if (recipient) {
-                // Take first 2 words
-                const _m = recipient.match(/\s*\((GBP|EUR)\)\s*$/);
-                const _suf = _m ? " (" + _m[1] + ")" : "";
-                const _base = recipient.replace(/\s*\((GBP|EUR)\)\s*$/, "");
-                const words = _base.split(/\s+/).slice(0, 2).join(" ") + _suf;
-                // Clean common suffixes if needed, or just trust words
-                detail = `${words}`;
-
-                // v3.028: Fix "Withdrawal (EUR)" showing instead of name
-                // Use the detected name as the primary detail
-                row.details = detail;
-
-              } else if (e.info && e.info !== "Withdrawal" && e.info !== "Deposit") {
-                // v3.017: Fallback to ledger info if no address match (e.g. "Revolut Ltd")
+              // FALLBACK: Use info if available (e.g. "Revolut Ltd")
+              if (e.info && e.info !== "Withdrawal" && e.info !== "Deposit") {
                 detail = e.info;
               }
             }
@@ -4121,23 +4332,20 @@ Purpose: GitHub Pages testing
             // Append Asset (cleaned)
             let cleanAsset = normalizedAsset.replace("ZEUR", "EUR").replace("ZGBP", "GBP").replace("ZUSD", "USD");
 
-            // v3.028: Make sure we don't double append
-            if (!detail.includes("(" + cleanAsset + ")")) {
+            // Patch 5: Only append asset if NO label was found, OR if the detail doesn't include it.
+            // If we found a label (e.g. "Revolut Business"), we do NOT append (EUR).
+            if (!label && detail && !detail.includes(cleanAsset)) {
               detail += ` (${cleanAsset})`;
             }
 
             row.details = detail;
-            // v3.045-19.35: Persist detected recipient for Summary Report
-            if (recipient) row.recipient = recipient;
-            // Also helpful: Save the raw info if needed
             if (e.info) row.rawInfo = e.info;
 
           } else {
-            // Use e.type or fallback. If type is missing, use "Transfer"
+            // Use e.type or fallback
             const typeLabel = e.type || "Transfer";
             row.details = `${typeLabel} (${e.asset})`;
 
-            // Fix: Ensure Balance rows have correct labels if somehow falling here
             if (e.type === 'balance') row.details = "Balance Adjustment";
           }
           i += 1;
@@ -4267,7 +4475,7 @@ Purpose: GitHub Pages testing
     // STATEMENT SUMMARY REPORT (v2.50)
     // ===========================================
     let summaryRecords = { crypto: [], fiat: [], deposits: [], fees: [] };
-    let depositTotals = {}; // v4.00-02: per-recipient (with GBP/EUR suffix) deposit totals for Haricom bank accounts
+    let depositTotals = { GBP: 0, EUR: 0 }; // v3.015: Global for access in render helpers
 
 
     function toggleSummaryReport() {
@@ -4401,14 +4609,7 @@ Purpose: GitHub Pages testing
         }
 
         // --- 2. PROCESS AMOUNTS ---
-        for (const [rawAsset, val] of Object.entries(item.amounts)) {
-          // Phase III-1: Normalize Kraken internal asset codes (ZEUR/ZGBP/XXRP)
-          let asset = rawAsset;
-          if (asset === "ZEUR" || asset === "EUR.HOLD") asset = "EUR";
-          else if (asset === "ZGBP" || asset === "GBP.HOLD") asset = "GBP";
-          else if (asset === "XXRP" || asset === "XRP.HOLD") asset = "XRP";
-          else if (asset === "ZUSD" || asset === "USD.HOLD") asset = "USD";
-
+        for (const [asset, val] of Object.entries(item.amounts)) {
           if (!val || val === 0) continue;
 
           // v3.045-18.3: Track Net Trade Flows for Reconciliation
@@ -4485,6 +4686,7 @@ Purpose: GitHub Pages testing
               // FIAT EXPENSE (bank withdrawals)
               // IMPORTANT: Keep GBP and EUR on separate summary rows by suffixing the label with currency.
               // This prevents merged rows when Kraken 'info' uses the same institution string (e.g. 'Revolut Ltd') for both currencies.
+              if (!fiatInstitutionByCurrency[asset]) fiatInstitutionByCurrency[asset] = recipient;
               const fiatKey = `${recipient} (${asset})`;
               if (!fMap[fiatKey]) fMap[fiatKey] = { GBP: 0, EUR: 0, EUR_GBP: 0 };
 
@@ -4577,15 +4779,32 @@ Purpose: GitHub Pages testing
           return (w.length <= 2) ? w.join(" ") : w.slice(0, 2).join(" ");
         };
 
-        // v4.00-57 FIAT LABEL RULE: We explicitly do NOT fallback to the address book here anymore.
-        // It simply uses the API-derived name passed from the bank report logic.
+        const isVerifiedAddress = (a) => {
+          const v = a && a.verified;
+          if (v === undefined || v === null) return true; // treat missing as verified for display purposes
+          if (v === true) return true;
+          const s = String(v).toLowerCase();
+          return (s === "true" || s === "1");
+        };
+
+        const fallbackInstitutionFromAddressBook = (ccy) => {
+          try {
+            const addrs = (cacheData && cacheData.krakenAddresses) ? cacheData.krakenAddresses : [];
+            const hits = addrs.filter(a => normAsset(a.asset) === ccy && isVerifiedAddress(a) && a.key);
+            if (!hits.length) return null;
+            return firstTwoWords(hits[0].key);
+          } catch (_) {
+            return null;
+          }
+        };
+
         for (const ccy of ["GBP", "EUR"]) {
           const total = (ccy === "GBP") ? depositTotals.GBP : depositTotals.EUR;
           if (!total || total <= 0) continue;
 
-          // Prefer institution label dynamically generated by fiat withdrawals in-period
-          // otherwise fallback to "Haricom Bank".
-          const inst = fiatInstitutionByCurrency[ccy] || "Haricom Bank";
+          // Prefer institution label evidenced by fiat withdrawals in-period (e.g., "Revolut Ltd"),
+          // otherwise fallback to the configured address-book key (e.g., "Revolut Business"/"Revolut B").
+          const inst = fiatInstitutionByCurrency[ccy] || fallbackInstitutionFromAddressBook(ccy) || "Bank";
           const label = `${inst} (${ccy})`;
 
           rows.push({
@@ -4890,31 +5109,35 @@ Purpose: GitHub Pages testing
       html += '<div style="background:#27ae60; color:#fff; padding:5px 10px; font-size:0.7rem; font-weight:bold; border-radius:4px 4px 0 0; margin-bottom:0; margin-top:20px;">Deposits from Haricom Bank Accounts  GBP | EUR</div>';
       html += '<table style="width:100%; border-collapse:collapse; margin-bottom:20px; border:1px solid #ddd;">';
       html += '<thead><tr style="background:#f2f2f2;">';
-      html += '<th style="padding:4px; border:1px solid #ddd; text-align:left;">Haricom Bank Account</th>';
-      html += '<th style="padding:4px; border:1px solid #ddd; text-align:right;">GBP</th>';
-      html += '<th style="padding:4px; border:1px solid #ddd; text-align:right;">EUR</th>';
-      html += '<th style="padding:4px; border:1px solid #ddd; text-align:right;">GBP Equivalent</th>';
+      html += '<th style="padding:4px; border:1px solid #ddd; text-align:left;">Currency</th>';
+      html += '<th style="padding:4px; border:1px solid #ddd; text-align:right;">Total Amount</th><th style="padding:4px; border:1px solid #ddd; text-align:right;">GBP Equivalent</th>';
       html += '</tr></thead><tbody>';
+      const _hasDeposits = (summaryRecords.deposits || []).some(r => (Number(r.total) || 0) !== 0);
+      if (!_hasDeposits) {
+        html += '<tr><td colspan="3" style="padding:8px; border:1px solid #ddd; text-align:center; color:#666; font-style:italic;">No deposits found for this period.</td></tr>';
+      }
+      for (const r of (summaryRecords.deposits || [])) {
+        if (!_hasDeposits) break;
+        const asset = r.asset;
+        const total = parseFloat(r.total || 0);
+        const totalShow = total.toFixed(2);
 
-      const depositRecipients = summaryRecords.deposits || [];
-      if (depositRecipients.length === 0) {
-        html += '<tr><td colspan="4" style="padding:8px; border:1px solid #ddd; text-align:center; color:#666; font-style:italic;">No deposits found for this period.</td></tr>';
-      } else {
-        for (const r of depositRecipients) {
-          const gbpShow = (r.GBP && r.GBP > 0) ? r.GBP.toFixed(2) : "-";
-          const eurShow = (r.EUR && r.EUR > 0) ? r.EUR.toFixed(2) : "-";
-          const eqShow = (r.EUR && r.EUR > 0) ? (r.EUR_GBP ? r.EUR_GBP.toFixed(2) : "0.00") : "n/a";
-
-          const gbpStyle = (r.GBP && r.GBP > 0) ? "font-weight:bold; color:#000;" : "";
-          const eqStyle = (r.EUR && r.EUR > 0) ? "font-weight:bold; color:#000;" : "color:#7f8c8d;";
-
-          html += '<tr>';
-          html += `<td style="padding:4px; border:1px solid #ddd; text-align:left;">${escHtml(r.recipient)}</td>`;
-          html += `<td style="padding:4px; border:1px solid #ddd; text-align:right; ${gbpStyle}">${gbpShow}</td>`;
-          html += `<td style="padding:4px; border:1px solid #ddd; text-align:right;">${eurShow}</td>`;
-          html += `<td style="padding:4px; border:1px solid #ddd; text-align:right; ${eqStyle}">${eqShow}</td>`;
-          html += '</tr>';
+        let gbpEqShow = "-";
+        if (asset === "GBP") {
+          gbpEqShow = "n/a";
+        } else if (asset === "EUR") {
+          const eq = (typeof r.gbpEq === "number") ? r.gbpEq : parseFloat(r.gbpEq || 0);
+          gbpEqShow = (eq || total === 0) ? (eq || 0).toFixed(2) : "0.00";
         }
+
+        const totalStyle = (asset === "GBP") ? "font-weight:bold;" : "";
+        const eqStyle = (asset === "EUR") ? "font-weight:bold; color:#000;" : "color:#7f8c8d;";
+
+        html += '<tr>';
+        html += `<td style="padding:4px; border:1px solid #ddd;">${asset}</td>`;
+        html += `<td style="padding:4px; border:1px solid #ddd; text-align:right; ${totalStyle}">${totalShow}</td>`;
+        html += `<td style="padding:4px; border:1px solid #ddd; text-align:right; ${eqStyle}">${gbpEqShow}</td>`;
+        html += '</tr>';
       }
       html += '</tbody></table>';
 
@@ -5113,8 +5336,8 @@ Purpose: GitHub Pages testing
       if (Array.isArray(summaryRecords.deposits)) {
         for (const r of summaryRecords.deposits) {
           if (!r) continue;
-          depGBP += _n2(r.GBP);
-          depEUR += _n2(r.EUR_GBP);
+          if (r.asset === "GBP") depGBP += _n2(r.total);
+          if (r.asset === "EUR") depEUR += _n2(r.gbpEq);
         }
       }
 
@@ -5664,21 +5887,7 @@ Purpose: GitHub Pages testing
       if (savedWithdrawals) cacheData.withdrawals = JSON.parse(savedWithdrawals);
       if (savedAddresses) cacheData.krakenAddresses = JSON.parse(savedAddresses);
       if (savedHistory) cacheData.withdrawalHistory = JSON.parse(savedHistory);
-      // v4.10-01: load version-agnostic rate cache first, then overlay with versioned cache if present
-      // This means rates survive a version bump without needing a full re-fetch
-      const savedRatesVersionless = localStorage.getItem("kraken_rates_cache");
-      if (savedRatesVersionless) {
-        try { cacheData.ratesCache = JSON.parse(savedRatesVersionless); } catch (e) { }
-      }
-      if (savedRates) {
-        try {
-          const versioned = JSON.parse(savedRates);
-          cacheData.ratesCache = Object.assign({}, cacheData.ratesCache, versioned);
-        } catch (e) { }
-      }
-      if (Object.keys(cacheData.ratesCache).length > 0) {
-        logTrace("Rates cache loaded from localStorage: " + Object.keys(cacheData.ratesCache).length + " dates");
-      }
+      if (savedRates) cacheData.ratesCache = JSON.parse(savedRates);
 
       renderPreview();
       updateStatusCounts();

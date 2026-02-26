@@ -1,0 +1,164 @@
+# Objective D: Bank Name Label Propagation Fix
+
+## Version Target
+- **Base Version**: v4.00-12 (Baseline)
+- **Target Version**: v4.00-13-00
+
+## Requirements
+
+Fix the bank name label propagation issue for fiat deposits and withdrawals (GBP/EUR) to ensure consistent labels appear across:
+1. **TWD Report** (Trade/Withdrawal/Deposit Report)
+2. **Kraken Statement** (Bank Statement view)
+3. **Statement Summary** (Aggregated summary derived from ledger)
+
+The labels must be derived from the Kraken Address Book (`krakenAddresses`) and propagate unchanged through all three reports.
+
+---
+
+## Current State Analysis (v4.00-12 Baseline)
+
+### Identified Bugs and Issues
+
+#### Bug 1: Typo in `generateBankReport()` causing crash (Line ~3946)
+**Location**: `generateBankReport()` function, around line 3946
+**Issue**: Variable `prevRoe` should be `prevRow`
+```javascript
+// Line 3946 - TYPO
+if (prevRoe.type === "trade") {
+// Should be:
+if (prevRow.type === "trade") {
+```
+**Impact**: This typo will cause a `ReferenceError` when the lookback logic attempts to find a preceding trade for withdrawal valuation, crashing the Statement Report generation.
+
+#### Bug 2: Variable `asset` referenced before definition (Line ~3997)
+**Location**: `generateBankReport()` function, around line 3997
+**Issue**: The variable `asset` is referenced but was not defined in that scope
+```javascript
+// Line 3997 - Undefined variable
+const _fa = (asset || "").replace(/^Z/, "");
+// `asset` is not defined at this point in the code block
+```
+**Impact**: This will cause a `ReferenceError` when processing fiat deposits, preventing bank labels from being assigned correctly.
+
+#### Bug 3: `fetchWithdrawalHistory()` missing EUR asset coverage (Line ~2901)
+**Location**: `fetchWithdrawalHistory()` function, line 2901
+**Issue**: The assets array queries `"ZUSD"` but not `"ZEUR"` or `"EUR"`
+```javascript
+const assets = ["USDT", "XXRP", "ZUSD", "ZGBP"];
+// Missing: "ZEUR", "EUR", "GBP"
+```
+**Impact**: EUR withdrawal history is not fetched, breaking the RefID -> Address Key linkage for EUR bank withdrawals. Per the Project Learnings document, the API requires both `"ZGBP"` AND `"GBP"` formats for proper coverage.
+
+#### Bug 4: Incomplete label propagation in Statement Summary deposits (Line ~4351-4355)
+**Location**: `generateStatementSummary()` function
+**Issue**: The deposit key construction doesn't consistently include the bank name from the `bankLabelByAsset` lookup; it relies on `recipient` which may be "Unknown" or missing.
+
+#### Bug 5: Statement Summary deposits section not showing bank names
+**Location**: `renderSummaryTable()` deposits section
+**Issue**: The deposits rendering iterates `summaryRecords.deposits` which uses `r.asset` and `r.total` but the deposit aggregation in `generateStatementSummary()` groups by recipient key, not by asset. The data structure mismatch causes incorrect rendering.
+
+---
+
+## Implementation Phases
+
+### Phase 1: Fix Critical Typo and Variable Reference Errors
+**Objective**: Fix JavaScript errors that crash the application
+
+1.1 Fix typo `prevRoe` -> `prevRow` at line ~3946 in `generateBankReport()`
+
+1.2 Fix undefined `asset` variable reference at line ~3997 by using the correct scoped variable (the entry's normalized asset)
+
+### Phase 2: Extend Withdrawal History Asset Coverage
+**Objective**: Ensure EUR withdrawal history is fetched for proper RefID linking
+
+2.1 Update `fetchWithdrawalHistory()` assets array to include EUR coverage:
+```javascript
+const assets = ["USDT", "XXRP", "ZGBP", "ZEUR", "GBP", "EUR"];
+```
+
+### Phase 3: Consolidate Bank Label Resolution
+**Objective**: Create consistent bank label lookup used across all three reports
+
+3.1 Move `bankLabelByAsset` lookup to a reusable helper function that can be called from:
+- `generateReportFromCache()` (TWD Report)
+- `generateBankReport()` (Kraken Statement)
+- `generateStatementSummary()` (Statement Summary)
+
+3.2 The label format must be: `<Bank Name> (<Currency>)` e.g., "Revolut Business (GBP)"
+
+### Phase 4: Fix Label Propagation in Statement Row Construction
+**Objective**: Ensure deposit/withdrawal rows in the Statement carry the bank label
+
+4.1 In `generateBankReport()`, ensure the deposit processing block (around line 3997) properly assigns `recipient` from `bankLabelByAsset` using the entry's asset
+
+4.2 Ensure `row.recipient` is set on both deposit and withdrawal rows for downstream Summary consumption
+
+### Phase 5: Fix Statement Summary Deposit Display
+**Objective**: Ensure deposits appear in Summary with correct bank names
+
+5.1 Review and fix the deposit aggregation in `generateStatementSummary()` to properly group by bank account name
+
+5.2 Ensure `depositTotals` structure matches what `renderSummaryTable()` expects
+
+5.3 Update deposits section rendering to show bank names (not just asset codes)
+
+### Phase 6: Verification and Testing
+**Objective**: Validate all three reports show identical bank labels
+
+6.1 Test with GBP deposit + GBP withdrawal scenario
+6.2 Test with EUR deposit + EUR withdrawal scenario  
+6.3 Test edge case: deposits exist, no withdrawals
+6.4 Test edge case: withdrawals exist, no deposits
+6.5 Test edge case: only GBP bank activity (no EUR)
+6.6 Test edge case: only EUR bank activity (no GBP)
+6.7 Verify propagation: same label in TWD -> Statement -> Summary
+
+---
+
+## Acceptance Criteria (from Core Functional Reference)
+
+Objective D is complete when ALL of the following are true:
+
+1. Fiat withdrawals to bank accounts appear in Statement Summary when present in Statement
+2. Fiat deposits from bank accounts appear in Statement Summary when present in Statement
+3. Labels are built from Kraken address metadata (`a.key` / `a.info`), and do not merge across currencies
+4. Label format is exactly: `<Institution Name> (<Currency>)`
+5. The same labels appear unchanged in TWD, Statement, and Statement Summary
+6. Edge-case display is correct:
+   - If no deposits exist in the date range, show "No deposits in this period" message
+   - If no withdrawals exist in the date range, show "No withdrawals in this period" message
+
+---
+
+## Files to Modify
+
+| File | Changes Required |
+|------|-----------------|
+| `Kraken Ledger Report.html` | All JavaScript fixes (single-file application) |
+
+---
+
+## Risk Assessment
+
+| Risk | Mitigation |
+|------|-----------|
+| Breaking existing functionality | Changes are targeted fixes only; no refactoring |
+| FX rate calculations affected | Fixes are presentation-layer only; no numeric logic changes |
+| Reconciliation changes | Bank labels are display-only; amounts unchanged |
+
+---
+
+## Version Control
+
+- **Version Increment**: v4.00-12 -> v4.00-13-00
+- **Version Comment**: `Objective D: Bank Label Propagation Fix`
+- **Hotfix Path**: If critical defect discovered during implementation, use `v4.00-13-00-hotfix-XX` pattern
+
+---
+
+## References
+
+- KRK_Core_Functional_Reference_v4.00-12_doc-v1.4 (Section 5: Objective D)
+- Phase_III-1_Bank_Withdrawal_Label_Normalisation_Execution_Plan
+- KRK_Project_Learnings_v1.000 (API Asset Codes section)
+- Post_Mortem_Review_v4.00_to_v4.00-40 (Historical context)

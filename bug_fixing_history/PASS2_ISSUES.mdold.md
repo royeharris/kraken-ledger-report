@@ -1,0 +1,5 @@
+- Statement Summary Report is missing; only a line appears when the button is pressed.
+- Description field is empty missing in UI (which fields/sections?)
+- Hard-coded values present (which values? which fields?)
+- Google Sheets export authorization error (exact error text + where shown)
+- Expected workflow: Read Ledger → Generate Reports button  Statement → Generate Summary → Export
