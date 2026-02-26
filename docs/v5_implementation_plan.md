@@ -140,7 +140,7 @@ The refinement of fiat labels will be handled in three distinct stages to ensure
 ### Stage 2: Fix Bug C (Withdrawal Labels - Fiat Only) [DONE]
 *   **Goal**: Ensure fiat withdrawals show the correct institution (e.g., `"Revolut Ltd"`) instead of the generic `"Withdrawal (EUR)"` in the **Withdrawals** section.
 *   **Fiat-Only Scope**: This fix is strictly gated by the `isFiat` check in the code. It does not affect crypto withdrawals, which continue to use the legacy address book matching logic (labeled as "Withdrawals to individuals" by the user).
-*   **Action**: Update the withdrawal name resolution within the fiat-conditional blocks to prioritize the `"key"` (the label assigned in Kraken) from the `WithdrawStatus` API.
+*   **Action**: Update the withdrawal name resolution within the fiat-conditional blocks to prioritize the `"key"` or `"info"` from the Kraken API. If no specific bank name is resolved, fallback to the label `"Other Banks"` to indicate missing metadata instead of guessing based on currency.
 *   **Result**: Fiat withdrawals will correctly display your assigned account labels, while crypto withdrawals remain unaffected.
 
 ### Stage 3: Fix Bug B + Generic Deposit Labels

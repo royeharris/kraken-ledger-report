@@ -2,6 +2,10 @@
 
 This document tracks the evolution of the Kraken Ledger Report project from Version 4.00 onwards.
 
+## [v4.10-09-FIX-BUG-C-FINAL] - 2026-02-26
+### Fixed
+- **Stage 2 Fiat Withdrawal Labels (Bug C) - Final:** Removed the rejected currency-based fallback. Implemented strict per-record bank name resolution prioritizing `key`, `method`, and `info`. Added "Other Banks" as a fallback to indicate missing API metadata, ensuring the report never makes incorrect guesses when multiple banks exist for the same currency.
+
 ## [v4.10-08-REFINED-BUG-C] - 2026-02-26
 ### Fixed
 - **Stage 2 Fiat Withdrawal Labels (Bug C) - Refined:** Simplified resolution logic to strictly prioritize API bank names. Added a currency-based historical fallback that ensures withdrawals are labeled with the most recently known bank for that currency (e.g., "Revolut Ltd") even if specific ledger records lack metadata.

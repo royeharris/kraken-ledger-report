@@ -503,7 +503,7 @@ Purpose: GitHub Pages testing
 
 
   <script>
-    const APP_VERSION = "v4.10-08-REFINED-BUG-C";
+    const APP_VERSION = "v4.10-09-FIX-BUG-C-FINAL";
   </script>
 
 
@@ -4055,27 +4055,36 @@ Purpose: GitHub Pages testing
                 detail = dynamicName;
               }
             } else if (isFiat && e.type === "withdrawal") {
-              // v4.10-08: Simplified fiat withdrawal resolution
-              // 1. Specific Match via RefID
+              // v4.10-09: Strict fiat withdrawal resolution
+              // 1. Identify specific withdrawal in history
               const historyMatch = cacheData.withdrawalHistory.find(h => h.refid === e.refid);
-              let nameFromAPI = historyMatch ? (historyMatch.key || historyMatch.method || historyMatch.info) : "";
 
-              // 2. Currency-based Fallback (search history for the bank name used for this currency)
-              if (!nameFromAPI || nameFromAPI.includes("Withdrawal")) {
-                const globalMatch = getFiatBankNameFromHistory(e.asset);
-                if (globalMatch) nameFromAPI = globalMatch;
+              let rawBankName = "";
+              if (historyMatch) {
+                // Prioritize user labels (key) or provider (method) or specific record info
+                rawBankName = historyMatch.key || historyMatch.method || historyMatch.info;
+
+                // If the string is generic API text, check the address book match
+                if (rawBankName && rawBankName.includes("Withdrawal")) {
+                  const addrMatch = cacheData.krakenAddresses.find(a => a.address === historyMatch.address);
+                  if (addrMatch) rawBankName = addrMatch.key;
+                }
               }
 
-              // 3. Ledger Info Fallback
-              if (!nameFromAPI && e.info && !e.info.includes("Withdrawal")) {
-                nameFromAPI = e.info;
+              // 2. Fallback to "Other Banks" instead of guessing by currency
+              if (!rawBankName || rawBankName.includes("Withdrawal")) {
+                if (e.info && !e.info.includes("Withdrawal") && e.info !== "Deposit") {
+                  rawBankName = e.info;
+                } else {
+                  rawBankName = "Other Banks";
+                }
               }
 
-              if (nameFromAPI) {
-                const words = String(nameFromAPI).trim().split(/\s+/).filter(Boolean);
-                detail = (words.length <= 2) ? words.join(" ") : words.slice(0, 2).join(" ");
-                recipient = detail;
-              }
+              // Apply name to report
+              const words = String(rawBankName).trim().split(/\s+/).filter(Boolean);
+              detail = (words.length <= 2) ? words.join(" ") : words.slice(0, 2).join(" ");
+              recipient = detail;
+
             } else {
               // v4.00-56 Legacy Crypto Match Logic
 
