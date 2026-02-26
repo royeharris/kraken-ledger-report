@@ -503,7 +503,7 @@ Purpose: GitHub Pages testing
 
 
   <script>
-    const APP_VERSION = "v4.10-06-FIX-BUG-C";
+    const APP_VERSION = "v4.10-07-FIX-BUG-C";
   </script>
 
 
@@ -2915,21 +2915,22 @@ Purpose: GitHub Pages testing
     // Used for labeling fiat deposits which lack 'info' strings from the Kraken API.
     function getFiatBankNameFromHistory(asset) {
       if (!cacheData.withdrawalHistory || !cacheData.withdrawalHistory.length) return null;
-      const cleanAsset = (asset || "").replace(/^Z/, "").toUpperCase();
+      const cleanAsset = (asset || "").toUpperCase().replace(/^Z/, "");
       if (cleanAsset !== "GBP" && cleanAsset !== "EUR") return null;
 
       // Find the first withdrawal in history matching this fiat currency
-      // v4.10-06: Prioritize 'key' (user's label) over 'info' (Kraken generic string)
+      // v4.10-07: Prioritize 'key' (user's label) or 'method' over generic 'info'
       const match = cacheData.withdrawalHistory.find(h => {
-        const hAsset = (h.asset || "").replace(/^Z/, "").toUpperCase();
-        return hAsset === cleanAsset && (h.key || h.info);
+        const hAsset = (h.asset || "").toUpperCase().replace(/^Z/, "");
+        return hAsset === cleanAsset && (h.key || h.method || h.info);
       });
 
       if (match) {
-        const rawName = match.key || match.info;
+        // v4.10-07: Prioritize Labels/Methods to avoid generic "Withdrawal (EUR)" strings
+        const rawName = match.key || match.method || match.info;
         if (!rawName || rawName.includes("Withdrawal")) return null;
 
-        // Extract up to 2 words for brevity (e.g., "Revolut Ltd")
+        // Extract up to 2 words (e.g., "Revolut Ltd")
         const words = String(rawName).trim().split(/\s+/).filter(Boolean);
         return (words.length <= 2) ? words.join(" ") : words.slice(0, 2).join(" ");
       }
@@ -4055,22 +4056,35 @@ Purpose: GitHub Pages testing
                 detail = dynamicName;
               }
             } else if (isFiat && e.type === "withdrawal") {
-              // For fiat withdrawals, it's often in either e.info or historyMatch.
+              // v4.10-07: Enhanced fiat withdrawal resolution
+              // For fiat withdrawals, the name is in historyMatch.key, historyMatch.method, or historyMatch.info.
               const historyMatch = cacheData.withdrawalHistory.find(h => h.refid === e.refid);
-              // Try historyMatch.info first, then e.info
+
               let rawBankName = "";
-              if (historyMatch && historyMatch.info) {
-                rawBankName = historyMatch.info;
-              } else if (e.info && e.info !== "Withdrawal" && e.info !== "Deposit") {
-                rawBankName = e.info;
+              if (historyMatch) {
+                // v4.10-07: Prioritize key (label) and method (provider) over the generic info string
+                rawBankName = historyMatch.key || historyMatch.method || historyMatch.info;
+
+                // If the string contains "Withdrawal", it's a generic API string - check address book instead
+                if (rawBankName && rawBankName.includes("Withdrawal")) {
+                  const addrMatch = cacheData.krakenAddresses.find(a => (a.address === historyMatch.address || a.key === historyMatch.key));
+                  if (addrMatch) rawBankName = addrMatch.key;
+                  else if (historyMatch.method) rawBankName = historyMatch.method; // fallback to method if info was generic
+                }
               }
 
-              // If we found a name, use it. Otherwise fallback to generic word.
-              if (rawBankName) {
-                // Extract just the first 2 words for brevity (e.g. "Revolut Ltd" or "Clear Junction")
+              if (!rawBankName || rawBankName.includes("Withdrawal")) {
+                // Fallback to ledger info ONLY if not generic
+                if (e.info && e.info !== "Withdrawal" && !e.info.includes("Withdrawal (")) {
+                  rawBankName = e.info;
+                }
+              }
+
+              // If we found a name, use it.
+              if (rawBankName && !rawBankName.includes("Withdrawal")) {
                 const words = String(rawBankName).trim().split(/\s+/).filter(Boolean);
                 detail = (words.length <= 2) ? words.join(" ") : words.slice(0, 2).join(" ");
-                recipient = detail; // Save clean name for downstream
+                recipient = detail;
               }
             } else {
               // v4.00-56 Legacy Crypto Match Logic
