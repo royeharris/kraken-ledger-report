@@ -503,7 +503,7 @@ Purpose: GitHub Pages testing
 
 
   <script>
-    const APP_VERSION = "v4.10-07-FIX-BUG-C";
+    const APP_VERSION = "v4.10-08-REFINED-BUG-C";
   </script>
 
 
@@ -2918,17 +2918,16 @@ Purpose: GitHub Pages testing
       const cleanAsset = (asset || "").toUpperCase().replace(/^Z/, "");
       if (cleanAsset !== "GBP" && cleanAsset !== "EUR") return null;
 
-      // Find the first withdrawal in history matching this fiat currency
-      // v4.10-07: Prioritize 'key' (user's label) or 'method' over generic 'info'
+      // Find the most recent withdrawal in history matching this fiat currency
+      // v4.10-08: Simply prioritize 'key' (user's label), then 'method', then 'info'
       const match = cacheData.withdrawalHistory.find(h => {
         const hAsset = (h.asset || "").toUpperCase().replace(/^Z/, "");
         return hAsset === cleanAsset && (h.key || h.method || h.info);
       });
 
       if (match) {
-        // v4.10-07: Prioritize Labels/Methods to avoid generic "Withdrawal (EUR)" strings
         const rawName = match.key || match.method || match.info;
-        if (!rawName || rawName.includes("Withdrawal")) return null;
+        if (!rawName) return null;
 
         // Extract up to 2 words (e.g., "Revolut Ltd")
         const words = String(rawName).trim().split(/\s+/).filter(Boolean);
@@ -4056,33 +4055,24 @@ Purpose: GitHub Pages testing
                 detail = dynamicName;
               }
             } else if (isFiat && e.type === "withdrawal") {
-              // v4.10-07: Enhanced fiat withdrawal resolution
-              // For fiat withdrawals, the name is in historyMatch.key, historyMatch.method, or historyMatch.info.
+              // v4.10-08: Simplified fiat withdrawal resolution
+              // 1. Specific Match via RefID
               const historyMatch = cacheData.withdrawalHistory.find(h => h.refid === e.refid);
+              let nameFromAPI = historyMatch ? (historyMatch.key || historyMatch.method || historyMatch.info) : "";
 
-              let rawBankName = "";
-              if (historyMatch) {
-                // v4.10-07: Prioritize key (label) and method (provider) over the generic info string
-                rawBankName = historyMatch.key || historyMatch.method || historyMatch.info;
-
-                // If the string contains "Withdrawal", it's a generic API string - check address book instead
-                if (rawBankName && rawBankName.includes("Withdrawal")) {
-                  const addrMatch = cacheData.krakenAddresses.find(a => (a.address === historyMatch.address || a.key === historyMatch.key));
-                  if (addrMatch) rawBankName = addrMatch.key;
-                  else if (historyMatch.method) rawBankName = historyMatch.method; // fallback to method if info was generic
-                }
+              // 2. Currency-based Fallback (search history for the bank name used for this currency)
+              if (!nameFromAPI || nameFromAPI.includes("Withdrawal")) {
+                const globalMatch = getFiatBankNameFromHistory(e.asset);
+                if (globalMatch) nameFromAPI = globalMatch;
               }
 
-              if (!rawBankName || rawBankName.includes("Withdrawal")) {
-                // Fallback to ledger info ONLY if not generic
-                if (e.info && e.info !== "Withdrawal" && !e.info.includes("Withdrawal (")) {
-                  rawBankName = e.info;
-                }
+              // 3. Ledger Info Fallback
+              if (!nameFromAPI && e.info && !e.info.includes("Withdrawal")) {
+                nameFromAPI = e.info;
               }
 
-              // If we found a name, use it.
-              if (rawBankName && !rawBankName.includes("Withdrawal")) {
-                const words = String(rawBankName).trim().split(/\s+/).filter(Boolean);
+              if (nameFromAPI) {
+                const words = String(nameFromAPI).trim().split(/\s+/).filter(Boolean);
                 detail = (words.length <= 2) ? words.join(" ") : words.slice(0, 2).join(" ");
                 recipient = detail;
               }
