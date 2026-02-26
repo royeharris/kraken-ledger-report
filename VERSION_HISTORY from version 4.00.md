@@ -2,6 +2,10 @@
 
 This document tracks the evolution of the Kraken Ledger Report project from Version 4.00 onwards.
 
+## [v4.10-06-FIX-BUG-C] - 2026-02-26
+### Fixed
+- **Stage 2 Fiat Withdrawal Labels (Bug C):** Prioritized user-defined account labels (`key`) from the Kraken API for fiat withdrawals. This ensures that custom names like "Revolut Ltd" are used in both the Bank Report and Statement Summary instead of falling back to the generic "Withdrawal (EUR)" string.
+
 ## [v4.10-05-DECOUPLING] - 2026-02-26
 ### Changed
 - **Staged Roadmap:** Transitioned to a staged refinement process collecting changes towards a future v5.00 release.

@@ -503,7 +503,7 @@ Purpose: GitHub Pages testing
 
 
   <script>
-    const APP_VERSION = "v4.10-05-DECOUPLING";
+    const APP_VERSION = "v4.10-06-FIX-BUG-C";
   </script>
 
 
@@ -2918,15 +2918,19 @@ Purpose: GitHub Pages testing
       const cleanAsset = (asset || "").replace(/^Z/, "").toUpperCase();
       if (cleanAsset !== "GBP" && cleanAsset !== "EUR") return null;
 
-      // Find the first withdrawal in history matching this fiat currency that has an 'info' string
+      // Find the first withdrawal in history matching this fiat currency
+      // v4.10-06: Prioritize 'key' (user's label) over 'info' (Kraken generic string)
       const match = cacheData.withdrawalHistory.find(h => {
         const hAsset = (h.asset || "").replace(/^Z/, "").toUpperCase();
-        return hAsset === cleanAsset && h.info;
+        return hAsset === cleanAsset && (h.key || h.info);
       });
 
-      if (match && match.info) {
+      if (match) {
+        const rawName = match.key || match.info;
+        if (!rawName || rawName.includes("Withdrawal")) return null;
+
         // Extract up to 2 words for brevity (e.g., "Revolut Ltd")
-        const words = String(match.info).trim().split(/\s+/).filter(Boolean);
+        const words = String(rawName).trim().split(/\s+/).filter(Boolean);
         return (words.length <= 2) ? words.join(" ") : words.slice(0, 2).join(" ");
       }
       return null;
@@ -3464,7 +3468,8 @@ Purpose: GitHub Pages testing
         const historyMatch = cacheData.withdrawalHistory.find(h => h.refid === w.refid);
 
         // Get address from history
-        let walletAddr = historyMatch ? (historyMatch.info || historyMatch.address || "") : "";
+        // v4.10-06: Prioritize 'key' (user label) for withdrawals to avoid generic strings
+        let walletAddr = historyMatch ? (historyMatch.key || historyMatch.info || historyMatch.address || "") : "";
         let destTag = historyMatch ? (historyMatch.dest || historyMatch.tag || "") : "";
 
         // Find recipient from krakenAddresses
@@ -4073,7 +4078,8 @@ Purpose: GitHub Pages testing
               // 1. History Lookup
               const historyMatch = cacheData.withdrawalHistory.find(h => h.refid === e.refid);
               if (historyMatch) {
-                const addr = historyMatch.info || historyMatch.address;
+                // v4.10-06: Prioritize key (label)
+                const addr = historyMatch.key || historyMatch.info || historyMatch.address;
                 const addrMatch = cacheData.krakenAddresses.find(a => a.address === addr);
                 if (addrMatch) recipient = addrMatch.key + ((addrMatch.asset === 'GBP' || addrMatch.asset === 'EUR') ? ' (' + addrMatch.asset + ')' : '');
                 else if (addr) recipient = addr;
