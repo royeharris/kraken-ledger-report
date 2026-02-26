@@ -2,7 +2,7 @@
 
 This document tracks the evolution of the Kraken Ledger Report project from Version 4.00 onwards.
 
-## [v4.10-05] - 2026-02-26
+## [v4.10-05-DECOUPLING] - 2026-02-26
 ### Changed
 - **Staged Roadmap:** Transitioned to a staged refinement process collecting changes towards a future v5.00 release.
 - **Stage 1 Label Decoupling:** Fully decoupled the Deposits section naming logic from Withdrawal recipient data in the Statement Summary. Deposits now consistently default to "Haricom Bank" instead of leaking "Withdrawal (EUR)" strings from the API.
