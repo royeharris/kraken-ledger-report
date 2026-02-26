@@ -1,4 +1,6 @@
-# Kraken Reports V5.00: Implementation Plan & Priorities
+# Kraken Reports V5.00:# implementation_plan_v5_roadmap
+
+This plan acts as a collection of bug fixes and enhancements required before a final **v5.00** release. Interim changes are released under the **v4.10-xx** branch.
 
 ## Context & Validated Baseline
 The V4.10-00 baseline has been validated across the full date range (account open to 22 Feb 2026).
