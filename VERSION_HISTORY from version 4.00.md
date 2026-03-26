@@ -2,6 +2,10 @@
 
 This document tracks the evolution of the Kraken Ledger Report project from Version 4.00 onwards.
 
+## [v4.11] - 2026-03-26
+### Added
+- **Final Accountant Report:** Formalized the version to v4.11 for professional delivery. Updated UI title and internal versioning to reflect a clean release.
+
 ## [v4.10-09-FIX-BUG-C-FINAL] - 2026-02-26
 ### Fixed
 - **Stage 2 Fiat Withdrawal Labels (Bug C) - Final:** Removed the rejected currency-based fallback. Implemented strict per-record bank name resolution prioritizing `key`, `method`, and `info`. Added "Other Banks" as a fallback to indicate missing API metadata, ensuring the report never makes incorrect guesses when multiple banks exist for the same currency.
