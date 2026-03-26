@@ -16,7 +16,7 @@ Purpose: GitHub Pages testing
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
   <meta http-equiv="Pragma" content="no-cache" />
   <meta http-equiv="Expires" content="0" />
-  <title>Haricom Ledger Report v4.00</title>
+  <title>Haricom Finance Utilities v4.00</title>
   <script async defer src="https://accounts.google.com/gsi/client"></script>
   <script async defer src="https://apis.google.com/js/api.js"></script>
   <style>
@@ -461,6 +461,39 @@ Purpose: GitHub Pages testing
       border-right: 1px solid #ddd;
       /* separation line */
     }
+
+    /* Compliance Banner */
+    .compliance-banner {
+      background: #fff3cd;
+      color: #856404;
+      padding: 10px;
+      text-align: center;
+      font-size: 0.75rem;
+      font-weight: 700;
+      border: 1px solid #ffeeba;
+      border-radius: 6px;
+      margin-bottom: 12px;
+      line-height: 1.4;
+    }
+
+    .key-security-info {
+      background: #e1f5fe;
+      color: #01579b;
+      padding: 8px;
+      margin-top: 8px;
+      border-radius: 4px;
+      font-size: 0.65rem;
+      line-height: 1.2;
+    }
+
+    .app-footer {
+      margin-top: 40px;
+      padding: 20px;
+      border-top: 1px solid #eee;
+      font-size: 0.65rem;
+      color: #7f8c8d;
+      text-align: center;
+    }
   </style>
 
   <script>
@@ -517,19 +550,24 @@ Purpose: GitHub Pages testing
       const traceEl = document.getElementById("trace_log");
       if (traceEl && v) traceEl.textContent = `Trace: ${v} Kraken Withdrawals Report initialized.`;
 
-      if (v) document.title = `Haricom Reports ${v}`;
+      if (v) document.title = `Haricom Finance Utilities ${v}`;
     });
   </script>
 
 </head>
 
 <body>
+  <div class="compliance-banner">
+    ⚠️ <b>NOTICE:</b> This is an Independent Local Utility for Accounting and Tax reporting.
+    <br>It is <b>NOT affiliated with, endorsed by, or impersonating</b> Kraken.com.
+  </div>
+
   <div class="container">
     <div class="header-wrap">
       <div
         style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; position:relative;">
         <div class="branding-row" style="margin-bottom:0; line-height:1.2;">
-          <div><b>Haricom Reports</b> <span style="font-size:0.7rem; color:#7f8c8d; font-weight:600;"><span
+          <div><b>Haricom Finance Utilities</b> <span style="font-size:0.7rem; color:#7f8c8d; font-weight:600;"><span
                 id="appVersion"></span></span></div>
           <div style="font-size:0.65rem; color:#b0b0b0; font-weight:400;">GBP | EUR | USDT | XRP</div>
         </div>
@@ -684,6 +722,12 @@ Purpose: GitHub Pages testing
         <button onclick="saveApiConfig(); event.stopPropagation();"
           style="margin-top:10px; padding:8px 16px; background:var(--accent); color:#fff; border:none; border-radius:4px; cursor:pointer; font-weight:600;">Save
           API Keys</button>
+
+        <div class="key-security-info">
+          🔒 <b>Local Security Information:</b> All API keys and private keys are stored <b>EXCLUSIVELY in your browser's
+            LocalStorage</b>.
+          They are never transmitted to Haricom servers or any third party other than the official Kraken API.
+        </div>
       </div>
     </div>
 
@@ -812,6 +856,12 @@ Purpose: GitHub Pages testing
       style="width:100%; padding:8px; margin-top:10px; background:#8e44ad; color:#fff; border:none; border-radius:4px; font-size:0.75rem; font-weight:600; cursor:pointer;">Display
       Progress Log</button>
     <div id="trace_log" onclick="toggleLog()">Trace: v4.000 Kraken Ledger Report initialized.</div>
+
+    <div class="app-footer">
+      Haricom Limited is an independent software provider.
+      <br>Kraken is a trademark of Payward, Inc. Google and Google Sheets are trademarks of Google LLC.
+      <br>&copy; 2026 Haricom Limited. All rights reserved.
+    </div>
   </div>
 
   <script>
@@ -5489,7 +5539,12 @@ Purpose: GitHub Pages testing
     <div class="t1">${titleLine}</div>
     <div class="t2">${dateRangeLine}</div>
   </div>
-  <div class="wrap">${tablesHtml}</div>
+  <div class="wrap">${tablesHtml}    <div class="app-footer">
+      Haricom Limited is an independent software provider.
+      <br>Kraken is a trademark of Payward, Inc. Google and Google Sheets are trademarks of Google LLC.
+      <br>&copy; 2026 Haricom Limited. All rights reserved.
+    </div>
+  </div>
 </body>
 </html>`);
       w.document.close();
